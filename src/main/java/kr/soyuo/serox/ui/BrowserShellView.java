@@ -546,6 +546,9 @@ public final class BrowserShellView extends BorderPane {
     for (Label status : List.of(navigationStatus, searchStatus, aiStatus, mcpStatus)) {
       status.setMaxWidth(UiTokens.STATUS_TEXT_MAX_WIDTH);
       status.setTextOverrun(javafx.scene.control.OverrunStyle.ELLIPSIS);
+      javafx.scene.control.Tooltip tip = new javafx.scene.control.Tooltip();
+      tip.textProperty().bind(status.textProperty());
+      status.setTooltip(tip);
     }
     Label divider = new Label("|");
     divider.getStyleClass().add("status-divider");
