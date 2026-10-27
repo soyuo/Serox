@@ -12,6 +12,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -22,12 +23,20 @@ import javafx.stage.Stage;
 import kr.soyuo.serox.browser.dom.Document;
 import kr.soyuo.serox.browser.render.CanvasPageView;
 import kr.soyuo.serox.core.application.BrowserController;
+import kr.soyuo.serox.core.application.DirectAddress;
+import kr.soyuo.serox.core.application.NavigationInputClassifier;
+import kr.soyuo.serox.core.application.NavigationTarget;
+import kr.soyuo.serox.core.application.SearchQuery;
 import kr.soyuo.serox.core.event.ActiveTabChanged;
 import kr.soyuo.serox.core.event.BrowserEventBus;
 import kr.soyuo.serox.core.event.ConnectionStatusChanged;
 import kr.soyuo.serox.core.event.EventSubscription;
 import kr.soyuo.serox.core.event.OperationFailed;
 import kr.soyuo.serox.core.event.PageLoaded;
+import kr.soyuo.serox.core.event.SearchCancelled;
+import kr.soyuo.serox.core.event.SearchCompleted;
+import kr.soyuo.serox.core.event.SearchFailed;
+import kr.soyuo.serox.core.event.SearchStarted;
 import kr.soyuo.serox.core.event.ServiceId;
 import kr.soyuo.serox.core.event.ServiceStatus;
 import kr.soyuo.serox.core.event.TabClosed;
@@ -35,6 +44,7 @@ import kr.soyuo.serox.core.event.TabStateChanged;
 import kr.soyuo.serox.core.model.NavigationStatus;
 import kr.soyuo.serox.core.model.TabId;
 import kr.soyuo.serox.core.model.TabSnapshot;
+import kr.soyuo.serox.search.application.SearchService;
 
 /** Displays the Figma browser frame, home view, and service status. */
 public final class BrowserShellView extends BorderPane {
@@ -52,12 +62,17 @@ public final class BrowserShellView extends BorderPane {
   private final EventSubscription activeTabSubscription;
   private final EventSubscription tabClosedSubscription;
   private final EventSubscription pageLoadedSubscription;
+  private final EventSubscription searchStartedSubscription;
+  private final EventSubscription searchCompletedSubscription;
+  private final EventSubscription searchFailedSubscription;
+  private final EventSubscription searchCancelledSubscription;
   private final Map<TabId, TabSnapshot> tabSnapshots = new HashMap<>();
   private final Map<TabId, PageLoaded> loadedPages = new HashMap<>();
   private final Map<TabId, HBox> tabButtons = new HashMap<>();
   private final Map<TabId, Label> tabTitles = new HashMap<>();
   private final HBox tabStrip = new HBox(UiTokens.SPACE_XS);
   private final BrowserController browserController;
+  private final SearchService searchService;
   private TabId activeTabId;
   private Button backButton;
   private Button forwardButton;
@@ -72,8 +87,9 @@ public final class BrowserShellView extends BorderPane {
   private double resizeStartScreenY;
 
   /** Creates the browser shell and subscribes to service status events. */
-  public BrowserShellView(BrowserController browserController) {
+  public BrowserShellView(BrowserController browserController, SearchService searchService) {
     this.browserController = Objects.requireNonNull(browserController, "browserController");
+    this.searchService = Objects.requireNonNull(searchService, "searchService");
     BrowserEventBus eventBus = browserController.eventBus();
     Objects.requireNonNull(eventBus, "eventBus");
     getStyleClass().add("app-root");
@@ -96,6 +112,12 @@ public final class BrowserShellView extends BorderPane {
     activeTabSubscription = eventBus.subscribe(ActiveTabChanged.class, this::showActiveTab);
     tabClosedSubscription = eventBus.subscribe(TabClosed.class, this::removeTab);
     pageLoadedSubscription = eventBus.subscribe(PageLoaded.class, this::showPage);
+    searchStartedSubscription = eventBus.subscribe(SearchStarted.class, this::showSearchStarted);
+    searchCompletedSubscription =
+        eventBus.subscribe(SearchCompleted.class, this::showSearchCompleted);
+    searchFailedSubscription = eventBus.subscribe(SearchFailed.class, this::showSearchFailed);
+    searchCancelledSubscription =
+        eventBus.subscribe(SearchCancelled.class, this::showSearchCancelled);
   }
 
   /** Releases event subscriptions owned by this view. */
@@ -106,6 +128,10 @@ public final class BrowserShellView extends BorderPane {
     activeTabSubscription.close();
     tabClosedSubscription.close();
     pageLoadedSubscription.close();
+    searchStartedSubscription.close();
+    searchCompletedSubscription.close();
+    searchFailedSubscription.close();
+    searchCancelledSubscription.close();
   }
 
   private VBox createBrowserChrome() {
@@ -183,6 +209,15 @@ public final class BrowserShellView extends BorderPane {
     addressField.setPromptText("검색어 또는 주소를 입력하세요…");
     addressField.setAccessibleText("검색어 또는 웹 주소, Ctrl+L로 이동");
     addressField.setOnAction(event -> navigateToAddress());
+    addressField.addEventFilter(
+        KeyEvent.KEY_PRESSED,
+        event -> {
+          if (event.getCode() == KeyCode.ESCAPE
+              && activeTabId != null
+              && searchService.cancel(activeTabId)) {
+            event.consume();
+          }
+        });
     addressField.getStyleClass().add("address-field");
     HBox.setHgrow(addressField, Priority.ALWAYS);
     HBox addressBox =
@@ -252,6 +287,45 @@ public final class BrowserShellView extends BorderPane {
     updateLabel(navigationStatus, event.error().safeMessage());
   }
 
+  private void showSearchStarted(SearchStarted event) {
+    FxThreadExecutor.execute(
+        () -> {
+          if (event.tabId().equals(activeTabId)) {
+            addressField.setText(event.query());
+            navigationStatus.setText("Searching…");
+          }
+        });
+  }
+
+  private void showSearchCompleted(SearchCompleted event) {
+    FxThreadExecutor.execute(
+        () -> {
+          if (event.tabId().equals(activeTabId)) {
+            addressField.setText(event.query());
+            navigationStatus.setText(event.response().results().size() + " search results");
+          }
+        });
+  }
+
+  private void showSearchFailed(SearchFailed event) {
+    FxThreadExecutor.execute(
+        () -> {
+          if (event.tabId().equals(activeTabId)) {
+            addressField.setText(event.query());
+            navigationStatus.setText(event.safeMessage());
+          }
+        });
+  }
+
+  private void showSearchCancelled(SearchCancelled event) {
+    FxThreadExecutor.execute(
+        () -> {
+          if (event.tabId().equals(activeTabId)) {
+            navigationStatus.setText("Search cancelled");
+          }
+        });
+  }
+
   private void showTabState(TabStateChanged event) {
     FxThreadExecutor.execute(
         () -> {
@@ -291,6 +365,7 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private void removeTab(TabClosed event) {
+    searchService.cancel(event.tabId());
     FxThreadExecutor.execute(
         () -> {
           tabSnapshots.remove(event.tabId());
@@ -345,7 +420,18 @@ public final class BrowserShellView extends BorderPane {
 
   private void navigateToAddress() {
     if (activeTabId != null && !addressField.getText().isBlank()) {
-      browserController.navigate(activeTabId, addressField.getText().strip());
+      String input = addressField.getText().strip();
+      try {
+        NavigationTarget target = new NavigationInputClassifier().classify(input);
+        if (target instanceof SearchQuery query) {
+          searchService.search(activeTabId, query.value());
+        } else {
+          searchService.cancel(activeTabId);
+          browserController.navigate(activeTabId, ((DirectAddress) target).uri().toString());
+        }
+      } catch (RuntimeException exception) {
+        browserController.navigate(activeTabId, input);
+      }
     }
   }
 
