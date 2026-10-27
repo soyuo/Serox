@@ -72,4 +72,30 @@ public final class SqliteRecentSearchRepository implements RecentSearchRepositor
           return List.copyOf(recent);
         });
   }
+
+  @Override
+  public CompletionStage<Void> delete(String query) {
+    Objects.requireNonNull(query, "query");
+    return database.submit(
+        connection -> {
+          try (PreparedStatement statement =
+              connection.prepareStatement("DELETE FROM recent_searches WHERE query = ?")) {
+            statement.setString(1, query.strip());
+            statement.executeUpdate();
+          }
+          return null;
+        });
+  }
+
+  @Override
+  public CompletionStage<Void> clear() {
+    return database.submit(
+        connection -> {
+          try (PreparedStatement statement =
+              connection.prepareStatement("DELETE FROM recent_searches")) {
+            statement.executeUpdate();
+          }
+          return null;
+        });
+  }
 }

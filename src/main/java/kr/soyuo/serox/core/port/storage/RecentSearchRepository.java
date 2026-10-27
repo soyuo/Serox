@@ -9,4 +9,10 @@ public interface RecentSearchRepository {
   CompletionStage<Void> record(RecentSearch recentSearch);
 
   CompletionStage<List<RecentSearch>> recent(int limit);
+
+  /** Removes one query; nothing happens if it is not stored. */
+  CompletionStage<Void> delete(String query);
+
+  /** Removes every stored query. */
+  CompletionStage<Void> clear();
 }

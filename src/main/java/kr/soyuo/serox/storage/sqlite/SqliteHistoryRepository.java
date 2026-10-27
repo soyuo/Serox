@@ -93,4 +93,15 @@ public final class SqliteHistoryRepository implements HistoryRepository {
           return null;
         });
   }
+
+  @Override
+  public CompletionStage<Void> clear() {
+    return database.submit(
+        connection -> {
+          try (PreparedStatement statement = connection.prepareStatement("DELETE FROM history")) {
+            statement.executeUpdate();
+          }
+          return null;
+        });
+  }
 }

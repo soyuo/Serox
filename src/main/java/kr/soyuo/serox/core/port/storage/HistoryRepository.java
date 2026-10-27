@@ -13,4 +13,7 @@ public interface HistoryRepository {
 
   /** Deletes entries older than the cutoff and any beyond the newest {@code maxEntries}. */
   CompletionStage<Void> prune(Instant olderThan, int maxEntries);
+
+  /** Removes every visit. */
+  CompletionStage<Void> clear();
 }

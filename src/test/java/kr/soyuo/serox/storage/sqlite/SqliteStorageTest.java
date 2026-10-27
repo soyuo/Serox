@@ -128,4 +128,31 @@ class SqliteStorageTest {
           storage.settings().load().toCompletableFuture().join());
     }
   }
+
+  @Test
+  void clearAndDeleteRemoveOnlyWhatWasAskedFor() {
+    Instant now = Instant.parse("2026-01-01T00:00:00Z");
+    try (var storage = new SqliteStorage(tempDir.resolve("clear.db"))) {
+      var searches = storage.recentSearches();
+      searches.record(new RecentSearch("one", now)).toCompletableFuture().join();
+      searches.record(new RecentSearch("two", now.plusSeconds(1))).toCompletableFuture().join();
+      storage
+          .history()
+          .add(new HistoryEntry(UUID.randomUUID(), URI.create("https://a.test/"), "A", now))
+          .toCompletableFuture()
+          .join();
+
+      searches.delete("one").toCompletableFuture().join();
+      assertEquals(
+          List.of("two"),
+          searches.recent(5).toCompletableFuture().join().stream().map(RecentSearch::query).toList());
+
+      searches.clear().toCompletableFuture().join();
+      assertTrue(searches.recent(5).toCompletableFuture().join().isEmpty());
+      assertEquals(1, storage.history().recent(10).toCompletableFuture().join().size());
+
+      storage.history().clear().toCompletableFuture().join();
+      assertTrue(storage.history().recent(10).toCompletableFuture().join().isEmpty());
+    }
+  }
 }
