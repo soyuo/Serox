@@ -9,6 +9,7 @@ module kr.soyuo.serox {
   requires java.sql;
   requires com.google.gson;
   requires org.xerial.sqlitejdbc;
+  requires org.mozilla.rhino;
 
   exports kr.soyuo.serox.app;
 }
