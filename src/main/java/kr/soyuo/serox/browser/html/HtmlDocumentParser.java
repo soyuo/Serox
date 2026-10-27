@@ -18,6 +18,9 @@ public final class HtmlDocumentParser {
           "source", "track", "wbr");
   private static final Set<String> HEAD_ELEMENTS =
       Set.of("base", "link", "meta", "title", "style", "script");
+  /** Deeper elements stay in the tree but do not nest further, so layout recursion is bounded. */
+  static final int MAX_NESTING = 256;
+
   private final HtmlTokenizer tokenizer;
 
   public HtmlDocumentParser() {
@@ -92,7 +95,7 @@ public final class HtmlDocumentParser {
     Element element = new Element(name);
     copyAttributes(token, element);
     parent.appendChild(element);
-    if (!token.selfClosing() && !VOID_ELEMENTS.contains(name)) {
+    if (!token.selfClosing() && !VOID_ELEMENTS.contains(name) && stack.size() < MAX_NESTING) {
       stack.add(element);
     }
   }

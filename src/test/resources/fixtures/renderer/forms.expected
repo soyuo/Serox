@@ -1,0 +1,10 @@
+viewport 320.0x200.0 document 316.0x110.0
+stroke 4.0,4.0 312.0x70.0 #000000 1.0
+text 11.0,25.0 Name link=-
+control input 41.8,11.0 120.0x28.0
+text 161.8,25.0  Agree link=-
+control input 11.0,39.0 120.0x28.0
+control button 131.0,39.0 120.0x28.0
+text 139.0,60.0 Send link=-
+image 4.0,74.0 32.0x32.0 logo
+unsupported 

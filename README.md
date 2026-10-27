@@ -50,9 +50,60 @@ Toolset 3.14.1은 아래 스크립트로 사용자 로컬 도구 경로에 준�
 `msi`는 Windows Installer 파일이다. 패키지 버전은 `pom.xml`의
 `app.release.version` 값을 사용한다. 각 패키징은 Windows에서 실행해야 한다.
 
-현재 골격은 브라우저 탭/도구 모음, 홈 검색 UI, 최근 검색 및 연결 상태 카드,
-하단 상태 표시줄을 제공한다. 실제 탐색, 검색 API, AI, MCP와 저장소 기능은
-아직 연결하지 않았다.
+설치·실행·데이터 위치는 [플랫폼 지원](docs/release/platform-support.md), 번들 런타임
+확인 결과는 [런타임 번들 점검](docs/release/runtime-bundle.md)을 참고한다.
+
+## 현재 상태 (릴리스 후보 0.1.0)
+
+Serox는 독자 HTML/CSS 렌더러로 지원 범위의 페이지를 열고, 탭 이동, 일반 검색,
+AI 요약과 출처, 설정·북마크·방문 기록·세션 복구, MCP 검색 도구를 제공한다.
+각 단계의 완료 기준 대조 결과는 [완료 체크리스트](docs/release/completion-checklist.md)에 있다.
+
+## API 설정
+
+검색과 AI 기능은 사용자가 직접 발급한 키가 있을 때만 켜진다. 키는 환경 변수로만 읽으며
+어디에도 저장하지 않는다. 키가 없어도 주소 입력, 탭, 북마크 등 일반 탐색은 동작한다.
+
+```powershell
+$env:SEROX_BRAVE_SEARCH_API_KEY = "<Brave Search API key>"
+$env:SEROX_ANTHROPIC_API_KEY = "<Anthropic API key>"
+.\dist\Serox\Serox.exe
+```
+
+- 데이터 폴더: `%LOCALAPPDATA%\Serox` (`SEROX_DATA_DIR`로 변경 가능)
+- 설정 화면의 연결 상태 배지가 키와 저장소의 실제 상태를 보여 준다.
+
+## 보안 안내
+
+- AI·MCP가 읽는 검색 결과 페이지는 공개 웹만 허용한다. localhost, 사설망, 링크 로컬 주소와
+  리다이렉트 우회를 차단한다. 자세한 내용은 [네트워크 정책](docs/security/network-policy.md).
+- 검색 결과와 페이지 본문은 신뢰하지 않는 데이터로 다룬다. 태그와 제어·방향 문자를 제거하고,
+  이메일·토큰·카드번호 등은 AI 제공자로 보내기 전에 가린다.
+- MCP 도구는 사용자가 환경 변수로 승인한 것만 실행되며, 호출 횟수가 제한된다.
+- 로그에는 키, 쿠키, 응답 본문, 예외 상세를 남기지 않는다. [보안 안내](docs/SECURITY.md).
+- 설치 파일은 아직 서명되지 않았다. 첫 실행 때 Windows SmartScreen 경고가 나올 수 있다.
+
+## 알려진 제한
+
+- JavaScript, flexbox, grid, 위치 지정, 미디어 쿼리는 지원하지 않는다.
+  이미지는 대체 텍스트가 있는 자리 표시자로 그려진다.
+  [렌더링 지원 범위](docs/rendering-support.md).
+- 검색은 Brave Search, AI는 Claude 하나만 지원한다. 두 연동은 로컬 가짜 서버로만 검증했고
+  실제 키로 호출해 본 적은 없다.
+- 지원 운영체제는 Windows뿐이다. MSI 설치·제거는 깨끗한 컴퓨터에서 아직 확인하지 않았다.
+- 페이지 읽기에서 DNS 재바인딩은 완전히 차단하지 못한다(응답 크기·형식 제한과 민감정보
+  가림으로 완화).
+- Figma 디자인과의 화면 대조는 완료하지 못했다. 현재 UI는 기존 디자인 토큰을 따른다.
+
+## 로드맵
+
+장기 항목은 MVP 완료 기준과 분리해 별도 이슈로 관리한다.
+
+1. 깨끗한 Windows에서 MSI 설치·업그레이드·제거 확인과 코드 서명
+2. 실제 API 키를 사용한 검색·AI 통합 점검과 Figma 대조
+3. CSS 확장(flexbox, 위치 지정)과 이미지 로딩
+4. JavaScript 런타임과 DOM 바인딩
+5. 추가 검색·AI 제공자, macOS·Linux 패키지
 
 ### 소스 구조
 

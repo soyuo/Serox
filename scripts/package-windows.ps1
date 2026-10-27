@@ -54,10 +54,21 @@ if (-not $version) {
 
 $jpackage = Resolve-Jpackage
 $dependencyPlugin = 'org.apache.maven.plugins:maven-dependency-plugin:3.11.0:copy-dependencies'
-& mvn clean package $dependencyPlugin '-DincludeScope=runtime' '-DincludeClassifiers=win' '-DoutputDirectory=target/jpackage-win'
-if ($LASTEXITCODE -ne 0) {
-    throw "Maven packaging failed with exit code $LASTEXITCODE."
+# Windows PowerShell 5.1 turns any native stderr output (even a JVM warning) into a terminating
+# error, so rely on the exit code instead.
+$previousErrorAction = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+& mvn clean package $dependencyPlugin '-DincludeScope=runtime' '-DoutputDirectory=target/jpackage-win'
+$mavenExitCode = $LASTEXITCODE
+$ErrorActionPreference = $previousErrorAction
+if ($mavenExitCode -ne 0) {
+    throw "Maven packaging failed with exit code $mavenExitCode."
 }
+
+# The platform-neutral JavaFX jars carry no native libraries; keep only the -win ones.
+Get-ChildItem 'target/jpackage-win' -File -Filter 'javafx-*.jar' |
+    Where-Object { $_.Name -notmatch '-win\.jar$' } |
+    Remove-Item -Force
 
 $applicationJar = Get-ChildItem 'target' -File -Filter 'serox-browser-*.jar' |
     Where-Object { $_.Name -notmatch '(sources|javadoc)' } |
@@ -77,16 +88,20 @@ $jpackageArgs = @(
     '--module', 'kr.soyuo.serox/kr.soyuo.serox.app.SeroxApplication',
     '--app-version', $version,
     '--vendor', 'soyuo.kr',
-    '--description', 'Serox AI Searching Browser'
+    '--description', 'Serox AI Searching Browser',
+    '--java-options', '--enable-native-access=javafx.graphics'
 )
 
 if ($Type -in @('msi', 'exe')) {
     $jpackageArgs += @('--win-menu', '--win-menu-group', 'Serox', '--win-shortcut')
 }
 
+$ErrorActionPreference = 'Continue'
 & $jpackage @jpackageArgs
-if ($LASTEXITCODE -ne 0) {
-    throw "jpackage failed with exit code $LASTEXITCODE."
+$jpackageExitCode = $LASTEXITCODE
+$ErrorActionPreference = $previousErrorAction
+if ($jpackageExitCode -ne 0) {
+    throw "jpackage failed with exit code $jpackageExitCode."
 }
 
 Write-Host "Created $Type package in $destination"
