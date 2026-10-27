@@ -288,3 +288,22 @@ AI 제공자 오류가 일반 탐색이나 검색을 막지 않는다.
 The combined STEP 12/13 check passed 77 tests with no failures/errors/skips.
 The follow-up PRs are stacked and remain unmerged. STEP 11's CI passed.
 This status does not claim live account authorization or a newly verified installer.
+## 9. TODO.md follow-up status — 2026-10-28
+
+| TODO item | Issue / PR | State |
+| --- | --- | --- |
+| Data folder `%USERPROFILEDATA%` | #83 / PR #84 | Merged; `%NAME%` expands, unknown names stay |
+| Theme kept after restart | #85 / PR #86 | Merged; theme saves when chosen |
+| New tab focus, narrower tabs | PR #88 | Merged; focus test not automated |
+| Search API without authentication | PR #90, #106 | Merged; DuckDuckGo page reader plus a picker; live site not called |
+| Program icon | PR #92 | Merged; installer icon not rebuilt |
+| MCP `...` text | PR #94 | Merged |
+| MCP tool switch, recent calls | PR #102 | Merged; sources-read count not shown |
+| Slider as in the design | PR #96 | Merged |
+| Dark mode, OS-default controls | PR #98 | Merged; text fields keep square corners |
+| Connection info | PR #100 | Merged; AI badge names the model |
+| https to http confirm | PR #104 | Merged |
+| AI browser cookie login | none | Not done on purpose: reading cookies from other browsers takes over logged-in sessions |
+| Per-site permissions | none | Not done on purpose: Serox has none of these features |
+
+The MSI build and an elevated install check (STEP 14) are left to the user.
