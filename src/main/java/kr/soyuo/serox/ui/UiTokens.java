@@ -13,6 +13,8 @@ public final class UiTokens {
   public static final String ICON_TAB_CLOSE = "65d4c.svg";
   public static final String ICON_BACK = "b2c0a.svg";
   public static final String ICON_HOME_SEARCH = "eff36.svg";
+  public static final String ICON_AI_SPARKLE = "df725.svg";
+  public static final String ICON_CHECK = "3f63a.svg";
 
   public static final String FONT_FAMILY = "Malgun Gothic";
   public static final double WINDOW_MIN_WIDTH = 760;
@@ -27,6 +29,8 @@ public final class UiTokens {
   public static final double HOME_CARD_GAP = SPACE_LG;
   public static final double HOME_LOGO_SIZE = 48;
   public static final double TOOLBAR_ICON_SIZE = 20;
+  public static final double AI_SPARKLE_SIZE = 16;
+  public static final double CHECK_SIZE = 18;
   public static final double WINDOW_ICON_SIZE = 12;
   public static final double TAB_TITLE_MAX_WIDTH = 190;
   public static final double STATUS_TEXT_MAX_WIDTH = 320;

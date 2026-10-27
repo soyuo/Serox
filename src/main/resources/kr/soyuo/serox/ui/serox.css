@@ -12,6 +12,9 @@
     serox-success: #0f7b5f;
     serox-error: #b42318;
     serox-hover-surface: #f3f5f8;
+    serox-ai-surface: #e6effe;
+    serox-ai-accent: #1d4ed8;
+    serox-ai-ring: #22d3ee;
     serox-window-close-hover: #e81123;
     -fx-background-color: serox-surface;
     -fx-text-fill: serox-text-primary;
@@ -173,7 +176,7 @@
     -fx-padding: 0 14px;
     -fx-pref-height: 44px;
     -fx-background-color: serox-surface-muted;
-    -fx-background-radius: 24px;
+    -fx-background-radius: 22px;
 }
 
 .address-field,
@@ -479,21 +482,7 @@
     -fx-padding: 0;
 }
 
-.ai-panel {
-    -fx-min-width: 280px;
-    -fx-max-width: 360px;
-    -fx-padding: 20px 20px 0 20px;
-    -fx-spacing: 12px;
-    -fx-background-color: serox-surface-muted;
-    -fx-border-color: serox-border;
-    -fx-border-width: 0 0 0 1px;
-}
 
-.ai-panel-title {
-    -fx-text-fill: serox-text-primary;
-    -fx-font-size: 1.154em;
-    -fx-font-weight: bold;
-}
 
 .ai-panel-scroll,
 .ai-panel-scroll > .viewport,
@@ -558,6 +547,8 @@
     serox-hover-surface: #232a36;
     serox-success: #4ade80;
     serox-error: #f87171;
+    serox-ai-surface: #1b2a4a;
+    serox-ai-accent: #93b4f8;
 }
 
 /* Compact density tightens list rows and toolbars. */
@@ -599,4 +590,133 @@
 .ai-panel-text,
 .card-note {
     -fx-min-width: 0;
+}
+
+/* AI summary panel, following the Figma search-result screen. */
+.ai-panel {
+    -fx-min-width: 320px;
+    -fx-max-width: 520px;
+    -fx-padding: 24px 24px 0 24px;
+    -fx-spacing: 20px;
+    -fx-background-color: serox-surface;
+    -fx-border-color: serox-border;
+    -fx-border-width: 0 0 0 1px;
+}
+
+.ai-summary-card {
+    -fx-padding: 20px;
+    -fx-background-color: serox-ai-surface;
+    -fx-background-radius: 14px;
+}
+
+.ai-summary-label {
+    -fx-text-fill: serox-ai-accent;
+    -fx-font-size: 1.000em;
+    -fx-font-weight: bold;
+}
+
+.ai-panel-flow {
+    -fx-line-spacing: 6px;
+}
+
+.ai-panel-run {
+    -fx-fill: serox-text-primary;
+    -fx-font-size: 1.143em;
+}
+
+.citation-chip {
+    -fx-min-width: 20px;
+    -fx-alignment: center;
+    -fx-padding: 0 6px;
+    -fx-background-color: serox-primary;
+    -fx-background-radius: 6px;
+    -fx-text-fill: white;
+    -fx-font-size: 0.857em;
+    -fx-font-weight: bold;
+}
+
+.source-card {
+    -fx-alignment: center-left;
+    -fx-padding: 6px 12px 6px 10px;
+    -fx-background-color: serox-surface;
+    -fx-background-radius: 10px;
+    -fx-border-color: serox-border;
+    -fx-border-radius: 10px;
+    -fx-cursor: hand;
+}
+
+.source-card:hover,
+.source-card:focused {
+    -fx-background-color: serox-hover-surface;
+}
+
+.source-badge {
+    -fx-min-width: 20px;
+    -fx-min-height: 20px;
+    -fx-alignment: center;
+    -fx-background-color: serox-surface-muted;
+    -fx-background-radius: 7px;
+    -fx-text-fill: serox-text-primary;
+    -fx-font-size: 0.857em;
+    -fx-font-weight: bold;
+}
+
+.source-title {
+    -fx-min-width: 0;
+    -fx-text-fill: serox-text-primary;
+    -fx-font-size: 0.929em;
+    -fx-font-weight: bold;
+}
+
+.source-url {
+    -fx-min-width: 0;
+    -fx-text-fill: serox-text-muted;
+    -fx-font-size: 0.857em;
+}
+
+.ai-footnote {
+    -fx-font-size: 0.857em;
+}
+
+
+/* Address bar while the shown results include an AI summary. */
+.address-box.address-ai {
+    -fx-border-color: serox-ai-ring;
+    -fx-border-width: 1.5px;
+    -fx-border-radius: 22px;
+    -fx-effect: dropshadow(gaussian, rgba(34, 211, 238, 0.25), 4, 0, 0, 0);
+}
+
+/* Segmented options and accent swatches from the Figma design settings. */
+.segment-option {
+    -fx-min-height: 44px;
+    -fx-padding: 0 18px;
+    -fx-background-color: serox-surface;
+    -fx-background-radius: 10px;
+    -fx-border-color: #c9cfda;
+    -fx-border-radius: 10px;
+    -fx-text-fill: serox-text-primary;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+.segment-option:selected {
+    -fx-background-color: serox-ai-surface;
+    -fx-border-color: serox-logo;
+}
+
+.accent-swatch {
+    -fx-min-width: 44px;
+    -fx-min-height: 44px;
+    -fx-max-width: 44px;
+    -fx-max-height: 44px;
+    -fx-padding: 0;
+    -fx-background-radius: 22px;
+    -fx-border-radius: 22px;
+    -fx-border-width: 3px;
+    -fx-cursor: hand;
+}
+
+.accent-swatch-selected {
+    -fx-border-color: white !important;
 }
