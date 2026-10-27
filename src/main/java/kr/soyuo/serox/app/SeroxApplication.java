@@ -66,6 +66,8 @@ public final class SeroxApplication extends Application {
   public static void main(String[] args) {
     if (List.of(args).contains("--mcp-headless")) {
       McpLauncher.runHeadless(System.getenv());
+      // The session is over; do not wait for any lingering non-daemon worker thread.
+      System.exit(0);
       return;
     }
     launch(args);
