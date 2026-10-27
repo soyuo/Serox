@@ -9,6 +9,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
+import kr.soyuo.serox.ai.api.EvidenceDocument;
+import kr.soyuo.serox.core.event.AiAnswerChanged;
 import kr.soyuo.serox.search.api.SearchResult;
 
 /** Displays search results and their selected result details. */
@@ -17,6 +19,7 @@ final class SearchResultsView extends BorderPane {
   private final Consumer<SearchResult> onOpenResult;
   private final VBox results = new VBox();
   private final BorderPane preview = new BorderPane();
+  private final AiPanelView aiPanel = new AiPanelView(this::showEvidence);
   private SearchResult selected;
 
   private SearchResultsView(String query, Consumer<SearchResult> onOpenResult) {
@@ -83,6 +86,7 @@ final class SearchResultsView extends BorderPane {
       String query, List<SearchResult> found, Consumer<SearchResult> onOpen) {
     SearchResultsView view = new SearchResultsView(query, onOpen);
     view.results.getChildren().add(view.heading(found.size() + "개 결과"));
+    view.setRight(view.aiPanel);
     for (SearchResult result : found) {
       Button item = new Button();
       Label title = new Label(result.title());
@@ -142,6 +146,37 @@ final class SearchResultsView extends BorderPane {
     button.getStyleClass().add("primary-button");
     button.setOnAction(event -> action.run());
     return button;
+  }
+
+  /** Forwards the latest AI answer state to the panel; search results are unaffected. */
+  void showAi(AiAnswerChanged event) {
+    aiPanel.show(event);
+  }
+
+  private void showEvidence(EvidenceDocument document) {
+    Label title = new Label(document.title());
+    title.setWrapText(true);
+    title.getStyleClass().add("search-preview-title");
+    Label url = new Label(document.uri().toString());
+    url.setWrapText(true);
+    url.getStyleClass().add("search-result-url");
+    Label excerpt = new Label(document.text());
+    excerpt.setWrapText(true);
+    excerpt.getStyleClass().add("search-result-snippet");
+    ScrollPane excerptScroll = new ScrollPane(excerpt);
+    excerptScroll.setFitToWidth(true);
+    excerptScroll.getStyleClass().add("search-results-scroll");
+    Button open =
+        action(
+            "원문 페이지 열기",
+            () ->
+                onOpenResult.accept(
+                    new SearchResult(
+                        document.sourceId(), document.uri(), document.title(), "", 1)));
+    VBox details = new VBox(14, title, url, excerptScroll, open);
+    details.setPadding(new Insets(40));
+    details.getStyleClass().add("search-preview-content");
+    preview.setCenter(details);
   }
 
   private void select(SearchResult result) {

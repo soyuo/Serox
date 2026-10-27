@@ -8,6 +8,10 @@ import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import kr.soyuo.serox.ai.api.AiProvider;
+import kr.soyuo.serox.ai.application.AiSearchService;
+import kr.soyuo.serox.ai.context.ContextBuilder;
+import kr.soyuo.serox.ai.provider.ClaudeProvider;
 import kr.soyuo.serox.browser.html.HtmlDocumentParser;
 import kr.soyuo.serox.browser.network.HttpBrowserEngine;
 import kr.soyuo.serox.browser.network.HttpRequestDispatcher;
@@ -20,6 +24,8 @@ import kr.soyuo.serox.core.application.UsageRecorder;
 import kr.soyuo.serox.core.event.InProcessBrowserEventBus;
 import kr.soyuo.serox.search.api.SearchProvider;
 import kr.soyuo.serox.search.application.SearchService;
+import kr.soyuo.serox.search.fetch.FetchLimits;
+import kr.soyuo.serox.search.fetch.PageFetcher;
 import kr.soyuo.serox.search.provider.BraveSearchProvider;
 import kr.soyuo.serox.storage.sqlite.SqliteStorage;
 
@@ -66,6 +72,7 @@ public final class AppBootstrap {
             sqlite ->
                 new UsageRecorder(
                     eventBus, sqlite.history(), sqlite.recentSearches(), Clock.systemUTC()));
+    AiSearchService aiSearchService = createAiSearchService(configuration, eventBus);
     Optional<SessionKeeper> sessionKeeper =
         storage.map(sqlite -> new SessionKeeper(eventBus, sqlite.sessions()));
     return new SeroxRuntime(
@@ -76,7 +83,25 @@ public final class AppBootstrap {
         searchService,
         storage,
         usageRecorder,
-        sessionKeeper);
+        sessionKeeper,
+        aiSearchService);
+  }
+
+  private static AiSearchService createAiSearchService(
+      kr.soyuo.serox.core.application.AppConfiguration configuration,
+      kr.soyuo.serox.core.event.BrowserEventBus eventBus) {
+    Optional<AiProvider> provider =
+        configuration
+            .anthropicApiKey()
+            .map(key -> (AiProvider) ClaudeProvider.create(key.revealForRequest()));
+    var fetcher =
+        new PageFetcher(
+            HttpRequestDispatcher.createDefault(
+                Duration.ofSeconds(5), Duration.ofSeconds(8), 1024 * 1024),
+            new HttpResponseHandler(),
+            new HtmlDocumentParser(),
+            FetchLimits.defaults());
+    return new AiSearchService(provider, fetcher, new ContextBuilder(), eventBus, Clock.systemUTC());
   }
 
   /** Resolves the per-user profile directory that holds the local database. */

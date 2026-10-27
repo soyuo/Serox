@@ -2,6 +2,7 @@ package kr.soyuo.serox.app;
 
 import java.util.Objects;
 import java.util.Optional;
+import kr.soyuo.serox.ai.application.AiSearchService;
 import kr.soyuo.serox.core.application.AppConfiguration;
 import kr.soyuo.serox.core.application.BrowserController;
 import kr.soyuo.serox.core.application.SessionKeeper;
@@ -19,7 +20,8 @@ public record SeroxRuntime(
     SearchService searchService,
     Optional<SqliteStorage> storage,
     Optional<UsageRecorder> usageRecorder,
-    Optional<SessionKeeper> sessionKeeper)
+    Optional<SessionKeeper> sessionKeeper,
+    AiSearchService aiSearchService)
     implements AutoCloseable {
   public SeroxRuntime {
     Objects.requireNonNull(configuration, "configuration");
@@ -30,10 +32,12 @@ public record SeroxRuntime(
     Objects.requireNonNull(storage, "storage");
     Objects.requireNonNull(usageRecorder, "usageRecorder");
     Objects.requireNonNull(sessionKeeper, "sessionKeeper");
+    Objects.requireNonNull(aiSearchService, "aiSearchService");
   }
 
   @Override
   public void close() {
+    aiSearchService.close();
     sessionKeeper.ifPresent(SessionKeeper::close);
     usageRecorder.ifPresent(UsageRecorder::close);
     searchService.close();
