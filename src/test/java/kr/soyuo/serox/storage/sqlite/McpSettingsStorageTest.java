@@ -71,4 +71,16 @@ class McpSettingsStorageTest {
         new McpSettings(5000, McpAccess.NETWORK, true),
         McpSettings.defaults().withPort(5000).withAccess(McpAccess.NETWORK).withAutoStart(true));
   }
+
+  @Test
+  void theSearchToolSwitchIsKept() {
+    var off = McpSettings.defaults().withSearchToolEnabled(false);
+    try (var storage = new SqliteStorage(tempDir.resolve("tool.db"))) {
+      assertTrue(storage.mcpSettings().load().toCompletableFuture().join().searchToolEnabled());
+      storage.mcpSettings().save(off).toCompletableFuture().join();
+    }
+    try (var reopened = new SqliteStorage(tempDir.resolve("tool.db"))) {
+      assertFalse(reopened.mcpSettings().load().toCompletableFuture().join().searchToolEnabled());
+    }
+  }
 }

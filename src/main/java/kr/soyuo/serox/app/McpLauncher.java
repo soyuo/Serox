@@ -6,6 +6,7 @@ import java.time.Clock;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import kr.soyuo.serox.ai.api.AiProvider;
 import kr.soyuo.serox.ai.application.SearchSummaryService;
@@ -17,6 +18,7 @@ import kr.soyuo.serox.mcp.security.AccessPolicy;
 import kr.soyuo.serox.mcp.security.EnvironmentApprovalGate;
 import kr.soyuo.serox.mcp.server.McpEndpoint;
 import kr.soyuo.serox.mcp.server.StdioMcpServer;
+import kr.soyuo.serox.mcp.tool.McpCallLog;
 import kr.soyuo.serox.mcp.tool.SearchAndSummarizeTool;
 import kr.soyuo.serox.mcp.tool.ToolRegistry;
 import kr.soyuo.serox.search.api.SearchProvider;
@@ -45,13 +47,19 @@ public final class McpLauncher {
 
   /** Like {@link #endpointFactory}, but the services are only built when the first agent connects. */
   public static Supplier<McpEndpoint> lazyEndpointFactory(Map<String, String> environment) {
+    return lazyEndpointFactory(environment, new McpCallLog(), name -> true);
+  }
+
+  /** Like {@link #lazyEndpointFactory(Map)}, with a call record and a switch for each tool. */
+  public static Supplier<McpEndpoint> lazyEndpointFactory(
+      Map<String, String> environment, McpCallLog log, Predicate<String> enabled) {
     return new Supplier<>() {
       private Supplier<McpEndpoint> built;
 
       @Override
       public synchronized McpEndpoint get() {
         if (built == null) {
-          built = endpointFactory(environment);
+          built = endpointFactory(environment, log, enabled);
         }
         return built.get();
       }
@@ -63,6 +71,12 @@ public final class McpLauncher {
    * limit and services, so every client session of an HTTP server shares them.
    */
   public static Supplier<McpEndpoint> endpointFactory(Map<String, String> environment) {
+    return endpointFactory(environment, new McpCallLog(), name -> true);
+  }
+
+  /** Like {@link #endpointFactory(Map)}, with a call record and a switch for each tool. */
+  public static Supplier<McpEndpoint> endpointFactory(
+      Map<String, String> environment, McpCallLog log, Predicate<String> enabled) {
     var configuration = AppConfigurationLoader.fromEnvironment(environment);
     Optional<SearchProvider> search =
         configuration
@@ -79,7 +93,11 @@ public final class McpLauncher {
             MAX_CONCURRENT_CALLS,
             MAX_CALLS_PER_MINUTE,
             Clock.systemUTC());
-    var registry = new ToolRegistry(policy).register(new SearchAndSummarizeTool(summary));
+    var registry =
+        new ToolRegistry(policy)
+            .register(new SearchAndSummarizeTool(summary))
+            .setCallLog(log)
+            .setEnabled(enabled);
     return () -> {
       var endpoint = new McpEndpoint(VERSION);
       registry.installInto(endpoint);

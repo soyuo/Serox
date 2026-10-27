@@ -19,9 +19,23 @@ import kr.soyuo.serox.mcp.server.McpProtocolException;
 public final class ToolRegistry {
   private final Map<String, McpTool> tools = new LinkedHashMap<>();
   private final AccessPolicy policy;
+  private volatile java.util.function.Predicate<String> enabled = name -> true;
+  private volatile McpCallLog callLog;
 
   public ToolRegistry(AccessPolicy policy) {
     this.policy = Objects.requireNonNull(policy, "policy");
+  }
+
+  /** Tools the user switched off are neither listed nor callable. */
+  public ToolRegistry setEnabled(java.util.function.Predicate<String> check) {
+    enabled = Objects.requireNonNull(check, "check");
+    return this;
+  }
+
+  /** Keeps a short in-memory record of each finished call. */
+  public ToolRegistry setCallLog(McpCallLog log) {
+    callLog = Objects.requireNonNull(log, "log");
+    return this;
   }
 
   /** Registers a tool; names must be unique. */
@@ -53,7 +67,7 @@ public final class ToolRegistry {
   private JsonElement list() {
     JsonArray array = new JsonArray();
     for (McpTool tool : tools.values()) {
-      if (!policy.approvedTools().contains(tool.name())) {
+      if (!policy.approvedTools().contains(tool.name()) || !enabled.test(tool.name())) {
         continue;
       }
       JsonObject entry = new JsonObject();
@@ -73,7 +87,7 @@ public final class ToolRegistry {
             ? params.get("name").getAsString()
             : "";
     McpTool tool = tools.get(name);
-    if (tool == null) {
+    if (tool == null || !enabled.test(name)) {
       throw McpProtocolException.invalidParams("Unknown tool.");
     }
     JsonObject arguments =
@@ -85,9 +99,26 @@ public final class ToolRegistry {
       throw McpProtocolException.invalidParams(String.join(" ", problems));
     }
     AccessPolicy.Permit permit = policy.begin(name);
+    String summary =
+        arguments.has("query") && arguments.get("query").isJsonPrimitive()
+            ? arguments.get("query").getAsString()
+            : "";
+    String client = policy.clientName();
     try {
       return tool.call(arguments, call)
-          .whenComplete((result, failure) -> permit.close())
+          .whenComplete(
+              (result, failure) -> {
+                permit.close();
+                McpCallLog log = callLog;
+                if (log != null) {
+                  log.record(
+                      name,
+                      summary,
+                      client,
+                      java.time.Instant.now(),
+                      failure == null && !result.isError());
+                }
+              })
           .thenApply(ToolResult::toJson);
     } catch (RuntimeException exception) {
       permit.close();
