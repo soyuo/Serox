@@ -1,0 +1,22 @@
+viewport 320.0x200.0 document 320.0x378.0
+fill 0.0,0.0 320.0x85.0 #0b57d0
+text 12.0,42.0 Release notes link=-
+text 12.0,69.0 v1 link=-
+text 0.0,117.0 Intro paragraph with link=-
+text 168.1,117.0  bold link=-
+text 208.1,117.0 , link=-
+text 216.9,117.0  italic link=-
+text 274.6,117.0  and link=-
+text 305.8,117.0  a link=https://example.test/
+text 0.0,138.0 link link=https://example.test/
+text 35.2,138.0 . link=-
+text 16.0,183.0 first item link=-
+text 16.0,208.0 second item link=-
+text 16.0,233.0 third item link=-
+fill 0.0,252.0 320.0x72.0 #fafafa
+stroke 0.0,252.0 320.0x72.0 #000000 1.0
+text 5.0,273.0 Quoted text that is long enough to link=-
+text 5.0,294.0 wrap onto more than one line of the link=-
+text 5.0,315.0 viewport. link=-
+text 0.0,358.0 footer note link=-
+unsupported 

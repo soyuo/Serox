@@ -160,4 +160,51 @@ class RenderingFixtureTest {
   private String hex(kr.soyuo.serox.browser.css.CssColor color) {
     return String.format(Locale.ROOT, "#%02x%02x%02x", color.red(), color.green(), color.blue());
   }
+
+  private String render(String html, int width, int height) {
+    Document document = new HtmlDocumentParser().parse(FIXTURE_URI, html);
+    var styles = new CssStyleEngine().compute(document);
+    var layout =
+        new LayoutEngine().layout(document, styles, new LayoutConstraints(width, height, 0, 0));
+    return snapshot(new DisplayListBuilder().build(layout), styles.unsupportedDeclarations());
+  }
+
+  @Test
+  void supportedContentMatchesItsGoldenSnapshots() throws IOException {
+    for (String name : java.util.List.of("article", "forms")) {
+      String actual = render(readFixture(name + ".html"), 320, 200);
+      java.nio.file.Path golden =
+          java.nio.file.Path.of("src/test/resources/fixtures/renderer/" + name + ".expected");
+      if (Boolean.getBoolean("serox.updateFixtures")) {
+        java.nio.file.Files.writeString(golden, actual, StandardCharsets.UTF_8);
+      }
+      assertEquals(
+          java.nio.file.Files.readString(golden, StandardCharsets.UTF_8).replace("\r\n", "\n"),
+          actual,
+          name);
+      assertEquals(actual, render(readFixture(name + ".html"), 320, 200), name + " is repeatable");
+    }
+  }
+
+  @Test
+  void scriptsNeverRenderAndNarrowViewportsReflow() throws IOException {
+    String article = readFixture("article.html");
+
+    assertTrue(!render(article, 320, 200).contains("must not render"));
+    assertTrue(!render(article, 120, 200).equals(render(article, 320, 200)));
+  }
+
+  @Test
+  void malformedAndHostileMarkupStillProducesADisplayList() {
+    String deep = "<div>".repeat(2000) + "text" + "</div>".repeat(2000);
+    for (String html :
+        java.util.List.of(
+            "",
+            "<p>unclosed <b>tags <i>everywhere",
+            "<<<>>> &bogus; </p></div></html><body>",
+            "<style>p { color: ; { } </style><p>x</p>",
+            deep)) {
+      assertTrue(!render(html, 200, 100).isEmpty(), html);
+    }
+  }
 }
