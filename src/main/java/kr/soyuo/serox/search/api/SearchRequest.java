@@ -3,10 +3,17 @@ package kr.soyuo.serox.search.api;
 import java.util.Objects;
 
 /** Search query and bounded result limit sent to a provider. */
-public record SearchRequest(String query, int resultLimit) {
+public record SearchRequest(String query, int resultLimit, String safeSearch) {
+  public SearchRequest(String query, int resultLimit) {
+    this(query, resultLimit, "moderate");
+  }
+
   /** Validates the query and enforces the provider result limit. */
   public SearchRequest {
     Objects.requireNonNull(query, "query");
+    if (!java.util.Set.of("off", "moderate", "strict").contains(safeSearch)) {
+      throw new IllegalArgumentException("Invalid safe-search mode");
+    }
     if (query.isBlank()) {
       throw new IllegalArgumentException("query must not be blank");
     }

@@ -87,11 +87,14 @@ final class GeneralPage extends ScrollPane {
     addressField.setAccessibleText("시작 페이지 주소");
     addressField.setDisable(!actions.available());
     addressField.setOnAction(event -> saveAddress());
-    addressField.focusedProperty().addListener((o, was, focused) -> {
-      if (!focused) {
-        saveAddress();
-      }
-    });
+    addressField
+        .focusedProperty()
+        .addListener(
+            (o, was, focused) -> {
+              if (!focused) {
+                saveAddress();
+              }
+            });
     Label name = new Label("시작 페이지 주소");
     name.getStyleClass().add("privacy-query");
     Region spacer = new Region();
@@ -135,13 +138,17 @@ final class GeneralPage extends ScrollPane {
             (observable, before, chosen) -> {
               if (chosen != null && chosen != actions.settings().language()) {
                 message.setText("언어를 바꿨어요. AI 요약은 다음 검색부터 이 언어로 나와요.");
-                actions.save(actions.settings().withLanguage(chosen));
+                actions.save(
+                    actions
+                        .settings()
+                        .withLanguage(chosen)
+                        .withSummaryPreferences(actions.settings().summary().withLanguage("app")));
               }
             });
     VBox name = new VBox(2);
     Label title = new Label("언어");
     title.getStyleClass().add("privacy-query");
-    Label detail = new Label("AI 요약에 쓰는 기본 언어예요.");
+    Label detail = new Label("요약 설정에서 ‘일반 설정 언어’를 고르면 사용하는 언어예요.");
     detail.getStyleClass().add("search-state-message");
     name.getChildren().addAll(title, detail);
     return row(name, languages);

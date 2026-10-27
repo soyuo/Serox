@@ -95,6 +95,7 @@ public final class BrowserShellView extends BorderPane {
   private AiSearchService aiSearchService;
   private kr.soyuo.serox.ai.application.AiConnectionService aiConnections;
   private java.util.function.Consumer<java.net.URI> openBrowser;
+  private SearchActions searchActions = SearchActions.none();
   private PrivacyActions privacyActions = PrivacyActions.none();
   private McpActions mcpActions = McpActions.none();
   private SettingsService settingsService;
@@ -246,6 +247,10 @@ public final class BrowserShellView extends BorderPane {
     this.aiSearchService = aiSearchService;
   }
 
+  public void setSearchActions(SearchActions actions) {
+    searchActions = java.util.Objects.requireNonNull(actions, "actions");
+  }
+
   /**
    * Uses the operating system browser for provider authorization, outside Serox's page renderer.
    */
@@ -329,14 +334,16 @@ public final class BrowserShellView extends BorderPane {
                     settings
                         .withPrivacyOf(settingsService.current())
                         .withGeneralOf(settingsService.current())
-                        .withShortcutsOf(settingsService.current())),
+                        .withShortcutsOf(settingsService.current())
+                        .withContentPreferencesOf(settingsService.current())),
             this::cancelSettings,
             new SettingsView.ServiceSummary(
                 statusText(searchStatus), statusText(aiStatus), statusText(mcpStatus)),
             privacyActions,
             mcpActions,
             aiConnections,
-            openBrowser));
+            openBrowser,
+            searchActions));
   }
 
   /** The status label's text without its "검색:" or "AI:" prefix. */
@@ -683,6 +690,9 @@ public final class BrowserShellView extends BorderPane {
           if (event.tabId().equals(activeTabId)
               && resultsView != null
               && getCenter() == resultsView) {
+            if (settingsService != null) {
+              resultsView.setSummaryPreferences(settingsService.current().summary());
+            }
             resultsView.showAi(event);
             aiSearchActive =
                 event.phase() == AiAnswerChanged.Phase.PREPARING

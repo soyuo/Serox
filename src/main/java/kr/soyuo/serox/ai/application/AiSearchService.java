@@ -45,6 +45,9 @@ public final class AiSearchService implements AutoCloseable {
   private final Map<TabId, Active> active = new HashMap<>();
   private final List<EventSubscription> subscriptions;
   private volatile Supplier<String> answerLanguage = () -> "";
+  private volatile Supplier<kr.soyuo.serox.search.fetch.FetchLimits> fetchLimits =
+      kr.soyuo.serox.search.fetch.FetchLimits::defaults;
+  private volatile Supplier<String> instructions = () -> "";
   private boolean closed;
 
   /** Subscribes to search events; the provider is absent when no API key is configured. */
@@ -72,6 +75,14 @@ public final class AiSearchService implements AutoCloseable {
    */
   public void setAnswerLanguage(Supplier<String> language) {
     this.answerLanguage = Objects.requireNonNull(language, "language");
+  }
+
+  public void setFetchLimits(Supplier<kr.soyuo.serox.search.fetch.FetchLimits> limits) {
+    fetchLimits = Objects.requireNonNull(limits, "limits");
+  }
+
+  public void setInstructions(Supplier<String> value) {
+    instructions = Objects.requireNonNull(value, "value");
   }
 
   /** Applies a connection choice to later searches and stops answers using the old credentials. */
@@ -105,30 +116,30 @@ public final class AiSearchService implements AutoCloseable {
       active.put(event.tabId(), run);
     }
     publish(event, Phase.PREPARING, "", Optional.empty(), List.of(), "");
-    run.fetch =
-        pageFetcher
-            .fetch(event.response().results())
-            .toCompletableFuture()
-            .whenComplete(
-                (pages, failure) -> {
-                  if (failure != null || !isCurrent(event.tabId(), run)) {
-                    return;
-                  }
-                  try {
-                    AiRequest request =
-                        contextBuilder
-                            .build(event.query(), pages, clock.instant())
-                            .withAnswerLanguage(answerLanguage.get());
-                    if (request.evidence().isEmpty()) {
-                      fail(event, run, NO_EVIDENCE_MESSAGE);
-                    } else {
-                      stream(event, run, request);
-                    }
-                  } catch (RuntimeException exception) {
-                    LOGGER.log(Level.WARNING, "AI answer could not be prepared.");
-                    fail(event, run, "AI 요약을 준비하지 못했어요.");
-                  }
-                });
+    var fetching =
+        pageFetcher.fetch(event.response().results(), fetchLimits.get()).toCompletableFuture();
+    run.fetch = fetching;
+    fetching.whenComplete(
+        (pages, failure) -> {
+          if (failure != null || !isCurrent(event.tabId(), run)) {
+            return;
+          }
+          try {
+            AiRequest request =
+                contextBuilder
+                    .build(event.query(), pages, clock.instant())
+                    .withAnswerLanguage(answerLanguage.get())
+                    .withInstructions(instructions.get());
+            if (request.evidence().isEmpty()) {
+              fail(event, run, NO_EVIDENCE_MESSAGE);
+            } else {
+              stream(event, run, request);
+            }
+          } catch (RuntimeException exception) {
+            LOGGER.log(Level.WARNING, "AI answer could not be prepared.");
+            fail(event, run, "AI 요약을 준비하지 못했어요.");
+          }
+        });
   }
 
   private void stream(SearchCompleted event, Active run, AiRequest request) {

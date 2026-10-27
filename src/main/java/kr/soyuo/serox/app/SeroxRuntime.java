@@ -50,8 +50,7 @@ public record SeroxRuntime(
   public void announceServiceStatus() {
     java.time.Instant now = java.time.Instant.now();
     eventBus.publish(
-        status(
-            now, ServiceId.SEARCH, configuration.hasBraveSearchApiKey(), "켜짐 (Brave)", "API 키 필요"));
+        status(now, ServiceId.SEARCH, searchService.configured(), "켜짐 (Brave)", "API 키 필요"));
     aiConnections.announce();
     eventBus.publish(
         new ConnectionStatusChanged(

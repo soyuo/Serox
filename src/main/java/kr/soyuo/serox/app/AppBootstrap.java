@@ -67,13 +67,14 @@ public final class AppBootstrap {
     BrowserController browserController =
         new DefaultBrowserController(engine, eventBus, engineExecutor);
     var searchProvider =
-        configuration
-            .braveSearchApiKey()
+        storedSearchKey(dataDirectory)
+            .or(() -> configuration.braveSearchApiKey())
             .map(key -> (SearchProvider) new BraveSearchProvider(key.revealForRequest()));
     var searchService = new SearchService(searchProvider, eventBus);
     Optional<SqliteStorage> storage = openStorage(dataDirectory);
     var settingsService = new SettingsService(storage.map(sqlite -> sqlite.settings()), eventBus);
     settingsService.load();
+    searchService.setSafeSearch(() -> settingsService.current().search().safeSearch());
     Optional<UsageRecorder> usageRecorder =
         storage.map(
             sqlite ->
@@ -84,6 +85,24 @@ public final class AppBootstrap {
                     Clock.systemUTC(),
                     settingsService::current));
     AiSearchService aiSearchService = createAiSearchService(configuration, eventBus);
+    aiSearchService.setAnswerLanguage(
+        () ->
+            switch (settingsService.current().summary().language()) {
+              case "Korean" -> "Korean";
+              case "app" -> settingsService.current().language().englishName();
+              default -> "";
+            });
+    aiSearchService.setInstructions(() -> settingsService.current().summary().instructions());
+    aiSearchService.setFetchLimits(
+        () -> {
+          var preferences = settingsService.current();
+          Duration timeout = Duration.ofSeconds(preferences.search().timeoutSeconds());
+          return new FetchLimits(
+              preferences.search().evidencePages(),
+              timeout,
+              timeout,
+              preferences.summary().sourceCharacters());
+        });
     var aiConnections =
         new AiConnectionService(
             configuration, dataDirectory.resolve("credentials"), aiSearchService, eventBus);
@@ -127,7 +146,7 @@ public final class AppBootstrap {
             .build();
     var transport =
         new GuardedTransport(
-            new HttpRequestDispatcher(client, Duration.ofSeconds(8), 1024 * 1024),
+            new HttpRequestDispatcher(client, Duration.ofMinutes(5), 1024 * 1024),
             new PublicAddressPolicy());
     return new PageFetcher(
         transport, new HttpResponseHandler(), new HtmlDocumentParser(), FetchLimits.defaults());
@@ -144,6 +163,23 @@ public final class AppBootstrap {
       return Path.of(localAppData, "Serox");
     }
     return Path.of(System.getProperty("user.home"), ".serox");
+  }
+
+  private static Optional<kr.soyuo.serox.core.model.SecretValue> storedSearchKey(Path directory) {
+    try {
+      var store =
+          new kr.soyuo.serox.ai.auth.ProtectedLocalStore(
+              directory.resolve("credentials/search.dpapi"));
+      var data = com.google.gson.JsonParser.parseString(store.read()).getAsJsonObject();
+      return data.has("key")
+          ? Optional.of(new kr.soyuo.serox.core.model.SecretValue(data.get("key").getAsString()))
+          : Optional.empty();
+    } catch (Exception unavailable) {
+      LOGGER.log(
+          Level.WARNING,
+          "Stored search credentials are unavailable; using environment configuration.");
+      return Optional.empty();
+    }
   }
 
   private static Optional<SqliteStorage> openStorage(Path dataDirectory) {

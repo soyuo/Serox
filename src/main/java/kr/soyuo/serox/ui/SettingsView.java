@@ -17,7 +17,7 @@ import kr.soyuo.serox.core.model.BrowserSettings;
 
 /**
  * The settings screen from the design: a section sidebar, the selected page and, on the design
- * page, a live preview. Only appearance is editable; the other pages show the real state.
+ * page, a live preview. Each supported control updates the service or preference that owns it.
  */
 final class SettingsView extends HBox {
   /** What the other pages report: the current status line of each connected service. */
@@ -53,6 +53,7 @@ final class SettingsView extends HBox {
   private final McpActions mcp;
   private final kr.soyuo.serox.ai.application.AiConnectionService aiConnections;
   private final java.util.function.Consumer<java.net.URI> openBrowser;
+  private final SearchActions searchActions;
   private final StackPane page = new StackPane();
 
   SettingsView(
@@ -94,11 +95,36 @@ final class SettingsView extends HBox {
       McpActions mcp,
       kr.soyuo.serox.ai.application.AiConnectionService aiConnections,
       java.util.function.Consumer<java.net.URI> openBrowser) {
+    this(
+        saved,
+        onPreview,
+        onApply,
+        onCancel,
+        summary,
+        privacy,
+        mcp,
+        aiConnections,
+        openBrowser,
+        SearchActions.none());
+  }
+
+  SettingsView(
+      BrowserSettings saved,
+      Consumer<BrowserSettings> onPreview,
+      Consumer<BrowserSettings> onApply,
+      Runnable onCancel,
+      ServiceSummary summary,
+      PrivacyActions privacy,
+      McpActions mcp,
+      kr.soyuo.serox.ai.application.AiConnectionService aiConnections,
+      java.util.function.Consumer<java.net.URI> openBrowser,
+      SearchActions searchActions) {
     this.summary = summary;
     this.privacy = privacy;
     this.mcp = mcp;
     this.aiConnections = aiConnections;
     this.openBrowser = openBrowser;
+    this.searchActions = searchActions;
     this.preview = new PreviewCard(saved);
     this.appearance =
         new AppearancePage(
@@ -155,6 +181,10 @@ final class SettingsView extends HBox {
       page.getChildren().setAll(new PrivacyPage(privacy));
     } else if (section == Section.AI && aiConnections != null) {
       page.getChildren().setAll(new AiProviderPage(aiConnections, openBrowser));
+    } else if (section == Section.SEARCH) {
+      page.getChildren().setAll(new SearchPage(privacy, searchActions));
+    } else if (section == Section.SUMMARY) {
+      page.getChildren().setAll(new SummaryPage(privacy));
     } else {
       page.getChildren().setAll(infoPage(section));
     }

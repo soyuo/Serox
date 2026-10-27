@@ -70,4 +70,42 @@ final class SettingsControls {
             });
     return row;
   }
+
+  static Node choices(String[] values, String selected, java.util.function.Consumer<String> save) {
+    javafx.scene.layout.FlowPane choices = new javafx.scene.layout.FlowPane(8, 8);
+    javafx.scene.control.ToggleGroup group = new javafx.scene.control.ToggleGroup();
+    for (String value : values) {
+      javafx.scene.control.ToggleButton button = new javafx.scene.control.ToggleButton(value);
+      button.getStyleClass().add("segment-option");
+      button.setToggleGroup(group);
+      button.setSelected(value.equals(selected));
+      button.setOnAction(
+          event -> {
+            button.setSelected(true);
+            save.accept(value);
+          });
+      choices.getChildren().add(button);
+    }
+    return choices;
+  }
+
+  static javafx.scene.control.ToggleButton switchControl(
+      String title, boolean selected, java.util.function.Consumer<Boolean> save) {
+    javafx.scene.control.ToggleButton button = new javafx.scene.control.ToggleButton();
+    button.getStyleClass().add("settings-switch");
+    button.setAccessibleText(title);
+    Region thumb = new Region();
+    thumb.getStyleClass().add("settings-switch-thumb");
+    javafx.scene.layout.StackPane track = new javafx.scene.layout.StackPane(thumb);
+    track.setPrefSize(46, 26);
+    button.setSelected(selected);
+    track.setAlignment(selected ? Pos.CENTER_RIGHT : Pos.CENTER_LEFT);
+    button.setGraphic(track);
+    button.setOnAction(
+        event -> {
+          track.setAlignment(button.isSelected() ? Pos.CENTER_RIGHT : Pos.CENTER_LEFT);
+          save.accept(button.isSelected());
+        });
+    return button;
+  }
 }

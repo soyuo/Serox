@@ -31,6 +31,11 @@ final class SearchResultsView extends BorderPane {
   private AiPanelPosition panelSide = AiPanelPosition.RIGHT;
   private BiConsumer<Boolean, AiPanelPosition> onPanelChanged = (open, side) -> {};
   private final AiPanelView aiPanel = new AiPanelView(this::showEvidence);
+
+  void setSummaryPreferences(kr.soyuo.serox.core.model.SummaryPreferences preferences) {
+    aiPanel.setPresentation(preferences.keyPoints(), preferences.inlineCitations());
+  }
+
   private SearchResult selected;
   private final ScrollPane listScroll;
   private boolean summaryFocus;
@@ -109,8 +114,7 @@ final class SearchResultsView extends BorderPane {
         .getChildren()
         .setAll(
             view.heading("오프라인"),
-            view.state(
-                "인터넷에 연결되어 있지 않아요", "연결을 확인한 뒤 다시 시도해 주세요.", view.action("다시 시도", onRetry)));
+            view.state("인터넷에 연결되어 있지 않아요", "연결을 확인한 뒤 다시 시도해 주세요.", view.action("다시 시도", onRetry)));
     view.preview.setCenter(view.sourcePlaceholder("인터넷에 연결되지 않았어요", "연결을 확인한 뒤 다시 시도해 주세요."));
     return view;
   }
@@ -213,7 +217,9 @@ final class SearchResultsView extends BorderPane {
     return button;
   }
 
-  /** Sets the remembered panel state and the callbacks for cancelling and retrying the AI answer. */
+  /**
+   * Sets the remembered panel state and the callbacks for cancelling and retrying the AI answer.
+   */
   void configureAiPanel(
       boolean open,
       AiPanelPosition side,
@@ -284,8 +290,7 @@ final class SearchResultsView extends BorderPane {
           case CANCELLED -> "요약을 취소했어요";
           default -> "AI를 연결하면 요약해 드려요";
         };
-    String detail =
-        event.message().isBlank() ? "검색 결과 목록은 그대로 볼 수 있어요." : event.message();
+    String detail = event.message().isBlank() ? "검색 결과 목록은 그대로 볼 수 있어요." : event.message();
     Label heading = new Label(title);
     heading.getStyleClass().add("ai-banner-title");
     VBox card = new VBox(UiTokens.SPACE_SM, heading, message(detail));
@@ -408,15 +413,15 @@ final class SearchResultsView extends BorderPane {
     address.setMaxWidth(Double.MAX_VALUE);
     address.setTextOverrun(javafx.scene.control.OverrunStyle.ELLIPSIS);
     javafx.scene.layout.HBox.setHgrow(address, javafx.scene.layout.Priority.ALWAYS);
-    Button open =
-        new Button("새 탭에서 열기");
+    Button open = new Button("새 탭에서 열기");
     open.getStyleClass().add("secondary-button");
     open.setAccessibleText("새 탭에서 원문 열기");
     open.setOnAction(
         event ->
             onOpenResult.accept(
                 new SearchResult(document.sourceId(), document.uri(), document.title(), "", 1)));
-    javafx.scene.layout.HBox header = new javafx.scene.layout.HBox(UiTokens.SPACE_SM, number, address, open);
+    javafx.scene.layout.HBox header =
+        new javafx.scene.layout.HBox(UiTokens.SPACE_SM, number, address, open);
     header.setAlignment(Pos.CENTER_LEFT);
     header.getStyleClass().add("source-pane-header");
 
