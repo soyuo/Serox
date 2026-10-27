@@ -13,11 +13,11 @@ Verified for STEP 14.5.
 
 | Step | Behavior | Checked |
 | --- | --- | --- |
-| Install | MSI places `Serox` with its runtime, adds a Start menu entry and a desktop shortcut | Package contents only (see [runtime-bundle.md](runtime-bundle.md)) |
+| Install | MSI places `Serox` with its runtime, adds a Start menu entry and a desktop shortcut | Per-user variant installed and run; the per-machine MSI needs an administrator and was not installed (see [runtime-bundle.md](runtime-bundle.md)) |
 | Start | `Serox.exe` opens the window and creates the database on first start | Yes, from the app image |
 | Exit | Closing the window stops the MCP server (if attached), drains pending database writes and closes the database | Yes (automated: `EndToEndScenarioTest`) |
 | Headless MCP | `Serox.exe --mcp-headless` exits with code 0 when stdin closes | Yes |
-| Uninstall | Removes the program files; the data directory below is kept | Not run |
+| Uninstall | Removes the program files and shortcuts; the data directory below is kept | Yes, per-user variant |
 
 ## Where data lives
 

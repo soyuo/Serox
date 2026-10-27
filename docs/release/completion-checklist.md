@@ -45,7 +45,7 @@ release; see the roadmap in the README.
   because its authorization was never completed. The UI follows the existing design tokens and the
   screen-flow notes, but a side-by-side review against the design has not happened.
 - **Live providers:** neither the Brave Search nor the Claude API has been called with a real key.
-- **Installer:** install, upgrade and uninstall were not exercised on a clean Windows machine, and
+- **Installer:** a per-user variant was installed, run and uninstalled; the shipped per-machine MSI needs an administrator and was not installed, upgrades were not tried, and
   the MSI is unsigned.
 - **Unsupported web features:** JavaScript, flexbox, grid and image decoding (see
   `docs/rendering-support.md`).
