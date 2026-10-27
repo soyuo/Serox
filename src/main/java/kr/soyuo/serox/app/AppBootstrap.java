@@ -30,6 +30,7 @@ import kr.soyuo.serox.core.application.DefaultBrowserController;
 import kr.soyuo.serox.core.application.LibraryService;
 import kr.soyuo.serox.core.application.SessionKeeper;
 import kr.soyuo.serox.core.application.SettingsService;
+import kr.soyuo.serox.core.application.SitePermissionService;
 import kr.soyuo.serox.core.application.UsageRecorder;
 import kr.soyuo.serox.core.event.InProcessBrowserEventBus;
 import kr.soyuo.serox.search.api.SearchProvider;
@@ -65,12 +66,18 @@ public final class AppBootstrap {
       kr.soyuo.serox.core.application.AppConfiguration configuration, Path dataDirectory) {
     var eventBus = new InProcessBrowserEventBus();
     var engineExecutor = Executors.newVirtualThreadPerTaskExecutor();
+    Optional<SqliteStorage> storage = openStorage(dataDirectory);
+    var sitePermissions =
+        new SitePermissionService(storage.map(sqlite -> sqlite.sitePermissions()));
+    sitePermissions.load();
     var transport =
         HttpRequestDispatcher.createDefault(
             Duration.ofSeconds(10), Duration.ofSeconds(30), 8 * 1024 * 1024);
     var scripts =
         new RhinoScriptRunner(
-            new TransportScriptFetcher(transport), address -> true, ScriptLimits.defaults());
+            new TransportScriptFetcher(transport),
+            sitePermissions::allowsScripts,
+            ScriptLimits.defaults());
     var engine =
         new HttpBrowserEngine(
             transport, new HttpResponseHandler(), new HtmlDocumentParser(), scripts);
@@ -82,7 +89,6 @@ public final class AppBootstrap {
             .map(key -> (SearchProvider) new BraveSearchProvider(key.revealForRequest()));
     var searchService = new SearchService(searchProvider, eventBus);
     searchService.setFallback(new DuckDuckGoSearchProvider());
-    Optional<SqliteStorage> storage = openStorage(dataDirectory);
     var settingsService = new SettingsService(storage.map(sqlite -> sqlite.settings()), eventBus);
     settingsService.load();
     searchService.setSafeSearch(() -> settingsService.current().search().safeSearch());
@@ -137,7 +143,8 @@ public final class AppBootstrap {
         aiSearchService,
         settingsService,
         libraryService,
-        aiConnections);
+        aiConnections,
+        sitePermissions);
   }
 
   private static AiSearchService createAiSearchService(

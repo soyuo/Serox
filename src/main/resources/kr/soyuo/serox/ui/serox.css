@@ -1184,3 +1184,80 @@
 .settings-info .password-field.field-error {
     -fx-border-color: serox-error;
 }
+
+/* Site info popup: connection facts and per-site permissions, as in the design. */
+.site-popup {
+    -fx-background-color: serox-surface;
+    -fx-background-radius: 12px;
+    -fx-border-color: serox-border;
+    -fx-border-radius: 12px;
+    -fx-padding: 4px 0;
+}
+
+.site-popup-header {
+    -fx-padding: 12px 16px;
+    -fx-border-color: transparent transparent serox-border transparent;
+}
+
+.site-popup-title {
+    -fx-text-fill: serox-text-primary;
+    -fx-font-weight: bold;
+    -fx-font-size: 1.077em;
+}
+
+.site-popup-title-ok {
+    -fx-text-fill: serox-success;
+    -fx-font-weight: bold;
+    -fx-font-size: 1.077em;
+}
+
+.site-popup-ok {
+    -fx-text-fill: serox-success;
+    -fx-font-weight: bold;
+}
+
+.site-popup-row {
+    -fx-padding: 10px 16px;
+}
+
+.site-popup-row > .label {
+    -fx-text-fill: serox-text-primary;
+}
+
+.site-popup-row > .search-state-message {
+    -fx-text-fill: serox-text-secondary;
+}
+
+.site-popup-link {
+    -fx-cursor: hand;
+}
+
+.site-popup-link:hover {
+    -fx-background-color: serox-hover-surface;
+}
+
+.site-popup-back {
+    -fx-background-color: transparent;
+    -fx-text-fill: serox-text-primary;
+    -fx-font-size: 1.4em;
+    -fx-padding: 0 8px;
+    -fx-cursor: hand;
+}
+
+.site-popup-choice {
+    -fx-padding: 10px 16px 10px 16px;
+    -fx-background-radius: 8px;
+}
+
+.site-popup-choice-selected {
+    -fx-background-color: serox-ai-surface;
+}
+
+.site-popup-radio {
+    -fx-text-fill: serox-text-primary;
+    -fx-font-weight: bold;
+}
+
+.site-popup-note {
+    -fx-padding: 8px 16px;
+}

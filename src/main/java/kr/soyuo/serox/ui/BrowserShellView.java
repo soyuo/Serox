@@ -104,6 +104,7 @@ public final class BrowserShellView extends BorderPane {
   private PrivacyActions privacyActions = PrivacyActions.none();
   private McpActions mcpActions = McpActions.none();
   private SettingsService settingsService;
+  private kr.soyuo.serox.core.application.SitePermissionService sitePermissions;
   private LibraryService libraryService;
   private final Button bookmarkButton = new Button("★");
   private EventSubscription settingsSubscription;
@@ -896,19 +897,28 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private void showSiteInfo() {
-    Label host = new Label(siteInfo.host().isBlank() ? "Serox" : siteInfo.host());
-    host.getStyleClass().add("search-result-title");
-    Label summary = new Label(siteInfo.summary());
-    summary.setWrapText(true);
-    summary.setMaxWidth(280);
-    summary.getStyleClass().add("search-result-snippet");
-    VBox content = new VBox(UiTokens.SPACE_SM, host, summary);
-    content.getStyleClass().add("site-info-popup");
-    content.setStyle(
-        "serox-text-primary: #151a23; serox-text-secondary: #4a5468; serox-success: #0f7b5f;");
-    CustomMenuItem item = new CustomMenuItem(content, false);
-    ContextMenu popup = new ContextMenu(item);
-    popup.show(siteInfoButton, javafx.geometry.Side.BOTTOM, 0, 4);
+    if (sitePermissions == null) {
+      return;
+    }
+    new SiteInfoPopup(
+            siteInfo,
+            sitePermissions,
+            this::reloadActivePage,
+            getStyleClass().contains("theme-dark"))
+        .show(siteInfoButton);
+  }
+
+  /** Loads the shown page again, for example after a site permission changed. */
+  private void reloadActivePage() {
+    PageLoaded page = loadedPages.get(activeTabId);
+    if (page != null) {
+      browserController.navigate(activeTabId, page.page().uri().toString());
+    }
+  }
+
+  /** Connects the per-site permissions the site info popup shows and changes. */
+  public void setSitePermissions(kr.soyuo.serox.core.application.SitePermissionService service) {
+    sitePermissions = java.util.Objects.requireNonNull(service, "service");
   }
 
   private void navigateToAddress() {

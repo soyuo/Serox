@@ -9,6 +9,7 @@ import kr.soyuo.serox.core.application.BrowserController;
 import kr.soyuo.serox.core.application.LibraryService;
 import kr.soyuo.serox.core.application.SessionKeeper;
 import kr.soyuo.serox.core.application.SettingsService;
+import kr.soyuo.serox.core.application.SitePermissionService;
 import kr.soyuo.serox.core.application.UsageRecorder;
 import kr.soyuo.serox.core.event.BrowserEventBus;
 import kr.soyuo.serox.core.event.ConnectionStatusChanged;
@@ -30,7 +31,8 @@ public record SeroxRuntime(
     AiSearchService aiSearchService,
     SettingsService settingsService,
     LibraryService libraryService,
-    AiConnectionService aiConnections)
+    AiConnectionService aiConnections,
+    SitePermissionService sitePermissions)
     implements AutoCloseable {
   public SeroxRuntime {
     Objects.requireNonNull(configuration, "configuration");
@@ -44,6 +46,7 @@ public record SeroxRuntime(
     Objects.requireNonNull(aiSearchService, "aiSearchService");
     Objects.requireNonNull(settingsService, "settingsService");
     Objects.requireNonNull(libraryService, "libraryService");
+    Objects.requireNonNull(sitePermissions, "sitePermissions");
   }
 
   /** Reports the real readiness of each service so the UI badges match the configuration. */

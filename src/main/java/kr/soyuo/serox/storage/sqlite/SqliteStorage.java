@@ -8,6 +8,7 @@ import kr.soyuo.serox.core.port.storage.McpSettingsRepository;
 import kr.soyuo.serox.core.port.storage.RecentSearchRepository;
 import kr.soyuo.serox.core.port.storage.SearchCacheRepository;
 import kr.soyuo.serox.core.port.storage.SessionRepository;
+import kr.soyuo.serox.core.port.storage.SitePermissionRepository;
 import kr.soyuo.serox.core.port.storage.SettingsRepository;
 
 /** Composition root for SQLite storage adapters. */
@@ -18,6 +19,7 @@ public final class SqliteStorage implements AutoCloseable {
   private final SessionRepository sessionRepository;
   private final SettingsRepository settingsRepository;
   private final McpSettingsRepository mcpSettingsRepository;
+  private final SitePermissionRepository sitePermissionRepository;
   private final SearchCacheRepository searchCacheRepository;
   private final RecentSearchRepository recentSearchRepository;
 
@@ -28,6 +30,7 @@ public final class SqliteStorage implements AutoCloseable {
     sessionRepository = new SqliteSessionRepository(database);
     settingsRepository = new SqliteSettingsRepository(database);
     mcpSettingsRepository = new SqliteMcpSettingsRepository(database);
+    sitePermissionRepository = new SqliteSitePermissionRepository(database);
     searchCacheRepository = new SqliteSearchCacheRepository(database);
     recentSearchRepository = new SqliteRecentSearchRepository(database);
   }
@@ -50,6 +53,10 @@ public final class SqliteStorage implements AutoCloseable {
 
   public McpSettingsRepository mcpSettings() {
     return mcpSettingsRepository;
+  }
+
+  public SitePermissionRepository sitePermissions() {
+    return sitePermissionRepository;
   }
 
   public SearchCacheRepository searchCache() {
