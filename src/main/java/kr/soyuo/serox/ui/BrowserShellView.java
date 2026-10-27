@@ -2,17 +2,21 @@ package kr.soyuo.serox.ui;
 
 import java.util.Objects;
 import javafx.application.Platform;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 import kr.soyuo.serox.core.event.BrowserEventBus;
 import kr.soyuo.serox.core.event.ConnectionStatusChanged;
 import kr.soyuo.serox.core.event.EventSubscription;
@@ -20,19 +24,37 @@ import kr.soyuo.serox.core.event.OperationFailed;
 import kr.soyuo.serox.core.event.ServiceId;
 import kr.soyuo.serox.core.event.ServiceStatus;
 
-/** Displays the browser chrome, home view, and application status. */
+/** Displays the Figma browser frame, home view, and service status. */
 public final class BrowserShellView extends BorderPane {
-  private final Label statusLabel = new Label("Serox · 준비됨");
+  private final UiPreviewData previewData = UiPreviewData.sample();
+  private final Label aiStatus = new Label("AI: " + previewData.ai().detail());
+  private final Label mcpStatus =
+      new Label(previewData.mcp().statusText() + " (" + previewData.mcp().detail() + ")");
+  private final Region statusDot = new Region();
+  private TextField addressField;
+  private HomeView homeView;
   private final EventSubscription connectionStatusSubscription;
   private final EventSubscription operationErrorSubscription;
+  private double dragOffsetX;
+  private double dragOffsetY;
+  private Cursor resizeCursor = Cursor.DEFAULT;
+  private double resizeStartX;
+  private double resizeStartY;
+  private double resizeStartWidth;
+  private double resizeStartHeight;
+  private double resizeStartScreenX;
+  private double resizeStartScreenY;
 
-  /** Creates the initial browser shell and subscribes to owned service status events. */
+  /** Creates the browser shell and subscribes to service status events. */
   public BrowserShellView(BrowserEventBus eventBus) {
     Objects.requireNonNull(eventBus, "eventBus");
     getStyleClass().add("app-root");
+    installWindowResizeHandlers();
     setTop(createBrowserChrome());
-    setCenter(new HomeView(this::showNotConnectedMessage));
+    homeView = new HomeView(previewData, this::showNotConnectedMessage);
+    setCenter(homeView);
     setBottom(createStatusBar());
+    installKeyboardShortcuts();
 
     var stylesheet = BrowserShellView.class.getResource("serox.css");
     if (stylesheet != null) {
@@ -50,20 +72,138 @@ public final class BrowserShellView extends BorderPane {
     operationErrorSubscription.close();
   }
 
+  private VBox createBrowserChrome() {
+    VBox chrome = new VBox(createTitleBar(), createToolbar());
+    chrome.getStyleClass().add("browser-chrome");
+    return chrome;
+  }
+
+  private HBox createTitleBar() {
+    HBox activeTab = new HBox(UiTokens.SPACE_SM, new Label("새 탭"));
+    activeTab.setAlignment(Pos.CENTER_LEFT);
+    activeTab.getStyleClass().add("active-tab");
+    Button closeTab = new Button();
+    closeTab.setGraphic(SvgIconView.icon(UiTokens.ICON_TAB_CLOSE, UiTokens.WINDOW_ICON_SIZE));
+    closeTab.setAccessibleText("현재 탭 닫기");
+    closeTab.setDisable(true);
+    closeTab.getStyleClass().add("tab-close");
+    activeTab.getChildren().add(closeTab);
+
+    HBox left = new HBox(UiTokens.SPACE_MD, SvgIconView.logo(16), activeTab);
+    left.setAlignment(Pos.CENTER_LEFT);
+    left.getStyleClass().add("titlebar-left");
+    HBox.setHgrow(left, Priority.ALWAYS);
+
+    Button minimize = windowButton(UiTokens.ICON_WINDOW_MINIMIZE, "창 최소화");
+    minimize.setOnAction(event -> stage().setIconified(true));
+    Button maximize = windowButton(UiTokens.ICON_WINDOW_MAXIMIZE, "창 최대화");
+    maximize.setOnAction(event -> stage().setMaximized(!stage().isMaximized()));
+    Button close = windowButton(UiTokens.ICON_WINDOW_CLOSE, "창 닫기");
+    close.getStyleClass().add("window-close-button");
+    close.setOnAction(event -> stage().close());
+    HBox controls = new HBox(minimize, maximize, close);
+    controls.getStyleClass().add("window-controls");
+
+    HBox bar = new HBox(left, controls);
+    bar.setAlignment(Pos.CENTER_LEFT);
+    bar.getStyleClass().add("titlebar");
+    bar.setOnMousePressed(
+        event -> {
+          if (event.getClickCount() == 2) {
+            stage().setMaximized(!stage().isMaximized());
+          } else {
+            dragOffsetX = event.getScreenX() - stage().getX();
+            dragOffsetY = event.getScreenY() - stage().getY();
+          }
+        });
+    bar.setOnMouseDragged(
+        event -> {
+          if (!stage().isMaximized() && event.getTarget() == bar) {
+            stage().setX(event.getScreenX() - dragOffsetX);
+            stage().setY(event.getScreenY() - dragOffsetY);
+          }
+        });
+    return bar;
+  }
+
+  private Button windowButton(String asset, String accessibleName) {
+    Button button = new Button();
+    button.setGraphic(SvgIconView.icon(asset, UiTokens.WINDOW_ICON_SIZE));
+    button.setAccessibleText(accessibleName);
+    button.getStyleClass().addAll("window-control-button");
+    return button;
+  }
+
+  private HBox createToolbar() {
+    Button back = toolbarButton(UiTokens.ICON_BACK, "뒤로");
+    Button forward = toolbarButton(UiTokens.ICON_FORWARD, "앞으로");
+    back.setDisable(true);
+    forward.setDisable(true);
+
+    addressField = new TextField();
+    addressField.setPromptText("검색어 또는 주소를 입력하세요…");
+    addressField.setAccessibleText("검색어 또는 웹 주소, Ctrl+L로 이동");
+    addressField.getStyleClass().add("address-field");
+    HBox.setHgrow(addressField, Priority.ALWAYS);
+    HBox addressBox =
+        new HBox(
+            UiTokens.SPACE_SM, SvgIconView.icon(UiTokens.ICON_ADDRESS_SEARCH, 18), addressField);
+    addressBox.setAlignment(Pos.CENTER_LEFT);
+    addressBox.getStyleClass().add("address-box");
+    HBox.setHgrow(addressBox, Priority.ALWAYS);
+
+    Button history = toolbarButton(UiTokens.ICON_HISTORY, "방문 기록");
+    Button settings = toolbarButton(UiTokens.ICON_SETTINGS, "설정");
+    history.setDisable(true);
+    settings.setDisable(true);
+    HBox row = new HBox(UiTokens.SPACE_XS, back, forward, addressBox, history, settings);
+    row.setAlignment(Pos.CENTER_LEFT);
+    row.getStyleClass().add("toolbar");
+    return row;
+  }
+
+  private Button toolbarButton(String asset, String accessibleName) {
+    Button button = new Button();
+    button.setGraphic(SvgIconView.icon(asset, UiTokens.TOOLBAR_ICON_SIZE));
+    button.setAccessibleText(accessibleName);
+    button.getStyleClass().add("toolbar-button");
+    return button;
+  }
+
+  private HBox createStatusBar() {
+    statusDot
+        .getStyleClass()
+        .setAll(
+            "status-dot",
+            previewData.mcp().enabled() ? "status-dot-connected" : "status-dot-disconnected");
+    mcpStatus.setGraphic(statusDot);
+    aiStatus.setAccessibleText("AI 연결 상태: " + previewData.ai().detail());
+    mcpStatus.setAccessibleText(
+        previewData.mcp().name() + " 상태: " + previewData.mcp().statusText());
+    Label divider = new Label("|");
+    divider.getStyleClass().add("status-divider");
+    Region spacer = new Region();
+    HBox.setHgrow(spacer, Priority.ALWAYS);
+    HBox bar = new HBox(UiTokens.SPACE_MD, aiStatus, divider, spacer, mcpStatus);
+    bar.setAlignment(Pos.CENTER_LEFT);
+    bar.getStyleClass().add("status-bar");
+    return bar;
+  }
+
   private void showConnectionStatus(ConnectionStatusChanged event) {
-    String detail =
-        event.safeMessage().isBlank()
-            ? serviceName(event.service()) + " · " + statusName(event.status())
-            : event.safeMessage();
-    updateStatusLabel(detail);
-  }
-
-  private void showOperationError(OperationFailed event) {
-    updateStatusLabel(event.error().safeMessage());
-  }
-
-  private void updateStatusLabel(String text) {
-    Runnable update = () -> statusLabel.setText(text);
+    String status =
+        event.safeMessage().isBlank() ? statusName(event.status()) : event.safeMessage();
+    Label target = event.service() == ServiceId.MCP ? mcpStatus : aiStatus;
+    String prefix = event.service() == ServiceId.MCP ? "MCP 서버 " : "AI: ";
+    Runnable update =
+        () -> {
+          target.setText(prefix + status);
+          target.setAccessibleText(
+              event.service() == ServiceId.MCP ? "MCP 서버 상태: " + status : "AI 연결 상태: " + status);
+          if (event.service() == ServiceId.MCP) {
+            statusDot.getStyleClass().setAll("status-dot", statusStyle(event.status()));
+          }
+        };
     if (Platform.isFxApplicationThread()) {
       update.run();
     } else {
@@ -71,113 +211,184 @@ public final class BrowserShellView extends BorderPane {
     }
   }
 
-  private String serviceName(ServiceId service) {
-    return switch (service) {
-      case BROWSER_ENGINE -> "브라우저";
-      case SEARCH -> "검색";
-      case AI -> "AI";
-      case MCP -> "MCP";
-      case STORAGE -> "저장소";
-    };
+  private void showOperationError(OperationFailed event) {
+    updateLabel(aiStatus, event.error().safeMessage());
+  }
+
+  private void updateLabel(Label label, String text) {
+    Runnable update = () -> label.setText(text);
+    if (Platform.isFxApplicationThread()) {
+      update.run();
+    } else {
+      Platform.runLater(update);
+    }
   }
 
   private String statusName(ServiceStatus status) {
     return switch (status) {
-      case DISCONNECTED -> "연결 안 됨";
+      case DISCONNECTED -> "꺼짐";
       case CONFIGURING -> "확인 중";
-      case CONNECTED -> "연결됨";
+      case CONNECTED -> "켜짐";
       case FAILED -> "연결 실패";
     };
   }
 
-  private VBox createBrowserChrome() {
-    VBox chrome = new VBox(createTabBar(), createToolbar());
-    chrome.getStyleClass().add("browser-chrome");
-    return chrome;
+  private String statusStyle(ServiceStatus status) {
+    return switch (status) {
+      case DISCONNECTED -> "status-dot-disconnected";
+      case CONFIGURING -> "status-dot-configuring";
+      case CONNECTED -> "status-dot-connected";
+      case FAILED -> "status-dot-failed";
+    };
   }
 
-  private HBox createTabBar() {
-    Label brandMark = new Label("S");
-    brandMark.getStyleClass().add("brand-mark-small");
-
-    Label activeTab = new Label("새 탭");
-    activeTab.getStyleClass().add("active-tab");
-
-    Button closeTab = new Button("×");
-    closeTab.getStyleClass().add("tab-close");
-    closeTab.setAccessibleText("현재 탭 닫기");
-    closeTab.setDisable(true);
-
-    HBox tab = new HBox(10, activeTab, closeTab);
-    tab.setAlignment(Pos.CENTER_LEFT);
-    tab.getStyleClass().add("tab-chip");
-
-    Button addTab = new Button("+");
-    addTab.getStyleClass().add("quiet-button");
-    addTab.setAccessibleText("새 탭");
-    addTab.setDisable(true);
-    addTab.setTooltip(new Tooltip("탭 기능은 탐색 코어 단계에서 연결됩니다."));
-
-    Region spacer = new Region();
-    HBox.setHgrow(spacer, Priority.ALWAYS);
-
-    HBox row = new HBox(12, brandMark, tab, addTab, spacer);
-    row.setAlignment(Pos.CENTER_LEFT);
-    row.setPadding(new Insets(6, 14, 0, 14));
-    row.getStyleClass().add("tab-bar");
-    return row;
-  }
-
-  private HBox createToolbar() {
-    Button back = toolbarButton("‹", "뒤로");
-    Button forward = toolbarButton("›", "앞으로");
-    Button reload = toolbarButton("↻", "새로고침");
-    back.setDisable(true);
-    forward.setDisable(true);
-    reload.setDisable(true);
-
-    TextField addressBar = new TextField();
-    addressBar.setPromptText("검색어 또는 주소를 입력하세요");
-    addressBar.setAccessibleText("검색어 또는 웹 주소");
-    addressBar.getStyleClass().add("address-bar");
-    HBox.setHgrow(addressBar, Priority.ALWAYS);
-
-    Button history = toolbarButton("◷", "방문 기록");
-    Button settings = toolbarButton("⚙", "설정");
-    history.setDisable(true);
-    settings.setDisable(true);
-
-    HBox row = new HBox(8, back, forward, reload, addressBar, history, settings);
-    row.setAlignment(Pos.CENTER);
-    row.setPadding(new Insets(10, 16, 12, 16));
-    row.getStyleClass().add("toolbar");
-    return row;
-  }
-
-  private Button toolbarButton(String text, String accessibleText) {
-    Button button = new Button(text);
-    button.getStyleClass().add("icon-button");
-    button.setAccessibleText(accessibleText);
-    button.setTooltip(new Tooltip(accessibleText + " 기능은 이후 단계에서 연결됩니다."));
-    return button;
-  }
-
-  private HBox createStatusBar() {
-    Label status = new Label("MVP UI · 탐색 엔진 미연결");
-    status.getStyleClass().add("status-muted");
-
-    Region spacer = new Region();
-    HBox.setHgrow(spacer, Priority.ALWAYS);
-
-    HBox bar = new HBox(statusLabel, spacer, status);
-    bar.setAlignment(Pos.CENTER_LEFT);
-    bar.setPadding(new Insets(8, 16, 8, 16));
-    bar.getStyleClass().add("status-bar");
-    return bar;
+  private void installKeyboardShortcuts() {
+    sceneProperty()
+        .addListener(
+            (observable, oldScene, newScene) -> {
+              if (newScene != null) {
+                newScene
+                    .getAccelerators()
+                    .put(
+                        new KeyCodeCombination(KeyCode.L, KeyCombination.CONTROL_DOWN),
+                        () -> {
+                          addressField.requestFocus();
+                          addressField.selectAll();
+                        });
+                newScene
+                    .getAccelerators()
+                    .put(
+                        new KeyCodeCombination(KeyCode.K, KeyCombination.CONTROL_DOWN),
+                        homeView::focusSearchField);
+              }
+            });
   }
 
   private void showNotConnectedMessage(String query) {
-    String value = query == null || query.isBlank() ? "" : " · " + query.trim();
-    statusLabel.setText("검색 엔진 연결 예정" + value);
+    if (query != null && !query.isBlank()) {
+      updateLabel(aiStatus, "검색 엔진 연결 예정 · " + query.trim());
+    }
+  }
+
+  private void installWindowResizeHandlers() {
+    addEventFilter(MouseEvent.MOUSE_MOVED, this::updateResizeCursor);
+    addEventFilter(
+        MouseEvent.MOUSE_PRESSED,
+        event -> {
+          resizeCursor = cursorAt(event.getSceneX(), event.getSceneY());
+          if (resizeCursor == Cursor.DEFAULT || stage().isMaximized()) {
+            resizeCursor = Cursor.DEFAULT;
+            return;
+          }
+          Stage window = stage();
+          resizeStartX = window.getX();
+          resizeStartY = window.getY();
+          resizeStartWidth = window.getWidth();
+          resizeStartHeight = window.getHeight();
+          resizeStartScreenX = event.getScreenX();
+          resizeStartScreenY = event.getScreenY();
+          event.consume();
+        });
+    addEventFilter(
+        MouseEvent.MOUSE_DRAGGED,
+        event -> {
+          if (resizeCursor != Cursor.DEFAULT) {
+            resizeWindow(event.getScreenX(), event.getScreenY());
+            event.consume();
+          }
+        });
+    addEventFilter(MouseEvent.MOUSE_RELEASED, event -> resizeCursor = Cursor.DEFAULT);
+    addEventFilter(
+        MouseEvent.MOUSE_EXITED,
+        event -> {
+          if (resizeCursor == Cursor.DEFAULT) {
+            setCursor(Cursor.DEFAULT);
+          }
+        });
+  }
+
+  private void updateResizeCursor(MouseEvent event) {
+    if (stage().isMaximized()) {
+      setCursor(Cursor.DEFAULT);
+      return;
+    }
+    Cursor next = cursorAt(event.getSceneX(), event.getSceneY());
+    setCursor(next);
+  }
+
+  private Cursor cursorAt(double x, double y) {
+    double edge = 7;
+    boolean left = x <= edge;
+    boolean right = x >= getWidth() - edge;
+    boolean top = y <= edge;
+    boolean bottom = y >= getHeight() - edge;
+    if (top && left || bottom && right) {
+      return Cursor.NW_RESIZE;
+    }
+    if (top && right) {
+      return Cursor.NE_RESIZE;
+    }
+    if (bottom && left) {
+      return Cursor.SW_RESIZE;
+    }
+    if (bottom && right) {
+      return Cursor.SE_RESIZE;
+    }
+    if (left) {
+      return Cursor.W_RESIZE;
+    }
+    if (right) {
+      return Cursor.E_RESIZE;
+    }
+    if (top) {
+      return Cursor.N_RESIZE;
+    }
+    if (bottom) {
+      return Cursor.S_RESIZE;
+    }
+    return Cursor.DEFAULT;
+  }
+
+  private void resizeWindow(double screenX, double screenY) {
+    Stage window = stage();
+    double deltaX = screenX - resizeStartScreenX;
+    double deltaY = screenY - resizeStartScreenY;
+    double minWidth = window.getMinWidth();
+    double minHeight = window.getMinHeight();
+    boolean fromLeft =
+        resizeCursor == Cursor.NW_RESIZE
+            || resizeCursor == Cursor.SW_RESIZE
+            || resizeCursor == Cursor.W_RESIZE;
+    boolean fromRight =
+        resizeCursor == Cursor.NE_RESIZE
+            || resizeCursor == Cursor.SE_RESIZE
+            || resizeCursor == Cursor.E_RESIZE;
+    boolean fromTop =
+        resizeCursor == Cursor.NW_RESIZE
+            || resizeCursor == Cursor.NE_RESIZE
+            || resizeCursor == Cursor.N_RESIZE;
+    boolean fromBottom =
+        resizeCursor == Cursor.SW_RESIZE
+            || resizeCursor == Cursor.SE_RESIZE
+            || resizeCursor == Cursor.S_RESIZE;
+
+    if (fromLeft) {
+      double width = Math.max(minWidth, resizeStartWidth - deltaX);
+      window.setX(resizeStartX + resizeStartWidth - width);
+      window.setWidth(width);
+    } else if (fromRight) {
+      window.setWidth(Math.max(minWidth, resizeStartWidth + deltaX));
+    }
+    if (fromTop) {
+      double height = Math.max(minHeight, resizeStartHeight - deltaY);
+      window.setY(resizeStartY + resizeStartHeight - height);
+      window.setHeight(height);
+    } else if (fromBottom) {
+      window.setHeight(Math.max(minHeight, resizeStartHeight + deltaY));
+    }
+  }
+
+  private Stage stage() {
+    return (Stage) getScene().getWindow();
   }
 }
