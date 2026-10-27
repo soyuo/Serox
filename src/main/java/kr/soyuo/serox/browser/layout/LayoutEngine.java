@@ -175,6 +175,32 @@ public final class LayoutEngine {
         double startY,
         double width,
         double gap) {
+      if (!style.value("flex-wrap").equals("wrap")) {
+        return layoutFlexLine(items, style, startX, startY, width, gap);
+      }
+      double cursorY = startY;
+      List<Element> line = new ArrayList<>();
+      double lineWidth = 0;
+      for (Element item : items) {
+        double base = outerWidthOf(item, width);
+        if (!line.isEmpty() && lineWidth + gap + base > width) {
+          cursorY += layoutFlexLine(line, style, startX, cursorY, width, gap) + gap;
+          line.clear();
+          lineWidth = 0;
+        }
+        lineWidth += (line.isEmpty() ? 0 : gap) + base;
+        line.add(item);
+      }
+      return cursorY + layoutFlexLine(line, style, startX, cursorY, width, gap) - startY;
+    }
+
+    private double layoutFlexLine(
+        List<Element> items,
+        ComputedStyle style,
+        double startX,
+        double startY,
+        double width,
+        double gap) {
       int count = items.size();
       double[] base = new double[count];
       double[] grow = new double[count];

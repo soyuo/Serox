@@ -37,6 +37,7 @@ public final class CssStyleEngine {
           "height",
           "display",
           "flex-direction",
+          "flex-wrap",
           "justify-content",
           "align-items",
           "gap",
@@ -147,6 +148,7 @@ public final class CssStyleEngine {
     return switch (property) {
       case "display" -> Set.of("block", "inline", "none", "flex").contains(normalized);
       case "flex-direction" -> Set.of("row", "column").contains(normalized);
+      case "flex-wrap" -> Set.of("nowrap", "wrap").contains(normalized);
       case "justify-content" ->
           Set.of("flex-start", "center", "flex-end", "space-between", "space-around")
               .contains(normalized);
@@ -232,6 +234,7 @@ public final class CssStyleEngine {
     defaults.put("width", "auto");
     defaults.put("height", "auto");
     defaults.put("flex-direction", "row");
+    defaults.put("flex-wrap", "nowrap");
     defaults.put("justify-content", "flex-start");
     defaults.put("align-items", "stretch");
     defaults.put("gap", "0px");
