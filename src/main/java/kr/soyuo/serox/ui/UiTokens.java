@@ -44,7 +44,7 @@ public final class UiTokens {
   public static final int PRIVACY_LIST_LIMIT = 5;
   public static final double PLACEHOLDER_ICON_SIZE = 40;
   public static final double WINDOW_ICON_SIZE = 12;
-  public static final double TAB_TITLE_MAX_WIDTH = 190;
+  public static final double TAB_TITLE_MAX_WIDTH = 130;
   public static final double STATUS_TEXT_MAX_WIDTH = 320;
 
   private UiTokens() {}
