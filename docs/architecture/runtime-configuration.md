@@ -15,18 +15,19 @@ same composition root and injected through their public interfaces.
 
 ## Settings and secret loading
 
-- `AppConfigurationLoader` reads only `SEROX_BRAVE_SEARCH_API_KEY` and
-  `SEROX_ANTHROPIC_API_KEY` from the process environment.
-- Values are wrapped by `SecretValue`. Its string representation is always
-  `[REDACTED]`; only provider request adapters may call `revealForRequest()`.
-- Missing values remain absent. The browser starts without those services and
-  reports them as unconfigured.
-- `BrowserSettings` contains typed appearance preferences and cannot hold
-  provider credentials. User preferences are loaded through `SettingsRepository`
-  when the SQLite storage step is implemented.
-- Production secret persistence should use the OS credential store described in
-  [SECURITY.md](../../docs/SECURITY.md). Environment variables are the initial
-  development input; neither source is copied to settings, logs, or arguments.
+- `AppConfigurationLoader` reads Brave, Anthropic, Gemini, OpenAI and xAI keys
+  from the documented environment variables. `SEROX_AI_PROVIDER` and
+  `SEROX_AI_MODEL` select the initial adapter. See the README for names.
+- `SecretValue.toString()` is redacted. Request adapters and protected-store
+  serialization may explicitly reveal the value; logs and ordinary settings may not.
+- On Windows, user-entered keys and ChatGPT OAuth tokens are stored in DPAPI
+  CurrentUser encrypted files. Environment keys are not copied into those files.
+  UI selections and user-saved keys override the initial environment configuration.
+- `BrowserSettings` contains typed general, appearance, privacy, shortcut, search
+  and summary preferences in SQLite; it never contains provider credentials.
+- Missing credentials or unavailable secure storage leave the browser usable.
+  An OS file lock prevents two desktop instances from overwriting token records.
+- See [secret handling](../SECURITY.md) and [browser authentication ADR](../decisions/0006-browser-authentication.md).
 
 ## Logging
 
