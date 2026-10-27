@@ -52,6 +52,7 @@ public final class SeroxApplication extends Application {
         runtime.aiConnections(), uri -> getHostServices().showDocument(uri.toString()));
     runtime.announceServiceStatus();
     browserShell.setSettingsService(runtime.settingsService());
+    browserShell.setSitePermissions(runtime.sitePermissions());
     browserShell.setLibraryService(runtime.libraryService());
     browserShell.setPrivacyActions(runtime.usageRecorder(), runtime.libraryService());
     if (getParameters().getRaw().contains("--mcp")) {
