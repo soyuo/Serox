@@ -783,6 +783,10 @@ public final class BrowserShellView extends BorderPane {
           PageLoaded page = loadedPages.get(activeTabId);
           if (page == null) {
             showHomeView();
+            if (snapshot == null || snapshot.currentUri().isEmpty()) {
+              addressField.requestFocus();
+              addressField.selectAll();
+            }
           } else {
             showPage(page);
           }

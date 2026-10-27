@@ -41,9 +41,9 @@
     -fx-alignment: center-left;
     -fx-spacing: 10px;
     -fx-padding: 0 12px;
-    -fx-pref-width: 260px;
-    -fx-min-width: 260px;
-    -fx-max-width: 260px;
+    -fx-pref-width: 200px;
+    -fx-min-width: 200px;
+    -fx-max-width: 200px;
     -fx-pref-height: 34px;
     -fx-background-color: serox-surface;
     -fx-background-radius: 8px 8px 0 0;
@@ -65,8 +65,8 @@
     -fx-alignment: center-left;
     -fx-spacing: 10px;
     -fx-padding: 0 12px;
-    -fx-pref-width: 220px;
-    -fx-min-width: 160px;
+    -fx-pref-width: 160px;
+    -fx-min-width: 120px;
     -fx-pref-height: 34px;
     -fx-background-color: transparent;
     -fx-text-fill: serox-text-secondary;
