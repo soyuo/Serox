@@ -12,7 +12,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
@@ -24,6 +23,7 @@ import kr.soyuo.serox.core.event.AiAnswerChanged;
 /** Shows the AI summary, key points and verified sources for one search. */
 final class AiPanelView extends VBox {
   private static final Pattern CITATION_MARKER = Pattern.compile("\\[S(\\d+)]");
+  private static final int MAX_LABEL_CHARS = 12;
   private static final String DISCLAIMER = "AI 요약에는 오류가 있을 수 있어요. 중요한 내용은 출처에서 확인하세요.";
 
   private final Consumer<EvidenceDocument> onSource;
@@ -107,7 +107,6 @@ final class AiPanelView extends VBox {
         summary.add(trimmed);
       }
     }
-    body.getChildren().add(readCount(evidence.size()));
     if (!summary.isEmpty()) {
       body.getChildren().add(summaryCard(citedParagraph(String.join(" ", summary))));
     } else {
@@ -116,7 +115,7 @@ final class AiPanelView extends VBox {
     if (!points.isEmpty()) {
       VBox rows = new VBox(UiTokens.SPACE_MD, heading("핵심 정리"));
       for (String point : points) {
-        rows.getChildren().add(citedParagraph(point));
+        rows.getChildren().add(keyPointRow(point));
       }
       body.getChildren().add(rows);
     }
@@ -138,15 +137,27 @@ final class AiPanelView extends VBox {
     body.getChildren().add(sources);
   }
 
-  /** The green-dot line above the summary: how many result pages the answer is based on. */
-  private HBox readCount(int pages) {
-    Region dot = new Region();
-    dot.getStyleClass().addAll("status-dot", "status-dot-connected");
-    Label text = new Label("검색 결과 " + pages + "곳을 읽고 정리했어요");
-    text.getStyleClass().add("search-state-message");
-    HBox line = new HBox(UiTokens.SPACE_SM, dot, text);
-    line.setAlignment(Pos.CENTER_LEFT);
-    return line;
+  /**
+   * One key point: a bold label column and the explanation, as in the design. A point without a
+   * short "label: text" start is shown as plain text across the full width.
+   */
+  private javafx.scene.Node keyPointRow(String point) {
+    int colon = point.indexOf(':');
+    boolean labelled =
+        colon > 0 && colon <= MAX_LABEL_CHARS && !point.substring(0, colon).contains("[");
+    if (!labelled) {
+      return citedParagraph(point);
+    }
+    Label label = new Label(point.substring(0, colon).strip());
+    label.getStyleClass().add("key-point-label");
+    label.setMinWidth(UiTokens.KEY_POINT_LABEL_WIDTH);
+    label.setPrefWidth(UiTokens.KEY_POINT_LABEL_WIDTH);
+    label.setAlignment(Pos.TOP_LEFT);
+    TextFlow text = citedParagraph(point.substring(colon + 1).strip());
+    HBox.setHgrow(text, Priority.ALWAYS);
+    HBox row = new HBox(UiTokens.SPACE_MD + 2, label, text);
+    row.setAlignment(Pos.TOP_LEFT);
+    return row;
   }
 
   /** The tinted card with the sparkle label that holds the summary text. */
@@ -249,3 +260,13 @@ final class AiPanelView extends VBox {
     return label;
   }
 }
+  /** The green-dot line above the summary: how many result pages the answer is based on. */
+  private HBox readCount(int pages) {
+    Region dot = new Region();
+    dot.getStyleClass().addAll("status-dot", "status-dot-connected");
+    Label text = new Label("�˻� ��� " + pages + "���� �а� �����߾��");
+    text.getStyleClass().add("search-state-message");
+    HBox line = new HBox(UiTokens.SPACE_SM, dot, text);
+    line.setAlignment(Pos.CENTER_LEFT);
+    return line;
+  }
