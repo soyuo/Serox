@@ -206,6 +206,21 @@ public final class BrowserShellView extends BorderPane {
           public java.util.concurrent.CompletionStage<Void> clearVisits() {
             return library.clearHistory();
           }
+
+          @Override
+          public kr.soyuo.serox.core.model.BrowserSettings settings() {
+            return settingsService == null
+                ? kr.soyuo.serox.core.model.BrowserSettings.defaults()
+                : settingsService.current();
+          }
+
+          @Override
+          public java.util.concurrent.CompletionStage<Void> save(
+              kr.soyuo.serox.core.model.BrowserSettings settings) {
+            return settingsService == null
+                ? java.util.concurrent.CompletableFuture.completedFuture(null)
+                : settingsService.save(settings);
+          }
         };
   }
 
@@ -281,7 +296,7 @@ public final class BrowserShellView extends BorderPane {
         new SettingsView(
             settingsService.current(),
             preview -> AppearanceStyler.apply(this, preview),
-            settings -> settingsService.save(settings),
+            settings -> settingsService.save(settings.withPrivacyOf(settingsService.current())),
             this::cancelSettings,
             new SettingsView.ServiceSummary(
                 statusText(searchStatus), statusText(aiStatus), statusText(mcpStatus)),
