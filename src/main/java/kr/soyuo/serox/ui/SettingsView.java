@@ -5,9 +5,8 @@ import java.util.function.Consumer;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.RadioButton;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.HBox;
@@ -21,7 +20,8 @@ import kr.soyuo.serox.core.model.ThemeMode;
 /** Edits the appearance settings; changes are stored in a draft until saved. */
 final class SettingsView extends ScrollPane {
   private static final List<String> ACCENT_PRESETS =
-      List.of("#2563EB", "#7C3AED", "#0F7B5F", "#D97706", "#DB2777", "#475569");
+      List.of("#2563EB", "#0B6E6E", "#6B3FC4", "#B4540A", "#151A23");
+  private static final Integer[] FONT_SCALES = {90, 100, 115};
 
   private final Consumer<BrowserSettings> onPreview;
   private final Consumer<BrowserSettings> onApply;
@@ -72,24 +72,28 @@ final class SettingsView extends ScrollPane {
     return section(
         "테마",
         choice(
-            ThemeMode.values(),
+            new ThemeMode[] {ThemeMode.LIGHT, ThemeMode.DARK, ThemeMode.SYSTEM},
             draft.theme(),
             mode ->
                 switch (mode) {
                   case SYSTEM -> "시스템";
-                  case LIGHT -> "라이트";
-                  case DARK -> "다크";
+                  case LIGHT -> "밝게";
+                  case DARK -> "어둡게";
                 },
             mode -> update(withTheme(mode))));
   }
 
   private VBox accentSection() {
-    HBox swatches = new HBox(UiTokens.SPACE_SM);
+    HBox swatches = new HBox(UiTokens.SPACE_MD);
     for (String color : ACCENT_PRESETS) {
       Button swatch = new Button();
-      swatch.setPrefSize(28, 28);
-      swatch.setStyle("-fx-background-color: " + color + "; -fx-background-radius: 14;");
+      swatch.getStyleClass().add("accent-swatch");
+      swatch.setStyle("-fx-background-color: " + color + "; -fx-border-color: " + color + ";");
       swatch.setAccessibleText("강조색 " + color);
+      if (color.equalsIgnoreCase(draft.accentColor())) {
+        swatch.getStyleClass().add("accent-swatch-selected");
+        swatch.setGraphic(SvgIconView.icon(UiTokens.ICON_CHECK, UiTokens.CHECK_SIZE));
+      }
       swatch.setOnAction(event -> setAccent(color));
       swatches.getChildren().add(swatch);
     }
@@ -102,31 +106,24 @@ final class SettingsView extends ScrollPane {
         setAccent(accentField.getText().strip());
       }
     });
-    return section("강조색", new HBox(UiTokens.SPACE_MD, swatches, accentField));
+    return section("강조 색", new HBox(UiTokens.SPACE_LG, swatches, accentField));
   }
 
   private VBox fontSection() {
-    Slider slider = new Slider(80, 200, draft.fontScalePercent());
-    slider.setMajorTickUnit(20);
-    slider.setBlockIncrement(5);
-    slider.setSnapToTicks(false);
-    slider.setAccessibleText("글자 크기 퍼센트");
-    Label value = new Label(draft.fontScalePercent() + "%");
-    slider.valueProperty().addListener((o, was, now) -> {
-      int percent = (int) Math.round(now.doubleValue() / 5.0) * 5;
-      value.setText(percent + "%");
-      update(withFontScale(percent));
-    });
-    HBox row = new HBox(UiTokens.SPACE_MD, slider, value);
-    HBox.setHgrow(slider, javafx.scene.layout.Priority.ALWAYS);
-    return section("글자 크기", row);
+    return section(
+        "글자 크기",
+        choice(
+            FONT_SCALES,
+            draft.fontScalePercent(),
+            percent -> percent < 100 ? "작게" : percent == 100 ? "보통" : "크게",
+            percent -> update(withFontScale(percent))));
   }
 
   private VBox panelSection() {
     return section(
         "AI 패널 위치",
         choice(
-            AiPanelPosition.values(),
+            new AiPanelPosition[] {AiPanelPosition.LEFT, AiPanelPosition.RIGHT},
             draft.aiPanelPosition(),
             position -> position == AiPanelPosition.LEFT ? "왼쪽" : "오른쪽",
             position -> update(withPanel(position))));
@@ -136,9 +133,9 @@ final class SettingsView extends ScrollPane {
     return section(
         "화면 밀도",
         choice(
-            DisplayDensity.values(),
+            new DisplayDensity[] {DisplayDensity.COMFORTABLE, DisplayDensity.COMPACT},
             draft.displayDensity(),
-            density -> density == DisplayDensity.COMPACT ? "촘촘하게" : "여유 있게",
+            density -> density == DisplayDensity.COMPACT ? "촘촘하게" : "여유롭게",
             density -> update(withDensity(density))));
   }
 
@@ -228,20 +225,29 @@ final class SettingsView extends ScrollPane {
     return box;
   }
 
+  /** A row of segmented options as in the design: one is selected and tinted. */
   private static <T> HBox choice(
       T[] values,
       T selected,
       java.util.function.Function<T, String> label,
       Consumer<T> onChange) {
     ToggleGroup group = new ToggleGroup();
-    HBox row = new HBox(UiTokens.SPACE_LG);
+    HBox row = new HBox(UiTokens.SPACE_SM);
     for (T value : values) {
-      RadioButton radio = new RadioButton(label.apply(value));
-      radio.setToggleGroup(group);
-      radio.setSelected(value.equals(selected));
-      radio.setAccessibleText(label.apply(value));
-      radio.setOnAction(event -> onChange.accept(value));
-      row.getChildren().add(radio);
+      ToggleButton option = new ToggleButton(label.apply(value));
+      option.getStyleClass().add("segment-option");
+      option.setToggleGroup(group);
+      option.setSelected(value.equals(selected));
+      option.setAccessibleText(label.apply(value));
+      option.setOnAction(
+          event -> {
+            if (option.isSelected()) {
+              onChange.accept(value);
+            } else {
+              option.setSelected(true);
+            }
+          });
+      row.getChildren().add(option);
     }
     return row;
   }
