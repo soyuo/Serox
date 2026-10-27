@@ -49,3 +49,5 @@ became readable. The canvas holds about 100 frames; only the screens below were 
   keeps `#2563EB` as the default and uses it as the first swatch.
 - **Not compared at all:** search states other than the two above, error and loading frames, site information and
   permission frames, the other settings sections, and the keyboard shortcuts page.
+- No-internet search state (frame 31#3415): offline message, status and matching source pane; only connection failures show it.
+- Privacy settings: search history switch and visit retention choices (7 days / 30 days / forever, capped at 5,000 visits).

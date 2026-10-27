@@ -9,6 +9,7 @@ import java.util.concurrent.CompletionStage;
 import kr.soyuo.serox.core.model.AiPanelPosition;
 import kr.soyuo.serox.core.model.BrowserSettings;
 import kr.soyuo.serox.core.model.DisplayDensity;
+import kr.soyuo.serox.core.model.HistoryRetention;
 import kr.soyuo.serox.core.model.ThemeMode;
 import kr.soyuo.serox.core.port.storage.SettingsRepository;
 
@@ -43,7 +44,10 @@ public final class SqliteSettingsRepository implements SettingsRepository {
               integerValue(values, "fontScalePercent", DEFAULTS.fontScalePercent()),
               enumValue(
                   values, "aiPanelPosition", DEFAULTS.aiPanelPosition(), AiPanelPosition.class),
-              enumValue(values, "displayDensity", DEFAULTS.displayDensity(), DisplayDensity.class)));
+              enumValue(values, "displayDensity", DEFAULTS.displayDensity(), DisplayDensity.class),
+              enumValue(
+                  values, "historyRetention", DEFAULTS.historyRetention(), HistoryRetention.class),
+              !"false".equals(values.get("saveSearchHistory"))));
         });
   }
 
@@ -56,7 +60,9 @@ public final class SqliteSettingsRepository implements SettingsRepository {
             "accentColor", settings.accentColor(),
             "fontScalePercent", Integer.toString(settings.fontScalePercent()),
             "aiPanelPosition", settings.aiPanelPosition().name(),
-            "displayDensity", settings.displayDensity().name());
+            "displayDensity", settings.displayDensity().name(),
+            "historyRetention", settings.historyRetention().name(),
+            "saveSearchHistory", Boolean.toString(settings.saveSearchHistory()));
     return database.submit(
         connection -> {
           try (PreparedStatement statement =

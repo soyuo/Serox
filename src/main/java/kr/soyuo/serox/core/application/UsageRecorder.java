@@ -16,6 +16,7 @@ import kr.soyuo.serox.core.event.BrowserEventBus;
 import kr.soyuo.serox.core.event.EventSubscription;
 import kr.soyuo.serox.core.event.PageLoaded;
 import kr.soyuo.serox.core.event.SearchStarted;
+import kr.soyuo.serox.core.model.BrowserSettings;
 import kr.soyuo.serox.core.model.HistoryEntry;
 import kr.soyuo.serox.core.model.RecentSearch;
 import kr.soyuo.serox.core.port.storage.HistoryRepository;
@@ -24,28 +25,39 @@ import kr.soyuo.serox.core.port.storage.RecentSearchRepository;
 /** Records visits and searches from application events; storage failures never reach callers. */
 public final class UsageRecorder implements AutoCloseable {
   static final Duration DUPLICATE_VISIT_WINDOW = Duration.ofSeconds(30);
-  static final Duration HISTORY_RETENTION = Duration.ofDays(90);
   static final int MAX_HISTORY_ENTRIES = 5_000;
   private static final Logger LOGGER = Logger.getLogger(UsageRecorder.class.getName());
 
   private final HistoryRepository historyRepository;
   private final RecentSearchRepository recentSearchRepository;
   private final Clock clock;
+  private final java.util.function.Supplier<BrowserSettings> settings;
   private final Map<java.net.URI, Instant> lastVisits = new HashMap<>();
   private final EventSubscription pageSubscription;
   private final EventSubscription searchSubscription;
 
-  /** Subscribes to page and search events on the supplied bus. */
+  /** Records with the default privacy choices (30 days of visits, searches saved). */
   public UsageRecorder(
       BrowserEventBus eventBus,
       HistoryRepository historyRepository,
       RecentSearchRepository recentSearchRepository,
       Clock clock) {
+    this(eventBus, historyRepository, recentSearchRepository, clock, BrowserSettings::defaults);
+  }
+
+  /** Subscribes to page and search events; {@code settings} is read on every event. */
+  public UsageRecorder(
+      BrowserEventBus eventBus,
+      HistoryRepository historyRepository,
+      RecentSearchRepository recentSearchRepository,
+      Clock clock,
+      java.util.function.Supplier<BrowserSettings> settings) {
     Objects.requireNonNull(eventBus, "eventBus");
     this.historyRepository = Objects.requireNonNull(historyRepository, "historyRepository");
     this.recentSearchRepository =
         Objects.requireNonNull(recentSearchRepository, "recentSearchRepository");
     this.clock = Objects.requireNonNull(clock, "clock");
+    this.settings = Objects.requireNonNull(settings, "settings");
     pageSubscription = eventBus.subscribe(PageLoaded.class, this::recordVisit);
     searchSubscription = eventBus.subscribe(SearchStarted.class, this::recordSearch);
   }
@@ -64,7 +76,7 @@ public final class UsageRecorder implements AutoCloseable {
 
   /** Stores a query so the home screen can offer it again. */
   public CompletionStage<Void> recordQuery(String query) {
-    if (query == null || query.isBlank()) {
+    if (query == null || query.isBlank() || !settings.get().saveSearchHistory()) {
       return CompletableFuture.completedFuture(null);
     }
     return guarded(
@@ -104,8 +116,18 @@ public final class UsageRecorder implements AutoCloseable {
                 .thenCompose(
                     ignored ->
                         historyRepository.prune(
-                            now.minus(HISTORY_RETENTION), MAX_HISTORY_ENTRIES)),
+                            retentionCutoff(now), MAX_HISTORY_ENTRIES)),
         "Visit history could not be saved.");
+  }
+
+  /** Visits older than this are dropped; "forever" keeps age out of it (the count still caps). */
+  private Instant retentionCutoff(Instant now) {
+    return settings
+        .get()
+        .historyRetention()
+        .keepFor()
+        .map(now::minus)
+        .orElse(Instant.EPOCH);
   }
 
   private CompletionStage<Void> guarded(

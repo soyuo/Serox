@@ -211,6 +211,21 @@ public final class BrowserShellView extends BorderPane {
           public java.util.concurrent.CompletionStage<Void> clearVisits() {
             return library.clearHistory();
           }
+
+          @Override
+          public kr.soyuo.serox.core.model.BrowserSettings settings() {
+            return settingsService == null
+                ? kr.soyuo.serox.core.model.BrowserSettings.defaults()
+                : settingsService.current();
+          }
+
+          @Override
+          public java.util.concurrent.CompletionStage<Void> save(
+              kr.soyuo.serox.core.model.BrowserSettings settings) {
+            return settingsService == null
+                ? java.util.concurrent.CompletableFuture.completedFuture(null)
+                : settingsService.save(settings);
+          }
         };
   }
 
@@ -286,7 +301,7 @@ public final class BrowserShellView extends BorderPane {
         new SettingsView(
             settingsService.current(),
             preview -> AppearanceStyler.apply(this, preview),
-            settings -> settingsService.save(settings),
+            settings -> settingsService.save(settings.withPrivacyOf(settingsService.current())),
             this::cancelSettings,
             new SettingsView.ServiceSummary(
                 statusText(searchStatus), statusText(aiStatus), statusText(mcpStatus)),
@@ -611,13 +626,14 @@ public final class BrowserShellView extends BorderPane {
           if (event.tabId().equals(activeTabId)) {
             addressField.setText(event.query());
             updateSiteInfo(Optional.empty());
-            navigationStatus.setText(event.safeMessage());
+            navigationStatus.setText(event.offline() ? "오프라인" : event.safeMessage());
+            Runnable retry = () -> searchService.search(event.tabId(), event.query());
+            java.util.function.Consumer<kr.soyuo.serox.search.api.SearchResult> open =
+                result -> browserController.navigate(event.tabId(), result.uri().toString());
             setCenter(
-                SearchResultsView.error(
-                    event.query(),
-                    event.safeMessage(),
-                    () -> searchService.search(event.tabId(), event.query()),
-                    result -> browserController.navigate(event.tabId(), result.uri().toString())));
+                event.offline()
+                    ? SearchResultsView.offline(event.query(), retry, open)
+                    : SearchResultsView.error(event.query(), event.safeMessage(), retry, open));
           }
         });
   }

@@ -104,6 +104,21 @@ class PrivacyPageTest {
       calls.add("clearVisits");
       return CompletableFuture.completedFuture(null);
     }
+
+    kr.soyuo.serox.core.model.BrowserSettings saved =
+        kr.soyuo.serox.core.model.BrowserSettings.defaults();
+
+    @Override
+    public kr.soyuo.serox.core.model.BrowserSettings settings() {
+      return saved;
+    }
+
+    @Override
+    public CompletionStage<Void> save(kr.soyuo.serox.core.model.BrowserSettings settings) {
+      calls.add("save:" + settings.historyRetention() + ":" + settings.saveSearchHistory());
+      saved = settings;
+      return CompletableFuture.completedFuture(null);
+    }
   }
 
   @Test
@@ -154,5 +169,44 @@ class PrivacyPageTest {
 
     assertEquals(List.of("delete:maven"), actions.calls);
     assertEquals(List.of("가상 스레드"), actions.queries);
+  }
+
+  @Test
+  void theSwitchAndTheRetentionChoiceAreSaved() throws Exception {
+    assumeTrue(toolkitReady, "JavaFX toolkit is not available");
+    FakeActions actions = new FakeActions();
+    Region page = onFx(() -> new PrivacyPage(actions, question -> true));
+    onFx(
+        () -> {
+          buttonLabelledToggle(page, "검색 기록 저장").fire();
+          buttonLabelledToggle(page, "방문 기록 보관 7일").fire();
+          return null;
+        });
+
+    assertEquals(
+        List.of("save:MONTH:false", "save:WEEK:false"), actions.calls);
+  }
+
+  private static javafx.scene.control.ToggleButton buttonLabelledToggle(
+      Node root, String accessibleText) {
+    if (root instanceof javafx.scene.control.ToggleButton toggle
+        && accessibleText.equals(toggle.getAccessibleText())) {
+      return toggle;
+    }
+    if (root instanceof javafx.scene.control.ScrollPane scroll && scroll.getContent() != null) {
+      var inside = buttonLabelledToggle(scroll.getContent(), accessibleText);
+      if (inside != null) {
+        return inside;
+      }
+    }
+    if (root instanceof javafx.scene.Parent parent) {
+      for (Node child : parent.getChildrenUnmodifiable()) {
+        var found = buttonLabelledToggle(child, accessibleText);
+        if (found != null) {
+          return found;
+        }
+      }
+    }
+    return null;
   }
 }
