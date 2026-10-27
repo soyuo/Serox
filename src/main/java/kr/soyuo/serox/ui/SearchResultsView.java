@@ -55,6 +55,19 @@ final class SearchResultsView extends BorderPane {
     return view;
   }
 
+  static SearchResultsView cancelled(
+      String query, Runnable onRetry, Consumer<SearchResult> onOpen) {
+    SearchResultsView view = new SearchResultsView(query, onOpen);
+    view.results
+        .getChildren()
+        .setAll(
+            view.heading("검색 결과"),
+            view.state("검색을 취소했어요", "원하면 다시 검색할 수 있어요.", view.action("다시 검색", onRetry)));
+    view.preview.setCenter(
+        view.state("검색이 취소됐어요", "검색을 다시 시작할 수 있어요.", view.action("다시 검색", onRetry)));
+    return view;
+  }
+
   static SearchResultsView error(
       String query, String error, Runnable onRetry, Consumer<SearchResult> onOpen) {
     SearchResultsView view = new SearchResultsView(query, onOpen);

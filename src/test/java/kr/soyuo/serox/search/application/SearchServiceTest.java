@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import kr.soyuo.serox.core.event.InProcessBrowserEventBus;
 import kr.soyuo.serox.core.event.SearchCancelled;
@@ -89,6 +90,73 @@ class SearchServiceTest {
     assertTrue(pending.isCancelled());
     assertEquals("cancel this", cancelled.get().query());
     assertFalse(service.cancel(tabId));
+    service.close();
+    eventBus.close();
+  }
+
+  @Test
+  void retryPublishesResultsAfterAnEarlierFailure() {
+    var eventBus = new InProcessBrowserEventBus();
+    var attempts = new AtomicInteger();
+    var completed = new AtomicReference<SearchCompleted>();
+    var failed = new AtomicReference<SearchFailed>();
+    eventBus.subscribe(SearchCompleted.class, completed::set);
+    eventBus.subscribe(SearchFailed.class, failed::set);
+    var service =
+        new SearchService(
+            Optional.of(
+                request ->
+                    attempts.getAndIncrement() == 0
+                        ? CompletableFuture.failedFuture(new IllegalStateException("offline"))
+                        : CompletableFuture.completedFuture(
+                            new SearchResponse(
+                                "fake",
+                                List.of(
+                                    new SearchResult(
+                                        "one",
+                                        URI.create("https://example.test/"),
+                                        "Example",
+                                        "Snippet",
+                                        1))))),
+            eventBus);
+    TabId tabId = TabId.create();
+
+    var first = service.search(tabId, "retry query").toCompletableFuture();
+    assertThrows(CompletionException.class, first::join);
+    var retried = service.search(tabId, "retry query").toCompletableFuture().join();
+
+    assertEquals("Search failed. Check your connection and try again.", failed.get().safeMessage());
+    assertEquals("Example", retried.results().getFirst().title());
+    assertEquals("retry query", completed.get().query());
+    assertEquals(2, attempts.get());
+    service.close();
+    eventBus.close();
+  }
+
+  @Test
+  void replacingSearchCancelsOldRequestAndSuppressesStaleCompletion() {
+    var eventBus = new InProcessBrowserEventBus();
+    var firstPending = new CompletableFuture<SearchResponse>();
+    var completed = new java.util.ArrayList<SearchCompleted>();
+    eventBus.subscribe(SearchCompleted.class, completed::add);
+    var attempts = new AtomicInteger();
+    var service =
+        new SearchService(
+            Optional.of(
+                request ->
+                    attempts.getAndIncrement() == 0
+                        ? firstPending
+                        : CompletableFuture.completedFuture(new SearchResponse("fake", List.of()))),
+            eventBus);
+    TabId tabId = TabId.create();
+    var first = service.search(tabId, "old query").toCompletableFuture();
+
+    service.search(tabId, "new query").toCompletableFuture().join();
+
+    assertTrue(first.isCancelled());
+    assertTrue(firstPending.isCancelled());
+    assertEquals(1, completed.size());
+    assertEquals("new query", completed.getFirst().query());
     service.close();
     eventBus.close();
   }

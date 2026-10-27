@@ -1,7 +1,5 @@
 package kr.soyuo.serox.ui;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +71,7 @@ public final class BrowserShellView extends BorderPane {
   private final Map<TabId, PageLoaded> loadedPages = new HashMap<>();
   private final Map<TabId, HBox> tabButtons = new HashMap<>();
   private final Map<TabId, Label> tabTitles = new HashMap<>();
-  private final Deque<String> recentSearches = new ArrayDeque<>();
+  private final RecentSearchHistory recentSearches = new RecentSearchHistory();
   private final HBox tabStrip = new HBox(UiTokens.SPACE_XS);
   private final BrowserController browserController;
   private final SearchService searchService;
@@ -354,7 +352,7 @@ public final class BrowserShellView extends BorderPane {
           if (event.tabId().equals(activeTabId)) {
             navigationStatus.setText("검색 취소됨");
             setCenter(
-                SearchResultsView.empty(
+                SearchResultsView.cancelled(
                     event.query(),
                     () -> searchService.search(event.tabId(), event.query()),
                     result -> browserController.navigate(event.tabId(), result.uri().toString())));
@@ -493,7 +491,7 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private void showHomeView() {
-    homeView = new HomeView(previewData, List.copyOf(recentSearches), this::searchFromHome);
+    homeView = new HomeView(previewData, recentSearches.queries(), this::searchFromHome);
     setCenter(homeView);
   }
 
@@ -506,11 +504,7 @@ public final class BrowserShellView extends BorderPane {
       return;
     }
     String normalized = query.strip();
-    recentSearches.remove(normalized);
-    recentSearches.addFirst(normalized);
-    while (recentSearches.size() > 5) {
-      recentSearches.removeLast();
-    }
+    recentSearches.add(normalized);
     searchService.search(activeTabId, normalized);
   }
 
