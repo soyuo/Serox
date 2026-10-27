@@ -90,7 +90,7 @@ $env:SEROX_ANTHROPIC_API_KEY = "<Anthropic API key>"
   [렌더링 지원 범위](docs/rendering-support.md).
 - 검색은 Brave Search, AI는 Claude 하나만 지원한다. 두 연동은 로컬 가짜 서버로만 검증했고
   실제 키로 호출해 본 적은 없다.
-- 지원 운영체제는 Windows뿐이다. MSI 설치·제거는 깨끗한 컴퓨터에서 아직 확인하지 않았다.
+- 지원 운영체제는 Windows뿐이다. 사용자 단위 설치판의 설치·실행·제거는 확인했지만, 배포용 MSI(관리자 권한 필요)는 설치해 보지 못했다.
 - 페이지 읽기에서 DNS 재바인딩은 완전히 차단하지 못한다(응답 크기·형식 제한과 민감정보
   가림으로 완화).
 - Figma 대조는 홈, 검색 결과, 디자인 설정 화면만 했다. 결과 화면 배치(오른쪽 원문 미리보기), 설정 사이드바·미리보기 등은 디자인과 다르다. [Figma 대조](docs/release/figma-comparison.md).

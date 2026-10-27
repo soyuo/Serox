@@ -46,7 +46,7 @@ release; see the roadmap in the README.
   settings sidebar and preview, and most other frames still differ or were not compared; see
   [figma-comparison.md](figma-comparison.md).
 - **Live providers:** neither the Brave Search nor the Claude API has been called with a real key.
-- **Installer:** install, upgrade and uninstall were not exercised on a clean Windows machine, and
+- **Installer:** a per-user variant was installed, run and uninstalled; the shipped per-machine MSI needs an administrator and was not installed, upgrades were not tried, and
   the MSI is unsigned.
 - **Unsupported web features:** JavaScript, flexbox, grid and image decoding (see
   `docs/rendering-support.md`).
