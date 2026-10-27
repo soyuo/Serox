@@ -34,6 +34,17 @@ public final class HtmlTokenizer {
         } else {
           tokens.add(token);
           position = end + 1;
+          if (token instanceof HtmlToken.StartTag start
+              && !start.selfClosing()
+              && (start.name().equals("script") || start.name().equals("style"))) {
+            // Script and style hold raw text: a < inside is code, not a tag.
+            int close = indexOfIgnoreCase(html, "</" + start.name(), position);
+            int rawEnd = close < 0 ? html.length() : close;
+            if (rawEnd > position) {
+              tokens.add(new HtmlToken.Text(html.substring(position, rawEnd)));
+            }
+            position = rawEnd;
+          }
         }
       } else {
         int nextTag = html.indexOf('<', position);
@@ -43,6 +54,16 @@ public final class HtmlTokenizer {
       }
     }
     return List.copyOf(tokens);
+  }
+
+  private static int indexOfIgnoreCase(String text, String needle, int from) {
+    int last = text.length() - needle.length();
+    for (int i = from; i <= last; i++) {
+      if (text.regionMatches(true, i, needle, 0, needle.length())) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   private int findTagEnd(String html, int position) {
