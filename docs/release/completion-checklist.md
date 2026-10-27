@@ -42,7 +42,7 @@ release; see the roadmap in the README.
 ## Known gaps to close before a public release
 
 - **Figma comparison (STEP 3, 10, 11):** the home, search-result and design-settings screens were
-  compared and the mismatches that fit the current layout were fixed. The result layout and
+  compared and the mismatches that fit the current layout were fixed. The source pane (it shows an excerpt, not the live page) and
   most other frames still differ or were not compared; see
   [figma-comparison.md](figma-comparison.md).
 - **Live providers:** neither the Brave Search nor the Claude API has been called with a real key.

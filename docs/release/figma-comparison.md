@@ -18,6 +18,7 @@ became readable. The canvas holds about 100 frames; only the screens below were 
 - AI summary card: light-blue `#e6effe` card with the sparkle label, 16 px text, 14 px radius.
 - Citation markers `[S1]` are drawn as small numbered chips (`#2563eb`, 6 px radius) inside the text.
 - Sources are cards with a numbered badge, title and URL, and the "AI summaries may contain errors" note.
+- Result screen with a finished summary: wide summary, fixed source pane with the dashed placeholder.
 - Settings: the sidebar with eight sections and a live preview card; segmented options (selected `#e6effe` with a `#3e81f4` border) instead of radio buttons,
   44 px accent swatches with a check mark, and the design's labels (밝게 / 어둡게 / 시스템,
   작게 / 보통 / 크게, 여유롭게 / 촘촘하게) and accent palette.
@@ -25,9 +26,12 @@ became readable. The canvas holds about 100 frames; only the screens below were 
 
 ## Still different (not done)
 
-- **Result layout.** The design puts the summary and sources on the left and a 532 px source
-  preview pane on the right (a dashed "click a source to open the page" placeholder). Serox shows
-  the result list with the AI panel beside it. Moving to the design layout is a larger change.
+- **Result layout partly.** Once an AI summary has finished, the screen now matches the design (wide
+  summary on the left, 532 px dashed source pane on the right; checked in a rendered image). The
+  source pane still shows the stored excerpt of the source, not the live page. Before a summary is
+  ready, without an AI key, or after a failure, Serox keeps the result list and the preview, because
+  the design only shows the finished state. Key points are bullet rows, not the design's
+  "label + text" table, since the model's answer has no labels.
 - **"Claude 요약" chip** inside the address bar and the **inactive tab** styling in the result frame.
 - **Settings pages other than the design page.** The sidebar and live preview now exist (checked in a
   rendered image against the design). Only appearance is editable. The other seven pages show real

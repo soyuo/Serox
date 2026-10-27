@@ -29,14 +29,16 @@ final class SearchResultsView extends BorderPane {
   private BiConsumer<Boolean, AiPanelPosition> onPanelChanged = (open, side) -> {};
   private final AiPanelView aiPanel = new AiPanelView(this::showEvidence);
   private SearchResult selected;
+  private final ScrollPane listScroll;
+  private boolean summaryFocus;
 
   private SearchResultsView(String query, Consumer<SearchResult> onOpenResult) {
     this.query = query;
     this.onOpenResult = onOpenResult;
     getStyleClass().add("search-results-view");
-    aiPanel.prefWidthProperty().bind(widthProperty().multiply(0.3));
+
     results.getStyleClass().add("search-results-list");
-    ScrollPane listScroll = new ScrollPane(results);
+    listScroll = new ScrollPane(results);
     listScroll.setFitToWidth(true);
     listScroll.prefWidthProperty().bind(widthProperty().multiply(0.38));
     listScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
@@ -45,6 +47,7 @@ final class SearchResultsView extends BorderPane {
     preview.getStyleClass().add("search-preview");
     content.setCenter(preview);
     setCenter(content);
+    refreshLayout();
     setQueryHeading();
   }
 
@@ -217,11 +220,60 @@ final class SearchResultsView extends BorderPane {
     panelPosition.setText(panelSide == AiPanelPosition.RIGHT ? "왼쪽으로 이동" : "오른쪽으로 이동");
     panelPosition.setAccessibleText(panelPosition.getText());
     panelPosition.setDisable(!panelOpen);
+    refreshLayout();
   }
 
   /** Forwards the latest AI answer state to the panel; search results are unaffected. */
   void showAi(AiAnswerChanged event) {
     aiPanel.show(event);
+    boolean focus = event.phase() == AiAnswerChanged.Phase.COMPLETED;
+    if (focus != summaryFocus) {
+      summaryFocus = focus;
+      refreshLayout();
+      if (focus) {
+        preview.setCenter(sourcePlaceholder());
+      } else if (selected != null) {
+        select(selected);
+      }
+    }
+  }
+
+  /**
+   * With a finished summary the design gives the summary the width and keeps a fixed source pane on
+   * the other side; the result list steps aside because the sources are listed in the summary.
+   */
+  private void refreshLayout() {
+    boolean focused = summaryFocus && panelOpen;
+    content.setLeft(focused ? null : listScroll);
+    aiPanel.prefWidthProperty().unbind();
+    if (focused) {
+      aiPanel.prefWidthProperty().bind(widthProperty().subtract(UiTokens.SOURCE_PANE_WIDTH));
+      if (!aiPanel.getStyleClass().contains("ai-panel-wide")) {
+        aiPanel.getStyleClass().add("ai-panel-wide");
+      }
+    } else {
+      aiPanel.prefWidthProperty().bind(widthProperty().multiply(0.3));
+      aiPanel.getStyleClass().remove("ai-panel-wide");
+    }
+  }
+
+  /** The dashed card shown until the user picks a source, as in the design. */
+  private VBox sourcePlaceholder() {
+    Label title = new Label("출처를 누르면 원문이 열려요");
+    title.getStyleClass().add("search-state-title");
+    VBox card =
+        new VBox(
+            UiTokens.SPACE_MD,
+            SvgIconView.icon(UiTokens.ICON_PREVIEW_PLACEHOLDER, UiTokens.PLACEHOLDER_ICON_SIZE),
+            title,
+            message("고른 출처의 페이지가 여기에 보여요."));
+    card.setAlignment(Pos.CENTER);
+    card.getStyleClass().add("source-placeholder");
+    VBox.setVgrow(card, javafx.scene.layout.Priority.ALWAYS);
+    VBox holder = new VBox(card);
+    holder.setPadding(new Insets(UiTokens.SPACE_LG));
+    holder.getStyleClass().add("source-holder");
+    return holder;
   }
 
   private void showEvidence(EvidenceDocument document) {
