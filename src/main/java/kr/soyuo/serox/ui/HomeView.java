@@ -1,5 +1,6 @@
 package kr.soyuo.serox.ui;
 
+import java.util.List;
 import java.util.function.Consumer;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -16,7 +17,7 @@ import javafx.scene.layout.VBox;
 final class HomeView extends VBox {
   private final TextField searchField = new TextField();
 
-  HomeView(UiPreviewData previewData, Consumer<String> onSearch) {
+  HomeView(UiPreviewData previewData, List<String> recentSearches, Consumer<String> onSearch) {
     getStyleClass().add("home-view");
     setAlignment(Pos.TOP_CENTER);
 
@@ -45,8 +46,8 @@ final class HomeView extends VBox {
     searchButton.setAccessibleText("검색 실행, Ctrl+K로 검색어 입력");
     searchButton.getStyleClass().add("primary-button");
     searchButton.setDefaultButton(true);
-    searchButton.setOnAction(event -> onSearch.accept(searchField.getText()));
-    searchField.setOnAction(event -> onSearch.accept(searchField.getText()));
+    searchButton.setOnAction(event -> submit(onSearch));
+    searchField.setOnAction(event -> submit(onSearch));
     HBox search = new HBox(UiTokens.SPACE_SM, searchInput, searchButton);
     search.setAlignment(Pos.CENTER);
     search.setMaxWidth(Double.MAX_VALUE);
@@ -56,7 +57,7 @@ final class HomeView extends VBox {
     HBox cards =
         new HBox(
             UiTokens.HOME_CARD_GAP,
-            createRecentSearchCard(previewData.recentSearches()),
+            createRecentSearchCard(recentSearches, onSearch),
             createConnectionCard(previewData));
     cards.setAlignment(Pos.TOP_CENTER);
     cards.getStyleClass().add("home-cards");
@@ -75,11 +76,14 @@ final class HomeView extends VBox {
     getChildren().add(content);
   }
 
-  private VBox createRecentSearchCard(java.util.List<String> recentSearches) {
+  private VBox createRecentSearchCard(
+      List<String> recentSearches, Consumer<String> onRecentSearch) {
     Label heading = new Label("최근 검색");
     heading.getStyleClass().add("card-heading");
     VBox entries = new VBox();
-    recentSearches.stream().map(this::recentSearch).forEach(entries.getChildren()::add);
+    recentSearches.stream()
+        .map(query -> recentSearch(query, onRecentSearch))
+        .forEach(entries.getChildren()::add);
     if (recentSearches.isEmpty()) {
       Label emptyState = new Label("최근 검색이 없습니다.");
       emptyState.setAccessibleText("검색 기록이 없습니다.");
@@ -98,10 +102,19 @@ final class HomeView extends VBox {
     return card;
   }
 
-  private Label recentSearch(String query) {
-    Label item = new Label(query);
+  private Button recentSearch(String query, Consumer<String> onRecentSearch) {
+    Button item = new Button(query);
+    item.setAccessibleText("최근 검색: " + query);
     item.getStyleClass().add("recent-search-item");
+    item.setOnAction(event -> onRecentSearch.accept(query));
     return item;
+  }
+
+  private void submit(Consumer<String> onSearch) {
+    String query = searchField.getText().strip();
+    if (!query.isBlank()) {
+      onSearch.accept(query);
+    }
   }
 
   private VBox createConnectionCard(UiPreviewData previewData) {

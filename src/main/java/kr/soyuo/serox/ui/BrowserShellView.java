@@ -1,6 +1,9 @@
 package kr.soyuo.serox.ui;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import javafx.geometry.Pos;
@@ -70,6 +73,7 @@ public final class BrowserShellView extends BorderPane {
   private final Map<TabId, PageLoaded> loadedPages = new HashMap<>();
   private final Map<TabId, HBox> tabButtons = new HashMap<>();
   private final Map<TabId, Label> tabTitles = new HashMap<>();
+  private final Deque<String> recentSearches = new ArrayDeque<>();
   private final HBox tabStrip = new HBox(UiTokens.SPACE_XS);
   private final BrowserController browserController;
   private final SearchService searchService;
@@ -95,7 +99,7 @@ public final class BrowserShellView extends BorderPane {
     getStyleClass().add("app-root");
     installWindowResizeHandlers();
     setTop(createBrowserChrome());
-    homeView = new HomeView(previewData, this::showNotConnectedMessage);
+    homeView = new HomeView(previewData, List.of(), this::searchFromHome);
     setCenter(homeView);
     setBottom(createStatusBar());
     installKeyboardShortcuts();
@@ -456,7 +460,7 @@ public final class BrowserShellView extends BorderPane {
       try {
         NavigationTarget target = new NavigationInputClassifier().classify(input);
         if (target instanceof SearchQuery query) {
-          searchService.search(activeTabId, query.value());
+          runSearch(query.value());
         } else {
           searchService.cancel(activeTabId);
           browserController.navigate(activeTabId, ((DirectAddress) target).uri().toString());
@@ -489,8 +493,25 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private void showHomeView() {
-    homeView = new HomeView(previewData, this::showNotConnectedMessage);
+    homeView = new HomeView(previewData, List.copyOf(recentSearches), this::searchFromHome);
     setCenter(homeView);
+  }
+
+  private void searchFromHome(String query) {
+    runSearch(query);
+  }
+
+  private void runSearch(String query) {
+    if (activeTabId == null || query == null || query.isBlank()) {
+      return;
+    }
+    String normalized = query.strip();
+    recentSearches.remove(normalized);
+    recentSearches.addFirst(normalized);
+    while (recentSearches.size() > 5) {
+      recentSearches.removeLast();
+    }
+    searchService.search(activeTabId, normalized);
   }
 
   private void updateHistoryButtons(TabSnapshot snapshot) {
@@ -573,12 +594,6 @@ public final class BrowserShellView extends BorderPane {
                         homeView::focusSearchField);
               }
             });
-  }
-
-  private void showNotConnectedMessage(String query) {
-    if (query != null && !query.isBlank()) {
-      updateLabel(aiStatus, "검색 엔진 연결 예정 · " + query.trim());
-    }
   }
 
   private void installWindowResizeHandlers() {

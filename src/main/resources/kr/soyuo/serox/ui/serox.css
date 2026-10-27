@@ -378,8 +378,17 @@
 .recent-search-item {
     -fx-pref-height: 32px;
     -fx-alignment: center-left;
+    -fx-padding: 0 8px;
+    -fx-background-color: transparent;
     -fx-text-fill: serox-text-primary;
     -fx-font-size: 12px;
+    -fx-cursor: hand;
+}
+
+.recent-search-item:hover,
+.recent-search-item:focused {
+    -fx-background-color: serox-hover-surface;
+    -fx-background-radius: 6px;
 }
 
 .empty-state {
