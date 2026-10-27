@@ -241,9 +241,12 @@ public final class BrowserShellView extends BorderPane {
             settingsService.current(),
             preview -> AppearanceStyler.apply(this, preview),
             settings -> settingsService.save(settings),
-            this::cancelSettings));
+            this::cancelSettings,
+            new SettingsView.ServiceSummary(
+                statusText(searchStatus), statusText(aiStatus), statusText(mcpStatus))));
   }
 
+/** The status label's text without its "검색:" or "AI:" prefix. */  private static String statusText(Label label) {    String text = label.getText() == null ? "" : label.getText();    int colon = text.indexOf(": ");    return colon >= 0 ? text.substring(colon + 2) : text;  }
   private void cancelSettings() {
     AppearanceStyler.apply(this, settingsService.current());
     closeSettings();
