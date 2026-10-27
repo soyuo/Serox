@@ -21,9 +21,19 @@ public final class PromptBuilder {
   /** Prevents instantiation of this stateless utility. */
   private PromptBuilder() {}
 
-  /** Returns the system prompt. */
+  /** Returns the system prompt, answering in the language of the question. */
   public static String systemPrompt() {
     return SYSTEM_PROMPT;
+  }
+
+  /** Returns the system prompt, answering in {@code answerLanguage} unless it is blank. */
+  public static String systemPrompt(String answerLanguage) {
+    if (answerLanguage.isBlank() || answerLanguage.length() > 40
+        || !answerLanguage.matches("[A-Za-z ]+")) {
+      return SYSTEM_PROMPT;
+    }
+    return SYSTEM_PROMPT.replace(
+        "Answer in the language of the question.", "Answer in " + answerLanguage + ".");
   }
 
   /** Renders the question and the evidence documents as the user message. */

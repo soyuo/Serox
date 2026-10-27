@@ -301,7 +301,11 @@ public final class BrowserShellView extends BorderPane {
         new SettingsView(
             settingsService.current(),
             preview -> AppearanceStyler.apply(this, preview),
-            settings -> settingsService.save(settings.withPrivacyOf(settingsService.current())),
+            settings ->
+                settingsService.save(
+                    settings
+                        .withPrivacyOf(settingsService.current())
+                        .withGeneralOf(settingsService.current())),
             this::cancelSettings,
             new SettingsView.ServiceSummary(
                 statusText(searchStatus), statusText(aiStatus), statusText(mcpStatus)),
