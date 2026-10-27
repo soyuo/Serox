@@ -16,7 +16,9 @@ import kr.soyuo.serox.core.event.BrowserEventBus;
 import kr.soyuo.serox.core.event.EventSubscription;
 import kr.soyuo.serox.core.event.TabClosed;
 import kr.soyuo.serox.core.event.TabStateChanged;
+import kr.soyuo.serox.core.model.BrowserSettings;
 import kr.soyuo.serox.core.model.SessionSnapshot;
+import kr.soyuo.serox.core.model.StartupMode;
 import kr.soyuo.serox.core.model.TabId;
 import kr.soyuo.serox.core.model.TabSnapshot;
 import kr.soyuo.serox.core.port.storage.SessionRepository;
@@ -48,15 +50,30 @@ public final class SessionKeeper implements AutoCloseable {
    * restore. Storage and restore failures fall back to the blank tab.
    */
   public void restoreOrStart(BrowserCommandService commands) {
+    restoreOrStart(commands, StartupMode.RESTORE_TABS, "");
+  }
+
+  /**
+   * Starts the way the user chose: reopen the last session's pages, open the start page, or begin
+   * with one blank tab. A start page that cannot be used falls back to the blank tab.
+   */
+  public void restoreOrStart(
+      BrowserCommandService commands, StartupMode mode, String startPageUrl) {
     Objects.requireNonNull(commands, "commands");
-    try {
-      restore(commands);
-    } catch (RuntimeException exception) {
-      LOGGER.log(Level.WARNING, "Previous session could not be restored.");
+    Objects.requireNonNull(mode, "mode");
+    if (mode == StartupMode.RESTORE_TABS) {
+      try {
+        restore(commands);
+      } catch (RuntimeException exception) {
+        LOGGER.log(Level.WARNING, "Previous session could not be restored.");
+      }
     }
     try {
       if (commands.listTabs().toCompletableFuture().join().isEmpty()) {
-        commands.createTab().toCompletableFuture().join();
+        TabSnapshot first = commands.createTab().toCompletableFuture().join();
+        if (mode == StartupMode.SPECIFIC_PAGE && BrowserSettings.isWebAddress(startPageUrl)) {
+          commands.navigate(first.id(), startPageUrl);
+        }
       }
     } catch (RuntimeException exception) {
       LOGGER.log(Level.WARNING, "Default tab could not be created.");
