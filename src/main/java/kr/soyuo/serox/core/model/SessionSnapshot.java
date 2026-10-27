@@ -12,9 +12,11 @@ public record SessionSnapshot(UUID id, List<TabSnapshot> tabs, Optional<TabId> a
     Objects.requireNonNull(id, "id");
     tabs = List.copyOf(tabs);
     activeTabId = Objects.requireNonNull(activeTabId, "activeTabId");
-    if (activeTabId.isPresent()
-        && tabs.stream().noneMatch(tab -> tab.id().equals(activeTabId.orElseThrow()))) {
-      throw new IllegalArgumentException("activeTabId must identify a tab in the session");
+    if (activeTabId.isPresent()) {
+      TabId activeId = activeTabId.orElseThrow();
+      if (tabs.stream().noneMatch(tab -> tab.id().equals(activeId))) {
+        throw new IllegalArgumentException("activeTabId must identify a tab in the session");
+      }
     }
   }
 }
