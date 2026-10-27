@@ -12,7 +12,8 @@ uses selector specificity, source order, inline declarations, and inherited
 
 Supported properties are colors and backgrounds, font size and weight, font family,
 text decoration, margin, padding, border, width, height, and `display: block`,
-`inline`, `flex`, or `none`. Lengths use pixels. Colors use the named initial palette or
+`inline`, `flex`, or `none`. Lengths use pixels; `width` also accepts a percentage of the
+containing block's content width. Colors use the named initial palette or
 three- and six-digit hexadecimal notation.
 
 ### Flexbox
@@ -30,7 +31,7 @@ a column (it needs a container height), and text placed directly inside a flex c
 (only element children become items).
 
 Grid, positioning, pseudo-classes, media queries, transforms, animations,
-percentage lengths, and other unsupported values fall back to initial styles.
+percentages other than `width`, and other unsupported values fall back to initial styles.
 
 ## Layout and paint
 
