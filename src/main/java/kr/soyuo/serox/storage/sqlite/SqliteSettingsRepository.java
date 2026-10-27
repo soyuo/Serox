@@ -2,6 +2,7 @@ package kr.soyuo.serox.storage.sqlite;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -11,6 +12,8 @@ import kr.soyuo.serox.core.model.AppLanguage;
 import kr.soyuo.serox.core.model.BrowserSettings;
 import kr.soyuo.serox.core.model.DisplayDensity;
 import kr.soyuo.serox.core.model.HistoryRetention;
+import kr.soyuo.serox.core.model.KeyChord;
+import kr.soyuo.serox.core.model.ShortcutAction;
 import kr.soyuo.serox.core.model.StartupMode;
 import kr.soyuo.serox.core.model.ThemeMode;
 import kr.soyuo.serox.core.port.storage.SettingsRepository;
@@ -18,6 +21,7 @@ import kr.soyuo.serox.core.port.storage.SettingsRepository;
 /** SQLite-backed non-secret browser preferences repository. */
 public final class SqliteSettingsRepository implements SettingsRepository {
   private static final BrowserSettings DEFAULTS = BrowserSettings.defaults();
+  private static final String SHORTCUT_PREFIX = "shortcut.";
 
   private final SqliteDatabase database;
 
@@ -52,39 +56,68 @@ public final class SqliteSettingsRepository implements SettingsRepository {
               !"false".equals(values.get("saveSearchHistory")),
               enumValue(values, "startupMode", DEFAULTS.startupMode(), StartupMode.class),
               values.getOrDefault("startPageUrl", DEFAULTS.startPageUrl()),
-              enumValue(values, "language", DEFAULTS.language(), AppLanguage.class)));
+              enumValue(values, "language", DEFAULTS.language(), AppLanguage.class),
+              shortcutValues(values)));
         });
+  }
+
+  /** The stored shortcut choices; entries that are no longer valid fall back to the default. */
+  private static Map<ShortcutAction, KeyChord> shortcutValues(Map<String, String> values) {
+    Map<ShortcutAction, KeyChord> overrides = new EnumMap<>(ShortcutAction.class);
+    for (ShortcutAction action : ShortcutAction.values()) {
+      String stored = values.get(SHORTCUT_PREFIX + action.name());
+      if (stored != null) {
+        KeyChord.parse(stored).ifPresent(chord -> overrides.put(action, chord));
+      }
+    }
+    return overrides;
   }
 
   @Override
   public CompletionStage<Void> save(BrowserSettings settings) {
     Objects.requireNonNull(settings, "settings");
-    Map<String, String> values =
-        Map.of(
-            "theme", settings.theme().name(),
-            "accentColor", settings.accentColor(),
-            "fontScalePercent", Integer.toString(settings.fontScalePercent()),
-            "aiPanelPosition", settings.aiPanelPosition().name(),
-            "displayDensity", settings.displayDensity().name(),
-            "historyRetention", settings.historyRetention().name(),
-            "saveSearchHistory", Boolean.toString(settings.saveSearchHistory()),
-            "startupMode", settings.startupMode().name(),
-            "startPageUrl", settings.startPageUrl(),
-            "language", settings.language().name());
+    Map<String, String> values = new HashMap<>();
+    values.put("theme", settings.theme().name());
+    values.put("accentColor", settings.accentColor());
+    values.put("fontScalePercent", Integer.toString(settings.fontScalePercent()));
+    values.put("aiPanelPosition", settings.aiPanelPosition().name());
+    values.put("displayDensity", settings.displayDensity().name());
+    values.put("historyRetention", settings.historyRetention().name());
+    values.put("saveSearchHistory", Boolean.toString(settings.saveSearchHistory()));
+    values.put("startupMode", settings.startupMode().name());
+    values.put("startPageUrl", settings.startPageUrl());
+    values.put("language", settings.language().name());
+    settings
+        .shortcutOverrides()
+        .forEach((action, chord) -> values.put(SHORTCUT_PREFIX + action.name(), chord.toString()));
     return database.submit(
         connection -> {
-          try (PreparedStatement statement =
-              connection.prepareStatement(
-                  "INSERT INTO settings(key, value, updated_at) VALUES (?, ?, ?) "
-                      + "ON CONFLICT(key) DO UPDATE SET "
-                      + "value=excluded.value, updated_at=excluded.updated_at")) {
-            for (Map.Entry<String, String> entry : values.entrySet()) {
-              statement.setString(1, entry.getKey());
-              statement.setString(2, entry.getValue());
-              statement.setLong(3, System.currentTimeMillis());
-              statement.addBatch();
+          connection.setAutoCommit(false);
+          try {
+            // Only choices that differ from the default are kept, so earlier ones must go first.
+            try (PreparedStatement clear =
+                connection.prepareStatement("DELETE FROM settings WHERE key LIKE 'shortcut.%'")) {
+              clear.executeUpdate();
             }
-            statement.executeBatch();
+            try (PreparedStatement statement =
+                connection.prepareStatement(
+                    "INSERT INTO settings(key, value, updated_at) VALUES (?, ?, ?) "
+                        + "ON CONFLICT(key) DO UPDATE SET "
+                        + "value=excluded.value, updated_at=excluded.updated_at")) {
+              for (Map.Entry<String, String> entry : values.entrySet()) {
+                statement.setString(1, entry.getKey());
+                statement.setString(2, entry.getValue());
+                statement.setLong(3, System.currentTimeMillis());
+                statement.addBatch();
+              }
+              statement.executeBatch();
+            }
+            connection.commit();
+          } catch (Exception exception) {
+            connection.rollback();
+            throw exception;
+          } finally {
+            connection.setAutoCommit(true);
           }
           return null;
         });
