@@ -3,6 +3,7 @@ package kr.soyuo.serox.ui;
 import java.util.function.Consumer;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.AccessibleRole;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -13,6 +14,8 @@ import javafx.scene.layout.VBox;
 
 /** Figma-inspired new-tab search and connection overview. */
 final class HomeView extends VBox {
+  private final TextField searchField = new TextField();
+
   HomeView(UiPreviewData previewData, Consumer<String> onSearch) {
     getStyleClass().add("home-view");
     setAlignment(Pos.TOP_CENTER);
@@ -26,9 +29,8 @@ final class HomeView extends VBox {
     Label tagline = new Label("검색하면 AI가 읽고 정리해 드려요. 출처와 함께요.");
     tagline.getStyleClass().add("tagline");
 
-    TextField searchField = new TextField();
     searchField.setPromptText("궁금한 것을 검색해 보세요…");
-    searchField.setAccessibleText("Serox 검색어");
+    searchField.setAccessibleText("Serox 검색어, Ctrl+K로 이동");
     searchField.getStyleClass().add("home-search-field");
     HBox searchInput =
         new HBox(
@@ -40,7 +42,7 @@ final class HomeView extends VBox {
     searchInput.getStyleClass().add("home-search-input");
 
     Button searchButton = new Button("검색");
-    searchButton.setAccessibleText("검색 실행");
+    searchButton.setAccessibleText("검색 실행, Ctrl+K로 검색어 입력");
     searchButton.getStyleClass().add("primary-button");
     searchButton.setDefaultButton(true);
     searchButton.setOnAction(event -> onSearch.accept(searchField.getText()));
@@ -78,8 +80,16 @@ final class HomeView extends VBox {
     heading.getStyleClass().add("card-heading");
     VBox entries = new VBox();
     recentSearches.stream().map(this::recentSearch).forEach(entries.getChildren()::add);
+    if (recentSearches.isEmpty()) {
+      Label emptyState = new Label("최근 검색이 없습니다.");
+      emptyState.setAccessibleText("검색 기록이 없습니다.");
+      emptyState.getStyleClass().add("empty-state");
+      entries.getChildren().add(emptyState);
+    }
     entries.getStyleClass().add("recent-searches");
     VBox card = new VBox(UiTokens.SPACE_SM, heading, entries);
+    card.setAccessibleRole(AccessibleRole.PARENT);
+    card.setAccessibleText("최근 검색 패널");
     card.setPrefWidth(UiTokens.HOME_CARD_WIDTH);
     card.setPrefHeight(UiTokens.HOME_CARD_HEIGHT);
     card.setMaxHeight(UiTokens.HOME_CARD_HEIGHT);
@@ -103,6 +113,8 @@ final class HomeView extends VBox {
     note.setWrapText(true);
     note.getStyleClass().add("card-note");
     VBox card = new VBox(UiTokens.SPACE_SM, heading, aiStatus, mcpStatus, note);
+    card.setAccessibleRole(AccessibleRole.PARENT);
+    card.setAccessibleText("AI 및 MCP 연결 상태 패널");
     card.setPrefWidth(UiTokens.HOME_CARD_WIDTH);
     card.setPrefHeight(UiTokens.HOME_CARD_HEIGHT);
     card.setMaxHeight(UiTokens.HOME_CARD_HEIGHT);
@@ -119,5 +131,10 @@ final class HomeView extends VBox {
     status.getStyleClass().add("connection-status");
     status.setAccessibleText(service.name() + " 상태: " + (service.enabled() ? "켜짐" : "꺼짐"));
     return status;
+  }
+
+  void focusSearchField() {
+    searchField.requestFocus();
+    searchField.selectAll();
   }
 }

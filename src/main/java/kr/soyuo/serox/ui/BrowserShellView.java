@@ -7,6 +7,9 @@ import javafx.scene.Cursor;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -28,6 +31,8 @@ public final class BrowserShellView extends BorderPane {
   private final Label mcpStatus =
       new Label(previewData.mcp().statusText() + " (" + previewData.mcp().detail() + ")");
   private final Region statusDot = new Region();
+  private TextField addressField;
+  private HomeView homeView;
   private final EventSubscription connectionStatusSubscription;
   private final EventSubscription operationErrorSubscription;
   private double dragOffsetX;
@@ -46,8 +51,10 @@ public final class BrowserShellView extends BorderPane {
     getStyleClass().add("app-root");
     installWindowResizeHandlers();
     setTop(createBrowserChrome());
-    setCenter(new HomeView(previewData, this::showNotConnectedMessage));
+    homeView = new HomeView(previewData, this::showNotConnectedMessage);
+    setCenter(homeView);
     setBottom(createStatusBar());
+    installKeyboardShortcuts();
 
     var stylesheet = BrowserShellView.class.getResource("serox.css");
     if (stylesheet != null) {
@@ -133,13 +140,14 @@ public final class BrowserShellView extends BorderPane {
     back.setDisable(true);
     forward.setDisable(true);
 
-    TextField address = new TextField();
-    address.setPromptText("검색어 또는 주소를 입력하세요…");
-    address.setAccessibleText("검색어 또는 웹 주소");
-    address.getStyleClass().add("address-field");
-    HBox.setHgrow(address, Priority.ALWAYS);
+    addressField = new TextField();
+    addressField.setPromptText("검색어 또는 주소를 입력하세요…");
+    addressField.setAccessibleText("검색어 또는 웹 주소, Ctrl+L로 이동");
+    addressField.getStyleClass().add("address-field");
+    HBox.setHgrow(addressField, Priority.ALWAYS);
     HBox addressBox =
-        new HBox(UiTokens.SPACE_SM, SvgIconView.icon(UiTokens.ICON_ADDRESS_SEARCH, 18), address);
+        new HBox(
+            UiTokens.SPACE_SM, SvgIconView.icon(UiTokens.ICON_ADDRESS_SEARCH, 18), addressField);
     addressBox.setAlignment(Pos.CENTER_LEFT);
     addressBox.getStyleClass().add("address-box");
     HBox.setHgrow(addressBox, Priority.ALWAYS);
@@ -169,6 +177,9 @@ public final class BrowserShellView extends BorderPane {
             "status-dot",
             previewData.mcp().enabled() ? "status-dot-connected" : "status-dot-disconnected");
     mcpStatus.setGraphic(statusDot);
+    aiStatus.setAccessibleText("AI 연결 상태: " + previewData.ai().detail());
+    mcpStatus.setAccessibleText(
+        previewData.mcp().name() + " 상태: " + previewData.mcp().statusText());
     Label divider = new Label("|");
     divider.getStyleClass().add("status-divider");
     Region spacer = new Region();
@@ -187,6 +198,8 @@ public final class BrowserShellView extends BorderPane {
     Runnable update =
         () -> {
           target.setText(prefix + status);
+          target.setAccessibleText(
+              event.service() == ServiceId.MCP ? "MCP 서버 상태: " + status : "AI 연결 상태: " + status);
           if (event.service() == ServiceId.MCP) {
             statusDot.getStyleClass().setAll("status-dot", statusStyle(event.status()));
           }
@@ -227,6 +240,28 @@ public final class BrowserShellView extends BorderPane {
       case CONNECTED -> "status-dot-connected";
       case FAILED -> "status-dot-failed";
     };
+  }
+
+  private void installKeyboardShortcuts() {
+    sceneProperty()
+        .addListener(
+            (observable, oldScene, newScene) -> {
+              if (newScene != null) {
+                newScene
+                    .getAccelerators()
+                    .put(
+                        new KeyCodeCombination(KeyCode.L, KeyCombination.CONTROL_DOWN),
+                        () -> {
+                          addressField.requestFocus();
+                          addressField.selectAll();
+                        });
+                newScene
+                    .getAccelerators()
+                    .put(
+                        new KeyCodeCombination(KeyCode.K, KeyCombination.CONTROL_DOWN),
+                        homeView::focusSearchField);
+              }
+            });
   }
 
   private void showNotConnectedMessage(String query) {

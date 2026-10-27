@@ -123,6 +123,14 @@
     -fx-opacity: 0.65;
 }
 
+.toolbar-button:focused,
+.window-control-button:focused,
+.tab-close:focused {
+    -fx-border-color: serox-primary;
+    -fx-border-radius: 8px;
+    -fx-border-width: 1px;
+}
+
 .address-box {
     -fx-spacing: 10px;
     -fx-padding: 0 14px;
@@ -139,6 +147,11 @@
     -fx-text-fill: serox-text-primary;
     -fx-prompt-text-fill: serox-text-muted;
     -fx-font-size: 12px;
+}
+
+.address-field:focused,
+.home-search-field:focused {
+    -fx-effect: dropshadow(gaussian, rgba(37, 99, 235, 0.42), 4, 0, 0, 0);
 }
 
 .home-view {
@@ -230,6 +243,19 @@
     -fx-alignment: center-left;
     -fx-text-fill: serox-text-primary;
     -fx-font-size: 12px;
+}
+
+.empty-state {
+    -fx-pref-height: 32px;
+    -fx-alignment: center-left;
+    -fx-text-fill: serox-text-muted;
+    -fx-font-size: 12px;
+}
+
+.primary-button:focused {
+    -fx-border-color: serox-primary-hover;
+    -fx-border-radius: 22px;
+    -fx-border-width: 2px;
 }
 
 .connection-status {
