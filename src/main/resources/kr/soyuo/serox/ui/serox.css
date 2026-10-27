@@ -882,3 +882,58 @@
 .ai-banner-error .ai-banner-title {
     -fx-text-fill: serox-error;
 }
+
+/* Privacy page and its confirmation window. */
+.privacy-row {
+    -fx-min-height: 48px;
+    -fx-padding: 0 16px;
+    -fx-background-color: serox-surface;
+    -fx-background-radius: 10px;
+    -fx-border-color: serox-border;
+    -fx-border-radius: 10px;
+}
+
+.privacy-query {
+    -fx-text-fill: serox-text-primary;
+    -fx-font-size: 1.000em;
+}
+
+.danger-button {
+    -fx-min-height: 36px;
+    -fx-padding: 0 16px;
+    -fx-background-color: serox-error;
+    -fx-background-radius: 8px;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+.danger-button:disabled {
+    -fx-opacity: 0.4;
+}
+
+.confirm-dialog {
+    -fx-background-color: serox-surface;
+    -fx-background-radius: 12px;
+}
+
+.confirm-dialog .header-panel {
+    -fx-background-color: serox-surface;
+}
+
+.confirm-dialog .header-panel .label {
+    -fx-font-size: 1.231em;
+    -fx-font-weight: bold;
+    -fx-text-fill: serox-text-primary;
+}
+
+.confirm-dialog .content.label {
+    -fx-text-fill: serox-text-secondary;
+}
+
+.confirm-dialog .button-bar .button:default {
+    -fx-background-color: serox-error;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8px;
+}

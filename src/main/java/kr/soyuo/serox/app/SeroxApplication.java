@@ -35,6 +35,7 @@ public final class SeroxApplication extends Application {
     runtime.announceServiceStatus();
     browserShell.setSettingsService(runtime.settingsService());
     browserShell.setLibraryService(runtime.libraryService());
+    browserShell.setPrivacyActions(runtime.usageRecorder(), runtime.libraryService());
     if (getParameters().getRaw().contains("--mcp")) {
       mcpServer =
           McpLauncher.create(

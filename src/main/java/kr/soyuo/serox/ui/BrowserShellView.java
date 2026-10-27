@@ -88,6 +88,7 @@ public final class BrowserShellView extends BorderPane {
   private boolean aiPanelOpen = true;
   private AiPanelPosition aiPanelSide = AiPanelPosition.RIGHT;
   private AiSearchService aiSearchService;
+  private PrivacyActions privacyActions = PrivacyActions.none();
   private SettingsService settingsService;
   private LibraryService libraryService;
   private final Button bookmarkButton = new Button("★");
@@ -169,6 +170,45 @@ public final class BrowserShellView extends BorderPane {
   }
 
   /** Supplies the AI service used to cancel an in-progress answer. */
+  /** Connects the privacy page to the stored data it can delete. */
+  public void setPrivacyActions(
+      java.util.Optional<kr.soyuo.serox.core.application.UsageRecorder> recorder,
+      kr.soyuo.serox.core.application.LibraryService library) {
+    privacyActions =
+        new PrivacyActions() {
+          @Override
+          public boolean available() {
+            return recorder.isPresent() && library.available();
+          }
+
+          @Override
+          public java.util.concurrent.CompletionStage<java.util.List<String>> recentQueries() {
+            return recorder
+                .map(r -> r.recentQueries(UiTokens.PRIVACY_LIST_LIMIT))
+                .orElseGet(() -> java.util.concurrent.CompletableFuture.completedFuture(java.util.List.of()));
+          }
+
+          @Override
+          public java.util.concurrent.CompletionStage<Void> deleteQuery(String query) {
+            return recorder
+                .map(r -> r.deleteQuery(query))
+                .orElseGet(() -> java.util.concurrent.CompletableFuture.completedFuture(null));
+          }
+
+          @Override
+          public java.util.concurrent.CompletionStage<Void> clearQueries() {
+            return recorder
+                .map(kr.soyuo.serox.core.application.UsageRecorder::clearQueries)
+                .orElseGet(() -> java.util.concurrent.CompletableFuture.completedFuture(null));
+          }
+
+          @Override
+          public java.util.concurrent.CompletionStage<Void> clearVisits() {
+            return library.clearHistory();
+          }
+        };
+  }
+
   public void setAiSearchService(AiSearchService aiSearchService) {
     this.aiSearchService = aiSearchService;
   }
@@ -244,7 +284,8 @@ public final class BrowserShellView extends BorderPane {
             settings -> settingsService.save(settings),
             this::cancelSettings,
             new SettingsView.ServiceSummary(
-                statusText(searchStatus), statusText(aiStatus), statusText(mcpStatus))));
+                statusText(searchStatus), statusText(aiStatus), statusText(mcpStatus)),
+            privacyActions));
   }
 
 /** The status label's text without its "검색:" or "AI:" prefix. */  private static String statusText(Label label) {    String text = label.getText() == null ? "" : label.getText();    int colon = text.indexOf(": ");    return colon >= 0 ? text.substring(colon + 2) : text;  }
