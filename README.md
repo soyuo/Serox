@@ -70,6 +70,12 @@ $env:SEROX_ANTHROPIC_API_KEY = "<Anthropic API key>"
 .\dist\Serox\Serox.exe
 ```
 
+AI 제공자는 `SEROX_AI_PROVIDER`로 `claude`, `gemini`, `codex`, `grok` 중 선택한다.
+기본값은 Claude다. Gemini는 `SEROX_GEMINI_API_KEY`, Codex(OpenAI API)는
+`SEROX_OPENAI_API_KEY`, Grok은 `SEROX_XAI_API_KEY`를 사용한다.
+`SEROX_AI_MODEL`로 모델 ID를 지정할 수 있다.
+모델 기본값과 검증 범위는 [AI 제공자 결정 기록](docs/decisions/0005-ai-providers.md)에 있다.
+
 - 데이터 폴더: `%LOCALAPPDATA%\Serox` (`SEROX_DATA_DIR`로 변경 가능)
 - 설정 화면의 연결 상태 배지가 키와 저장소의 실제 상태를 보여 준다.
 
@@ -159,7 +165,7 @@ Serox는 stdio 기반 MCP 서버를 제공한다. 에이전트가 Serox를 직�
 - 창과 함께 실행(하단 상태 표시줄에 MCP 연결 상태 표시): `Serox --mcp`
 - 사용자 승인: 에이전트 설정의 환경 변수에 허용할 도구를 적어야 한다.
   `SEROX_MCP_APPROVED_TOOLS=search_and_summarize` — 값이 없으면 세션이 거부된다.
-- 검색·요약에는 `SEROX_BRAVE_SEARCH_API_KEY`와 `SEROX_ANTHROPIC_API_KEY`가 필요하다.
+- 검색·요약에는 `SEROX_BRAVE_SEARCH_API_KEY`와 선택한 AI 제공자의 API 키가 필요하다.
 - 호출은 동시 2건, 분당 20건으로 제한되고, 브라우저 제어·로컬 파일·방문 기록에 접근하는
   도구는 존재하지 않는다.
 

@@ -170,6 +170,10 @@ Search, AI, Storage, Security 모듈을 통해 동작하도록 연결한다.
 **완료 기준:** AI 답변에 검증된 출처가 표시되고,
 AI 제공자 오류가 일반 탐색이나 검색을 막지 않는다.
 
+**후속 구현:** [추가 AI 제공자 #75](https://github.com/soyuo/Serox/issues/75)는
+10.3의 Gemini·OpenAI·xAI 스트리밍과 10.7의 오류·일반 검색 보존 검증을 보완한다.
+설정과 실서비스 검증의 한계는 [AI 제공자 결정 기록](docs/decisions/0005-ai-providers.md)에 기록한다.
+
 ### STEP 11 — 디자인 기반 브라우저 확장 UI
 
 1. 공통 토큰을 사용해 탭 바, 도구 모음, 빈 상태와 상태 표시를 다듬는다.

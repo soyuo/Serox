@@ -134,7 +134,7 @@ class AiSearchServiceTest {
     try (var service = service(Optional.empty(), true)) {
       search();
       assertEquals(Phase.UNAVAILABLE, aiEvents.getLast().phase());
-      assertTrue(aiEvents.getLast().message().contains("SEROX_ANTHROPIC_API_KEY"));
+      assertTrue(aiEvents.getLast().message().contains("API 키"));
     }
   }
 }
