@@ -89,7 +89,8 @@ $jpackageArgs = @(
     '--app-version', $version,
     '--vendor', 'soyuo.kr',
     '--description', 'Serox AI Searching Browser',
-    '--java-options', '--enable-native-access=javafx.graphics'
+    '--java-options', '--enable-native-access=javafx.graphics',
+    '--icon', (Join-Path $projectRoot 'scripts/icon/serox.ico')
 )
 
 if ($Type -in @('msi', 'exe')) {

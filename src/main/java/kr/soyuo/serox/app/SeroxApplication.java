@@ -70,6 +70,10 @@ public final class SeroxApplication extends Application {
     browserShell.setMcpActions(mcpActions(mcpSettings));
     Scene scene = new Scene(browserShell, 1100, 720);
 
+    var icon = SeroxApplication.class.getResource("/kr/soyuo/serox/ui/assets/serox-icon.png");
+    if (icon != null) {
+      stage.getIcons().add(new javafx.scene.image.Image(icon.toExternalForm()));
+    }
     stage.initStyle(StageStyle.UNDECORATED);
     stage.setMinWidth(UiTokens.WINDOW_MIN_WIDTH);
     stage.setMinHeight(UiTokens.WINDOW_MIN_HEIGHT);
