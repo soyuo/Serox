@@ -1,0 +1,20 @@
+viewport 320.0x200.0 document 320.0x229.0
+fill 0.0,0.0 320.0x35.0 #0b57d0
+text 8.0,22.0 Serox link=-
+text 280.7,22.0 menu link=-
+fill 8.0,43.0 96.0x104.0 #f6f7f9
+stroke 8.0,43.0 96.0x104.0 #000000 1.0
+text 15.0,80.0 first card link=-
+fill 112.0,43.0 96.0x104.0 #f6f7f9
+stroke 112.0,43.0 96.0x104.0 #000000 1.0
+text 119.0,80.0 second card link=-
+text 119.0,99.0 with longer link=-
+text 119.0,118.0 text link=-
+fill 216.0,43.0 96.0x104.0 #f6f7f9
+stroke 216.0,43.0 96.0x104.0 #000000 1.0
+text 223.0,80.0 third link=-
+fill 144.2,163.0 31.6x27.0 #e6effe
+text 148.2,181.0 one link=-
+fill 144.2,194.0 31.6x27.0 #e6effe
+text 148.2,212.0 two link=-
+unsupported 

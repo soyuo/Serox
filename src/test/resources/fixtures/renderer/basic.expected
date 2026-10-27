@@ -8,4 +8,4 @@ text 84.6,90.0  read link=https://fixture.test/docs
 text 23.0,111.0 docs link=https://fixture.test/docs
 image 23.0,119.0 40.0x24.0 visual sample
 text 8.0,174.0 fallback text link=-
-unsupported display: flex
+unsupported display: grid

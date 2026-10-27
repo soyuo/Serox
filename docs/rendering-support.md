@@ -12,10 +12,24 @@ uses selector specificity, source order, inline declarations, and inherited
 
 Supported properties are colors and backgrounds, font size and weight, font family,
 text decoration, margin, padding, border, width, height, and `display: block`,
-`inline`, or `none`. Lengths use pixels. Colors use the named initial palette or
+`inline`, `flex`, or `none`. Lengths use pixels. Colors use the named initial palette or
 three- and six-digit hexadecimal notation.
 
-Flexbox, Grid, positioning, pseudo-classes, media queries, transforms, animations,
+### Flexbox
+
+`display: flex` is supported on block containers with these properties:
+`flex-direction` (`row`, `column`), `justify-content` (`flex-start`, `center`, `flex-end`,
+`space-between`, `space-around`), `align-items` (`stretch`, `flex-start`, `center`,
+`flex-end`), `gap`, and `flex-grow` (or the first number of `flex`). Items without a width
+take the width of their content; items that do not fit shrink in proportion to their width.
+Nested flex containers work.
+
+Not supported in flex layout: `flex-wrap` (items stay on one line), `flex-basis`,
+`flex-shrink`, `order`, `align-self`, `align-content`, `inline-flex`, `justify-content` along
+a column (it needs a container height), and text placed directly inside a flex container
+(only element children become items).
+
+Grid, positioning, pseudo-classes, media queries, transforms, animations,
 percentage lengths, and other unsupported values fall back to initial styles.
 
 ## Layout and paint
