@@ -29,6 +29,7 @@ public final class SearchService implements AutoCloseable {
   private volatile Optional<SearchProvider> provider;
   private volatile Optional<SearchProvider> fallback = Optional.empty();
   private volatile java.util.function.Supplier<String> safeSearch = () -> "moderate";
+  private volatile java.util.function.Supplier<String> engine = () -> "auto";
   private final BrowserEventBus eventBus;
   private final AtomicLong requestIds = new AtomicLong();
   private final Map<TabId, ActiveSearch> activeSearches = new HashMap<>();
@@ -38,6 +39,11 @@ public final class SearchService implements AutoCloseable {
   public SearchService(Optional<SearchProvider> provider, BrowserEventBus eventBus) {
     this.provider = Objects.requireNonNull(provider, "provider");
     this.eventBus = Objects.requireNonNull(eventBus, "eventBus");
+  }
+
+  /** Which engine to ask: {@code auto}, {@code duckduckgo} or {@code brave}. */
+  public void setEngine(java.util.function.Supplier<String> choice) {
+    engine = Objects.requireNonNull(choice, "choice");
   }
 
   public void setSafeSearch(java.util.function.Supplier<String> mode) {
@@ -78,7 +84,12 @@ public final class SearchService implements AutoCloseable {
     }
     eventBus.publish(new SearchStarted(Instant.now(), tabId, requestId, normalizedQuery));
 
-    Optional<SearchProvider> chosen = provider.or(() -> fallback);
+    Optional<SearchProvider> chosen =
+        switch (engine.get()) {
+          case "duckduckgo" -> fallback;
+          case "brave" -> provider;
+          default -> provider.or(() -> fallback);
+        };
     if (chosen.isEmpty()) {
       SearchProviderException failure = new SearchProviderException(UNCONFIGURED_MESSAGE);
       publishFailure(tabId, requestId, normalizedQuery, failure);

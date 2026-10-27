@@ -102,6 +102,7 @@ public final class SqliteSettingsRepository implements SettingsRepository {
     values.put("search.evidencePages", Integer.toString(settings.search().evidencePages()));
     values.put("search.safeSearch", settings.search().safeSearch());
     values.put("search.timeoutSeconds", Integer.toString(settings.search().timeoutSeconds()));
+    values.put("search.engine", settings.search().engine());
     values.put("summary.language", settings.summary().language());
     values.put("summary.keyPoints", Boolean.toString(settings.summary().keyPoints()));
     values.put("summary.inlineCitations", Boolean.toString(settings.summary().inlineCitations()));
@@ -167,7 +168,8 @@ public final class SqliteSettingsRepository implements SettingsRepository {
       return new kr.soyuo.serox.core.model.SearchPreferences(
           integerValue(values, "search.evidencePages", 5),
           values.getOrDefault("search.safeSearch", "moderate"),
-          integerValue(values, "search.timeoutSeconds", 10));
+          integerValue(values, "search.timeoutSeconds", 10),
+          values.getOrDefault("search.engine", "auto"));
     } catch (IllegalArgumentException invalid) {
       return kr.soyuo.serox.core.model.SearchPreferences.defaults();
     }
