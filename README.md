@@ -55,5 +55,8 @@ mvn clean javafx:run
 UI는 이후 `STEP.md`의 모듈 구조에 맞춰 애플리케이션 코어와 브라우저 엔진으로
 분리해 나간다.
 
+API 키와 로그 처리 규칙은 [보안 안내](docs/SECURITY.md)를 따른다. 실제 키를
+저장소, 명령행 인수, 이슈, PR 또는 로그에 넣지 않는다.
+
 도구 참고: [OpenJFX Maven 안내](https://openjfx.io/openjfx-docs/#maven),
 [JDK 25 jpackage 안내](https://docs.oracle.com/en/java/javase/25/jpackage/index.html).
