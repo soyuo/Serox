@@ -205,7 +205,7 @@
 }
 
 .search-results-scroll {
-    -fx-pref-width: 600px;
+    -fx-min-width: 240px;
     -fx-max-width: 600px;
     -fx-border-color: transparent serox-border transparent transparent;
 }
@@ -480,7 +480,6 @@
 }
 
 .ai-panel {
-    -fx-pref-width: 320px;
     -fx-min-width: 280px;
     -fx-max-width: 360px;
     -fx-padding: 20px 20px 0 20px;
@@ -587,4 +586,17 @@
 
 .library-view {
     -fx-background-color: serox-surface;
+}
+
+/* Long unbroken text must wrap or truncate instead of widening the window. */
+.search-result-title,
+.search-preview-title,
+.search-result-url,
+.search-result-snippet,
+.search-state-title,
+.search-state-message,
+.search-query-heading,
+.ai-panel-text,
+.card-note {
+    -fx-min-width: 0;
 }
