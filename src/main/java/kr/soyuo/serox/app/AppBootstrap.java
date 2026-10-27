@@ -1,8 +1,13 @@
 package kr.soyuo.serox.app;
 
+import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import kr.soyuo.serox.browser.html.HtmlDocumentParser;
 import kr.soyuo.serox.browser.network.HttpBrowserEngine;
 import kr.soyuo.serox.browser.network.HttpRequestDispatcher;
@@ -10,13 +15,17 @@ import kr.soyuo.serox.browser.network.HttpResponseHandler;
 import kr.soyuo.serox.core.application.AppConfigurationLoader;
 import kr.soyuo.serox.core.application.BrowserController;
 import kr.soyuo.serox.core.application.DefaultBrowserController;
+import kr.soyuo.serox.core.application.UsageRecorder;
 import kr.soyuo.serox.core.event.InProcessBrowserEventBus;
 import kr.soyuo.serox.search.api.SearchProvider;
 import kr.soyuo.serox.search.application.SearchService;
 import kr.soyuo.serox.search.provider.BraveSearchProvider;
+import kr.soyuo.serox.storage.sqlite.SqliteStorage;
 
 /** Composition root for application-scoped adapters and configuration. */
 public final class AppBootstrap {
+  private static final Logger LOGGER = Logger.getLogger(AppBootstrap.class.getName());
+
   /** Prevents instantiation of the composition root. */
   private AppBootstrap() {}
 
@@ -24,17 +33,17 @@ public final class AppBootstrap {
   public static SeroxRuntime createRuntime() {
     SeroxLogging.configure();
     var configuration = AppConfigurationLoader.fromEnvironment(System.getenv());
-    return createRuntime(configuration);
+    return createRuntime(configuration, resolveDataDirectory(System.getenv()));
   }
 
   static SeroxRuntime createRuntime(Map<String, String> environment) {
     SeroxLogging.configure();
     var configuration = AppConfigurationLoader.fromEnvironment(environment);
-    return createRuntime(configuration);
+    return createRuntime(configuration, resolveDataDirectory(environment));
   }
 
   private static SeroxRuntime createRuntime(
-      kr.soyuo.serox.core.application.AppConfiguration configuration) {
+      kr.soyuo.serox.core.application.AppConfiguration configuration, Path dataDirectory) {
     var eventBus = new InProcessBrowserEventBus();
     var engineExecutor = Executors.newVirtualThreadPerTaskExecutor();
     var engine =
@@ -50,7 +59,41 @@ public final class AppBootstrap {
             .braveSearchApiKey()
             .map(key -> (SearchProvider) new BraveSearchProvider(key.revealForRequest()));
     var searchService = new SearchService(searchProvider, eventBus);
+    Optional<SqliteStorage> storage = openStorage(dataDirectory);
+    Optional<UsageRecorder> usageRecorder =
+        storage.map(
+            sqlite ->
+                new UsageRecorder(
+                    eventBus, sqlite.history(), sqlite.recentSearches(), Clock.systemUTC()));
     return new SeroxRuntime(
-        configuration, eventBus, browserController, engineExecutor, searchService);
+        configuration,
+        eventBus,
+        browserController,
+        engineExecutor,
+        searchService,
+        storage,
+        usageRecorder);
+  }
+
+  /** Resolves the per-user profile directory that holds the local database. */
+  static Path resolveDataDirectory(Map<String, String> environment) {
+    String override = environment.get("SEROX_DATA_DIR");
+    if (override != null && !override.isBlank()) {
+      return Path.of(override);
+    }
+    String localAppData = environment.get("LOCALAPPDATA");
+    if (localAppData != null && !localAppData.isBlank()) {
+      return Path.of(localAppData, "Serox");
+    }
+    return Path.of(System.getProperty("user.home"), ".serox");
+  }
+
+  private static Optional<SqliteStorage> openStorage(Path dataDirectory) {
+    try {
+      return Optional.of(new SqliteStorage(dataDirectory.resolve("serox.db")));
+    } catch (RuntimeException exception) {
+      LOGGER.log(Level.WARNING, "Local storage is unavailable; running without persistence.");
+      return Optional.empty();
+    }
   }
 }

@@ -1,5 +1,6 @@
 package kr.soyuo.serox.app;
 
+import java.util.List;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -15,7 +16,13 @@ public final class SeroxApplication extends Application {
   @Override
   public void start(Stage stage) {
     runtime = AppBootstrap.createRuntime();
-    browserShell = new BrowserShellView(runtime.browserController(), runtime.searchService());
+    List<String> recentQueries =
+        runtime
+            .usageRecorder()
+            .map(recorder -> recorder.recentQueries(5).toCompletableFuture().join())
+            .orElse(List.of());
+    browserShell =
+        new BrowserShellView(runtime.browserController(), runtime.searchService(), recentQueries);
     runtime.browserController().createTab();
     browserShell.setStyle("-fx-font-family: \"" + UiTokens.FONT_FAMILY + "\";");
     Scene scene = new Scene(browserShell, 1100, 720);

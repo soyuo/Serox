@@ -90,14 +90,23 @@ public final class BrowserShellView extends BorderPane {
 
   /** Creates the browser shell and subscribes to service status events. */
   public BrowserShellView(BrowserController browserController, SearchService searchService) {
+    this(browserController, searchService, List.of());
+  }
+
+  /** Creates the browser shell seeded with stored recent queries, newest first. */
+  public BrowserShellView(
+      BrowserController browserController,
+      SearchService searchService,
+      List<String> storedRecentQueries) {
     this.browserController = Objects.requireNonNull(browserController, "browserController");
     this.searchService = Objects.requireNonNull(searchService, "searchService");
     BrowserEventBus eventBus = browserController.eventBus();
     Objects.requireNonNull(eventBus, "eventBus");
+    storedRecentQueries.reversed().forEach(recentSearches::add);
     getStyleClass().add("app-root");
     installWindowResizeHandlers();
     setTop(createBrowserChrome());
-    homeView = new HomeView(previewData, List.of(), this::searchFromHome);
+    homeView = new HomeView(previewData, recentSearches.queries(), this::searchFromHome);
     setCenter(homeView);
     setBottom(createStatusBar());
     installKeyboardShortcuts();

@@ -16,6 +16,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /** Owns SQLite connections, schema migrations, and serialized storage I/O. */
 public final class SqliteDatabase implements AutoCloseable {
@@ -136,6 +137,14 @@ public final class SqliteDatabase implements AutoCloseable {
     if (!closed) {
       closed = true;
       executor.shutdown();
+      try {
+        if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+          executor.shutdownNow();
+        }
+      } catch (InterruptedException exception) {
+        executor.shutdownNow();
+        Thread.currentThread().interrupt();
+      }
     }
   }
 

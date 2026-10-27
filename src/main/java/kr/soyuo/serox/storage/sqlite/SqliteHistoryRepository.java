@@ -65,4 +65,28 @@ public final class SqliteHistoryRepository implements HistoryRepository {
           return List.copyOf(entries);
         });
   }
+
+  @Override
+  public CompletionStage<Void> prune(Instant olderThan, int maxEntries) {
+    Objects.requireNonNull(olderThan, "olderThan");
+    if (maxEntries < 0) {
+      throw new IllegalArgumentException("maxEntries must not be negative");
+    }
+    return database.submit(
+        connection -> {
+          try (PreparedStatement statement =
+              connection.prepareStatement("DELETE FROM history WHERE visited_at < ?")) {
+            statement.setLong(1, olderThan.toEpochMilli());
+            statement.executeUpdate();
+          }
+          try (PreparedStatement statement =
+              connection.prepareStatement(
+                  "DELETE FROM history WHERE id NOT IN "
+                      + "(SELECT id FROM history ORDER BY visited_at DESC, id DESC LIMIT ?)")) {
+            statement.setInt(1, maxEntries);
+            statement.executeUpdate();
+          }
+          return null;
+        });
+  }
 }
