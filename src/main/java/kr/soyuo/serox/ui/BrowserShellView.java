@@ -292,7 +292,12 @@ public final class BrowserShellView extends BorderPane {
         () -> {
           if (event.tabId().equals(activeTabId)) {
             addressField.setText(event.query());
-            navigationStatus.setText("Searching…");
+            navigationStatus.setText("검색 중…");
+            setCenter(
+                SearchResultsView.loading(
+                    event.query(),
+                    () -> searchService.cancel(event.tabId()),
+                    result -> browserController.navigate(event.tabId(), result.uri().toString())));
           }
         });
   }
@@ -302,7 +307,23 @@ public final class BrowserShellView extends BorderPane {
         () -> {
           if (event.tabId().equals(activeTabId)) {
             addressField.setText(event.query());
-            navigationStatus.setText(event.response().results().size() + " search results");
+            int count = event.response().results().size();
+            navigationStatus.setText("검색 결과 " + count + "개");
+            if (count == 0) {
+              setCenter(
+                  SearchResultsView.empty(
+                      event.query(),
+                      () -> searchService.search(event.tabId(), event.query()),
+                      result ->
+                          browserController.navigate(event.tabId(), result.uri().toString())));
+            } else {
+              setCenter(
+                  SearchResultsView.results(
+                      event.query(),
+                      event.response().results(),
+                      result ->
+                          browserController.navigate(event.tabId(), result.uri().toString())));
+            }
           }
         });
   }
@@ -313,6 +334,12 @@ public final class BrowserShellView extends BorderPane {
           if (event.tabId().equals(activeTabId)) {
             addressField.setText(event.query());
             navigationStatus.setText(event.safeMessage());
+            setCenter(
+                SearchResultsView.error(
+                    event.query(),
+                    event.safeMessage(),
+                    () -> searchService.search(event.tabId(), event.query()),
+                    result -> browserController.navigate(event.tabId(), result.uri().toString())));
           }
         });
   }
@@ -321,7 +348,12 @@ public final class BrowserShellView extends BorderPane {
     FxThreadExecutor.execute(
         () -> {
           if (event.tabId().equals(activeTabId)) {
-            navigationStatus.setText("Search cancelled");
+            navigationStatus.setText("검색 취소됨");
+            setCenter(
+                SearchResultsView.empty(
+                    event.query(),
+                    () -> searchService.search(event.tabId(), event.query()),
+                    result -> browserController.navigate(event.tabId(), result.uri().toString())));
           }
         });
   }

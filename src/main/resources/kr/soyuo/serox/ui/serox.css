@@ -195,6 +195,106 @@
     -fx-background-color: serox-surface;
 }
 
+.search-results-view {
+    -fx-background-color: serox-surface;
+}
+
+.search-results-scroll,
+.search-results-scroll > .viewport {
+    -fx-background-color: serox-surface;
+}
+
+.search-results-scroll {
+    -fx-pref-width: 600px;
+    -fx-max-width: 600px;
+    -fx-border-color: transparent serox-border transparent transparent;
+}
+
+.search-results-list {
+    -fx-spacing: 0;
+    -fx-padding: 20px 24px;
+    -fx-background-color: serox-surface;
+}
+
+.search-query-heading {
+    -fx-padding: 20px 24px;
+    -fx-text-fill: serox-text-primary;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.search-section-heading {
+    -fx-padding: 0 0 14px 0;
+    -fx-text-fill: serox-text-secondary;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.search-result-item {
+    -fx-alignment: center-left;
+    -fx-padding: 14px 10px;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent serox-border transparent;
+    -fx-cursor: hand;
+}
+
+.search-result-item:hover,
+.search-result-item:focused {
+    -fx-background-color: serox-hover-surface;
+}
+
+.search-result-content {
+    -fx-alignment: center-left;
+}
+
+.search-result-title,
+.search-preview-title {
+    -fx-text-fill: serox-text-primary;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+.search-result-url {
+    -fx-text-fill: serox-success;
+    -fx-font-size: 11px;
+}
+
+.search-result-snippet,
+.search-state-message {
+    -fx-text-fill: serox-text-secondary;
+    -fx-font-size: 12px;
+}
+
+.search-preview {
+    -fx-background-color: serox-surface;
+}
+
+.search-preview-content {
+    -fx-alignment: top-left;
+    -fx-spacing: 14px;
+}
+
+.search-state {
+    -fx-alignment: center;
+    -fx-spacing: 10px;
+}
+
+.search-state-title {
+    -fx-text-fill: serox-text-primary;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.secondary-button {
+    -fx-padding: 8px 16px;
+    -fx-background-color: serox-surface;
+    -fx-border-color: serox-border;
+    -fx-border-radius: 18px;
+    -fx-background-radius: 18px;
+    -fx-text-fill: serox-text-primary;
+    -fx-cursor: hand;
+}
+
 .brand-lockup {
     -fx-pref-height: 48px;
 }
