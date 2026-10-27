@@ -93,7 +93,7 @@ $env:SEROX_ANTHROPIC_API_KEY = "<Anthropic API key>"
 - 지원 운영체제는 Windows뿐이다. MSI 설치·제거는 깨끗한 컴퓨터에서 아직 확인하지 않았다.
 - 페이지 읽기에서 DNS 재바인딩은 완전히 차단하지 못한다(응답 크기·형식 제한과 민감정보
   가림으로 완화).
-- Figma 디자인과의 화면 대조는 완료하지 못했다. 현재 UI는 기존 디자인 토큰을 따른다.
+- Figma 대조는 홈, 검색 결과, 디자인 설정 화면만 했다. 결과 화면 배치(오른쪽 원문 미리보기), 설정 사이드바·미리보기 등은 디자인과 다르다. [Figma 대조](docs/release/figma-comparison.md).
 
 ## 로드맵
 
