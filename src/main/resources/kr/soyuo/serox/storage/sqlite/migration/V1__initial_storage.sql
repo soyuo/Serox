@@ -30,7 +30,7 @@ CREATE TABLE sessions (
 CREATE TABLE tabs (
     id TEXT PRIMARY KEY NOT NULL,
     session_id TEXT NOT NULL REFERENCES sessions (id) ON DELETE CASCADE,
-    url TEXT NOT NULL,
+    url TEXT,
     position INTEGER NOT NULL CHECK (position >= 0),
     active INTEGER NOT NULL DEFAULT 0 CHECK (active IN (0, 1)),
     UNIQUE (session_id, position)
