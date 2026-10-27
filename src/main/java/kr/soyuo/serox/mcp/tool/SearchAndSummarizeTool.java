@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import kr.soyuo.serox.ai.application.SearchSummary;
+import kr.soyuo.serox.ai.context.SensitiveDataFilter;
 import kr.soyuo.serox.ai.application.SearchSummaryService;
 import kr.soyuo.serox.ai.application.SummaryException;
 import kr.soyuo.serox.mcp.server.McpCall;
@@ -76,17 +77,18 @@ public final class SearchAndSummarizeTool implements McpTool {
     for (SearchSummary.Source source : summary.sources()) {
       JsonObject entry = new JsonObject();
       entry.addProperty("id", source.id());
-      entry.addProperty("title", source.title());
+      entry.addProperty("title", SensitiveDataFilter.redact(source.title()));
       entry.addProperty("url", source.url().toString());
-      entry.addProperty("referencedText", source.referencedText());
+      entry.addProperty("referencedText", SensitiveDataFilter.redact(source.referencedText()));
       entry.addProperty("retrievedAt", source.retrievedAt().toString());
       sources.add(entry);
     }
     JsonObject structured = new JsonObject();
     structured.addProperty("query", summary.query());
-    structured.addProperty("answer", summary.answer());
+    String answer = SensitiveDataFilter.redact(summary.answer());
+    structured.addProperty("answer", answer);
     structured.add("sources", sources);
     structured.addProperty("grounded", !summary.sources().isEmpty());
-    return ToolResult.success(summary.answer(), structured);
+    return ToolResult.success(answer, structured);
   }
 }
