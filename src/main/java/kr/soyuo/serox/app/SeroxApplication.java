@@ -47,6 +47,8 @@ public final class SeroxApplication extends Application {
         .aiSearchService()
         .setAnswerLanguage(() -> runtime.settingsService().current().language().englishName());
     browserShell.setAiSearchService(runtime.aiSearchService());
+    browserShell.setAiConnections(
+        runtime.aiConnections(), uri -> getHostServices().showDocument(uri.toString()));
     runtime.announceServiceStatus();
     browserShell.setSettingsService(runtime.settingsService());
     browserShell.setLibraryService(runtime.libraryService());
@@ -129,7 +131,12 @@ public final class SeroxApplication extends Application {
           .storage()
           .map(
               storage ->
-                  storage.mcpSettings().load().toCompletableFuture().orTimeout(3, TimeUnit.SECONDS).join())
+                  storage
+                      .mcpSettings()
+                      .load()
+                      .toCompletableFuture()
+                      .orTimeout(3, TimeUnit.SECONDS)
+                      .join())
           .orElse(McpSettings.defaults());
     } catch (RuntimeException unreadable) {
       LOGGER.log(Level.WARNING, "MCP settings could not be read; using the defaults.");

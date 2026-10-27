@@ -155,6 +155,18 @@ mvn verify
 하나의 커밋으로 남긴다. 커밋 메시지는 `type: lowercase summary` 형식을 사용한다.
 각 STEP PR은 GitHub에서 **Create a merge commit**으로 합친다.
 
+## AI 제공자와 브라우저 로그인
+
+AI 제공자 설정에서는 Claude, Gemini, Codex(OpenAI), Grok의 API 키를 연결하고 모델을
+고를 수 있다. 입력한 키는 모델 목록 요청으로 확인한 뒤 Windows DPAPI로 암호화해
+저장한다. 환경 변수 키도 계속 지원한다.
+
+Codex 카드의 **Continue with ChatGPT**는 기본 브라우저에서 Serox의 권한을 승인하고
+앱으로 돌아오는 공식 OAuth 흐름이다. 플랜 사용 권한을 승인한 계정의 모델만 표시하며,
+요약은 해당 ChatGPT 플랜이나 승인한 크레딧을 사용한다. 다른 제공자의 웹사이트 로그인은
+API 인증과 같지 않으므로 제공자별 지원 범위를 화면에 안내한다. 자세한 흐름과 테스트
+범위는 [브라우저 인증 결정 기록](docs/decisions/0006-browser-authentication.md)을 참고한다.
+
 ## MCP 서버 (외부 AI 에이전트 연동)
 
 Serox는 stdio 기반 MCP 서버를 제공한다. 에이전트가 Serox를 직접 실행하며, 도구는

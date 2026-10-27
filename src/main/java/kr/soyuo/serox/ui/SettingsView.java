@@ -51,6 +51,8 @@ final class SettingsView extends HBox {
   private final ServiceSummary summary;
   private final PrivacyActions privacy;
   private final McpActions mcp;
+  private final kr.soyuo.serox.ai.application.AiConnectionService aiConnections;
+  private final java.util.function.Consumer<java.net.URI> openBrowser;
   private final StackPane page = new StackPane();
 
   SettingsView(
@@ -79,9 +81,24 @@ final class SettingsView extends HBox {
       ServiceSummary summary,
       PrivacyActions privacy,
       McpActions mcp) {
+    this(saved, onPreview, onApply, onCancel, summary, privacy, mcp, null, null);
+  }
+
+  SettingsView(
+      BrowserSettings saved,
+      Consumer<BrowserSettings> onPreview,
+      Consumer<BrowserSettings> onApply,
+      Runnable onCancel,
+      ServiceSummary summary,
+      PrivacyActions privacy,
+      McpActions mcp,
+      kr.soyuo.serox.ai.application.AiConnectionService aiConnections,
+      java.util.function.Consumer<java.net.URI> openBrowser) {
     this.summary = summary;
     this.privacy = privacy;
     this.mcp = mcp;
+    this.aiConnections = aiConnections;
+    this.openBrowser = openBrowser;
     this.preview = new PreviewCard(saved);
     this.appearance =
         new AppearancePage(
@@ -136,6 +153,8 @@ final class SettingsView extends HBox {
       page.getChildren().setAll(new ShortcutsPage(privacy));
     } else if (section == Section.PRIVACY) {
       page.getChildren().setAll(new PrivacyPage(privacy));
+    } else if (section == Section.AI && aiConnections != null) {
+      page.getChildren().setAll(new AiProviderPage(aiConnections, openBrowser));
     } else {
       page.getChildren().setAll(infoPage(section));
     }
@@ -219,8 +238,7 @@ final class SettingsView extends HBox {
       summaryCard.getStyleClass().add("preview-summary-card");
       summaryCard.getChildren().addAll(summaryBox, text);
       chip.getStyleClass().add("preview-chip");
-      VBox left =
-          new VBox(UiTokens.SPACE_SM, summaryCard, line(176), line(106), chip);
+      VBox left = new VBox(UiTokens.SPACE_SM, summaryCard, line(176), line(106), chip);
       left.setPadding(new Insets(12));
       left.getStyleClass().add("preview-left");
       VBox right = new VBox(UiTokens.SPACE_SM, line(-1), line(-1), line(116));
@@ -251,8 +269,7 @@ final class SettingsView extends HBox {
     void show(BrowserSettings settings) {
       String accent = settings.accentColor();
       chip.setStyle("-fx-background-color: " + accent + ";");
-      summaryCard.setStyle(
-          "-fx-background-color: " + accent + "1F;");
+      summaryCard.setStyle("-fx-background-color: " + accent + "1F;");
     }
   }
 }

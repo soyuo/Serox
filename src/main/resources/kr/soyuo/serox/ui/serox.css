@@ -1090,3 +1090,7 @@
 .connection-content .text-field, .connection-content .combo-box { -fx-pref-height: 44; }
 .connection-primary { -fx-background-color: #3E81F4; -fx-text-fill: white; -fx-pref-height: 44; -fx-background-radius: 8; }
 .connection-secondary { -fx-pref-height: 44; -fx-background-radius: 8; }
+.provider-vendor { -fx-font-size: 13px; -fx-text-fill: serox-text-muted; }
+.provider-status { -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: serox-text-muted; }
+.provider-radio { -fx-min-width: 18; -fx-max-width: 18; -fx-min-height: 18; -fx-max-height: 18; -fx-background-radius: 9; -fx-border-radius: 9; -fx-border-color: #9DA5B3; -fx-background-color: transparent; }
+.provider-card:selected .provider-radio { -fx-border-color: #3E81F4; -fx-border-width: 5; -fx-background-color: white; }

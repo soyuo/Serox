@@ -2,12 +2,13 @@ package kr.soyuo.serox.app;
 
 import java.util.Objects;
 import java.util.Optional;
+import kr.soyuo.serox.ai.application.AiConnectionService;
 import kr.soyuo.serox.ai.application.AiSearchService;
 import kr.soyuo.serox.core.application.AppConfiguration;
 import kr.soyuo.serox.core.application.BrowserController;
 import kr.soyuo.serox.core.application.LibraryService;
-import kr.soyuo.serox.core.application.SettingsService;
 import kr.soyuo.serox.core.application.SessionKeeper;
+import kr.soyuo.serox.core.application.SettingsService;
 import kr.soyuo.serox.core.application.UsageRecorder;
 import kr.soyuo.serox.core.event.BrowserEventBus;
 import kr.soyuo.serox.core.event.ConnectionStatusChanged;
@@ -28,7 +29,8 @@ public record SeroxRuntime(
     Optional<SessionKeeper> sessionKeeper,
     AiSearchService aiSearchService,
     SettingsService settingsService,
-    LibraryService libraryService)
+    LibraryService libraryService,
+    AiConnectionService aiConnections)
     implements AutoCloseable {
   public SeroxRuntime {
     Objects.requireNonNull(configuration, "configuration");
@@ -49,23 +51,12 @@ public record SeroxRuntime(
     java.time.Instant now = java.time.Instant.now();
     eventBus.publish(
         status(
-            now,
-            ServiceId.SEARCH,
-            configuration.hasBraveSearchApiKey(),
-            "켜짐 (Brave)",
-            "API 키 필요"));
-    eventBus.publish(
-        status(
-            now,
-            ServiceId.AI,
-            configuration.hasAiApiKey(),
-            "켜짐 (" + configuration.aiProvider().label() + ")",
-            "API 키 필요"));
+            now, ServiceId.SEARCH, configuration.hasBraveSearchApiKey(), "켜짐 (Brave)", "API 키 필요"));
+    aiConnections.announce();
     eventBus.publish(
         new ConnectionStatusChanged(
             now, ServiceId.MCP, ServiceStatus.DISCONNECTED, "꺼짐 (--mcp로 실행하면 켜짐)"));
-    eventBus.publish(
-        status(now, ServiceId.STORAGE, storage.isPresent(), "저장소 사용 가능", "저장소 사용 불가"));
+    eventBus.publish(status(now, ServiceId.STORAGE, storage.isPresent(), "저장소 사용 가능", "저장소 사용 불가"));
   }
 
   private static ConnectionStatusChanged status(
@@ -80,6 +71,7 @@ public record SeroxRuntime(
   @Override
   public void close() {
     aiSearchService.close();
+    aiConnections.close();
     sessionKeeper.ifPresent(SessionKeeper::close);
     usageRecorder.ifPresent(UsageRecorder::close);
     searchService.close();

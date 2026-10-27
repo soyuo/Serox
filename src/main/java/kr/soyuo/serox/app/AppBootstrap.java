@@ -9,6 +9,7 @@ import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import kr.soyuo.serox.ai.api.AiProvider;
+import kr.soyuo.serox.ai.application.AiConnectionService;
 import kr.soyuo.serox.ai.application.AiSearchService;
 import kr.soyuo.serox.ai.context.ContextBuilder;
 import kr.soyuo.serox.ai.provider.AiProviders;
@@ -71,8 +72,7 @@ public final class AppBootstrap {
             .map(key -> (SearchProvider) new BraveSearchProvider(key.revealForRequest()));
     var searchService = new SearchService(searchProvider, eventBus);
     Optional<SqliteStorage> storage = openStorage(dataDirectory);
-    var settingsService =
-        new SettingsService(storage.map(sqlite -> sqlite.settings()), eventBus);
+    var settingsService = new SettingsService(storage.map(sqlite -> sqlite.settings()), eventBus);
     settingsService.load();
     Optional<UsageRecorder> usageRecorder =
         storage.map(
@@ -84,6 +84,9 @@ public final class AppBootstrap {
                     Clock.systemUTC(),
                     settingsService::current));
     AiSearchService aiSearchService = createAiSearchService(configuration, eventBus);
+    var aiConnections =
+        new AiConnectionService(
+            configuration, dataDirectory.resolve("credentials"), aiSearchService, eventBus);
     var libraryService =
         new LibraryService(
             storage.map(sqlite -> sqlite.history()),
@@ -102,7 +105,8 @@ public final class AppBootstrap {
         sessionKeeper,
         aiSearchService,
         settingsService,
-        libraryService);
+        libraryService,
+        aiConnections);
   }
 
   private static AiSearchService createAiSearchService(
@@ -110,7 +114,8 @@ public final class AppBootstrap {
       kr.soyuo.serox.core.event.BrowserEventBus eventBus) {
     Optional<AiProvider> provider = AiProviders.fromConfiguration(configuration);
     var fetcher = createPageFetcher();
-    return new AiSearchService(provider, fetcher, new ContextBuilder(), eventBus, Clock.systemUTC());
+    return new AiSearchService(
+        provider, fetcher, new ContextBuilder(), eventBus, Clock.systemUTC());
   }
 
   /** Page reader shared by the AI features: small responses, short timeouts, few pages. */
