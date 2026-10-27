@@ -25,6 +25,7 @@ public final class AccessPolicy {
   private final Clock clock;
   private final Deque<Instant> recentCalls = new ArrayDeque<>();
   private Set<String> approved = Set.of();
+  private String client = "";
   private int running;
 
   public AccessPolicy(
@@ -49,11 +50,17 @@ public final class AccessPolicy {
         clientName = info.get("name").getAsString();
       }
     }
+    client = clientName;
     approved = Set.copyOf(gate.approve(clientName, offeredTools));
     if (approved.isEmpty()) {
       throw new McpProtocolException(
           DENIED, "Access denied: the user has not approved any Serox tools for this client.");
     }
+  }
+
+  /** The name the connected client gave itself, as the user was shown it when approving. */
+  public synchronized String clientName() {
+    return client;
   }
 
   /** Tools the current session may see and call. */

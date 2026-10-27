@@ -52,9 +52,9 @@
     -fx-alignment: center-left;
     -fx-spacing: 10px;
     -fx-padding: 0 12px;
-    -fx-pref-width: 260px;
-    -fx-min-width: 260px;
-    -fx-max-width: 260px;
+    -fx-pref-width: 200px;
+    -fx-min-width: 200px;
+    -fx-max-width: 200px;
     -fx-pref-height: 34px;
     -fx-background-color: serox-surface;
     -fx-background-radius: 8px 8px 0 0;
@@ -76,8 +76,8 @@
     -fx-alignment: center-left;
     -fx-spacing: 10px;
     -fx-padding: 0 12px;
-    -fx-pref-width: 220px;
-    -fx-min-width: 160px;
+    -fx-pref-width: 160px;
+    -fx-min-width: 120px;
     -fx-pref-height: 34px;
     -fx-background-color: transparent;
     -fx-text-fill: serox-text-secondary;
@@ -1114,4 +1114,38 @@
 
 .text-input {
     -fx-prompt-text-fill: serox-text-muted;
+}
+
+.serox-slider {
+    -fx-padding: 0;
+}
+
+.serox-slider .track {
+    -fx-background-color: serox-border;
+    -fx-background-insets: 0;
+    -fx-background-radius: 2px;
+    -fx-pref-height: 4px;
+    -fx-padding: 2px;
+}
+
+.serox-slider .thumb {
+    -fx-background-color: serox-primary, serox-surface;
+    -fx-background-insets: 0, 2px;
+    -fx-background-radius: 10px;
+    -fx-padding: 10px;
+    -fx-effect: none;
+}
+
+.serox-slider:focused .thumb {
+    -fx-background-color: serox-primary-hover, serox-surface;
+}
+
+.slider-value {
+    -fx-text-fill: serox-primary;
+    -fx-font-weight: bold;
+}
+
+.slider-range {
+    -fx-text-fill: serox-text-secondary;
+    -fx-font-size: 0.857em;
 }

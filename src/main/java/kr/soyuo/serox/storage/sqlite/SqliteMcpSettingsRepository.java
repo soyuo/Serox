@@ -59,7 +59,8 @@ public final class SqliteMcpSettingsRepository implements McpSettingsRepository 
       access = DEFAULTS.access();
     }
     boolean autoStart = "true".equals(values.get("mcp.autoStart"));
-    return new McpSettings(port, access, autoStart);
+    boolean searchTool = !"false".equals(values.get("mcp.searchTool"));
+    return new McpSettings(port, access, autoStart, searchTool);
   }
 
   @Override
@@ -69,7 +70,8 @@ public final class SqliteMcpSettingsRepository implements McpSettingsRepository 
         Map.of(
             "mcp.port", Integer.toString(settings.port()),
             "mcp.access", settings.access().name(),
-            "mcp.autoStart", Boolean.toString(settings.autoStart()));
+            "mcp.autoStart", Boolean.toString(settings.autoStart()),
+            "mcp.searchTool", Boolean.toString(settings.searchToolEnabled()));
     return database.submit(
         connection -> {
           try (PreparedStatement statement =

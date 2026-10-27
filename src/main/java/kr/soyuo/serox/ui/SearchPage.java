@@ -1,12 +1,15 @@
 package kr.soyuo.serox.ui;
 
 import javafx.application.Platform;
+import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Slider;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import kr.soyuo.serox.core.model.SearchPreferences;
 
@@ -23,10 +26,12 @@ final class SearchPage extends ScrollPane {
     provider.setContentDisplay(javafx.scene.control.ContentDisplay.RIGHT);
     provider.setPrefWidth(220);
     provider.setDisable(true);
-    card.getChildren().add(SettingsControls.row("검색 API", "현재는 Brave Search API를 지원해요.", provider));
+    card.getChildren().add(SettingsControls.row("검색 API", "키가 없으면 DuckDuckGo, 키가 있으면 Brave Search API를 써요.", provider));
     Label message =
         SettingsControls.label(
-            search.configured() ? "API 키 설정됨 · 다음 검색에서 연결을 확인해요." : "API 키를 연결하세요.",
+            search.configured()
+                ? "API 키 설정됨 · 다음 검색에서 연결을 확인해요."
+                : "키 없이 DuckDuckGo로 검색하고 있어요. Brave 키를 넣으면 Brave로 바뀌어요.",
             "search-state-message");
     PasswordField key = new PasswordField();
     key.setPrefWidth(260);
@@ -155,7 +160,7 @@ final class SearchPage extends ScrollPane {
     card.getChildren()
         .add(
             SettingsControls.row(
-                "본문 수집 제한 시간", "10초부터 5분까지 설정할 수 있어요.", new HBox(12, timeout, seconds)));
+                "본문 수집 제한 시간", "10초부터 5분까지 설정할 수 있어요.", sliderBox(timeout, seconds)));
     var robots = SettingsControls.switchControl("수집을 막은 사이트는 건너뛰기", false, value -> {});
     robots.setDisable(true);
     card.getChildren()
@@ -166,6 +171,24 @@ final class SearchPage extends ScrollPane {
                 robots));
     content.getChildren().addAll(card, message);
     SettingsControls.configure(this, content);
+  }
+
+  /** The design's slider: value on top, thin track, and the two ends labelled below. */
+  private static VBox sliderBox(Slider slider, Label value) {
+    slider.getStyleClass().add("serox-slider");
+    value.getStyleClass().add("slider-value");
+    HBox top = new HBox(value);
+    top.setAlignment(Pos.CENTER_RIGHT);
+    Label low = new Label("10초");
+    Label high = new Label("5분");
+    low.getStyleClass().add("slider-range");
+    high.getStyleClass().add("slider-range");
+    Region spacer = new Region();
+    HBox.setHgrow(spacer, Priority.ALWAYS);
+    VBox box = new VBox(4, top, slider, new HBox(low, spacer, high));
+    box.setPrefWidth(slider.getPrefWidth());
+    box.setMaxWidth(slider.getPrefWidth());
+    return box;
   }
 
   private static void update(PrivacyActions actions, SearchPreferences value) {

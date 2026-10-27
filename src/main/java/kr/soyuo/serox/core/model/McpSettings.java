@@ -2,8 +2,12 @@ package kr.soyuo.serox.core.model;
 
 import java.util.Objects;
 
-/** How the MCP HTTP server runs: its port, who may connect, and whether it starts with Serox. */
-public record McpSettings(int port, McpAccess access, boolean autoStart) {
+/**
+ * How the MCP HTTP server runs: its port, who may connect, whether it starts with Serox, and
+ * whether the search tool is offered to agents.
+ */
+public record McpSettings(
+    int port, McpAccess access, boolean autoStart, boolean searchToolEnabled) {
   /** The port the design shows. */
   public static final int DEFAULT_PORT = 3845;
 
@@ -20,6 +24,11 @@ public record McpSettings(int port, McpAccess access, boolean autoStart) {
     }
   }
 
+  /** Settings with the search tool on, which is how it starts. */
+  public McpSettings(int port, McpAccess access, boolean autoStart) {
+    this(port, access, autoStart, true);
+  }
+
   /** Off at start and for this computer only, which is the safe way to begin. */
   public static McpSettings defaults() {
     return new McpSettings(DEFAULT_PORT, McpAccess.LOCAL_ONLY, false);
@@ -32,16 +41,21 @@ public record McpSettings(int port, McpAccess access, boolean autoStart) {
 
   /** These settings with another port. */
   public McpSettings withPort(int newPort) {
-    return new McpSettings(newPort, access, autoStart);
+    return new McpSettings(newPort, access, autoStart, searchToolEnabled);
   }
 
   /** These settings with another access scope. */
   public McpSettings withAccess(McpAccess newAccess) {
-    return new McpSettings(port, newAccess, autoStart);
+    return new McpSettings(port, newAccess, autoStart, searchToolEnabled);
   }
 
   /** These settings with automatic start switched on or off. */
   public McpSettings withAutoStart(boolean start) {
-    return new McpSettings(port, access, start);
+    return new McpSettings(port, access, start, searchToolEnabled);
+  }
+
+  /** These settings with the search tool offered or hidden. */
+  public McpSettings withSearchToolEnabled(boolean enabled) {
+    return new McpSettings(port, access, autoStart, enabled);
   }
 }

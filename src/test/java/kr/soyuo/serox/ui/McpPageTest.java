@@ -109,6 +109,7 @@ class McpPageTest {
     final List<McpSettings> starts = new ArrayList<>();
     final List<McpSettings> saves = new ArrayList<>();
     int takenPort = -1;
+    List<Call> calls = new ArrayList<>();
     int stops;
 
     @Override
@@ -120,6 +121,11 @@ class McpPageTest {
     public void save(McpSettings next) {
       settings = next;
       saves.add(next);
+    }
+
+    @Override
+    public List<Call> recentCalls() {
+      return calls;
     }
 
     @Override
@@ -162,6 +168,8 @@ class McpPageTest {
               "claude mcp add --transport http serox http://localhost:3845/mcp",
               labelWithClass(page, "code-block").getText());
           assertTrue(find(page, ToggleButton.class, "이 컴퓨터만").isSelected());
+          // Long commands must wrap, not end in an ellipsis.
+          assertTrue(labelWithClass(page, "code-block").isWrapText());
           return null;
         });
   }
@@ -327,6 +335,55 @@ class McpPageTest {
                 }
               });
           assertTrue(texts.stream().anyMatch(text -> text.contains("SEROX_MCP_TOKEN")));
+          return null;
+        });
+  }
+
+  @Test
+  void theToolSwitchIsSavedAndRecentCallsAreListed() throws Exception {
+    assumeTrue(toolkitReady);
+    var server = new FakeServer();
+    server.calls.add(
+        new McpActions.Call("java virtual thread", "agent-a", java.time.Instant.now(), true));
+    server.calls.add(
+        new McpActions.Call("jsoup parse table", "", java.time.Instant.now().minusSeconds(7200), false));
+    onFx(
+        () -> {
+          var page = new McpPage(server, text -> {});
+          var toolSwitch = find(page, ToggleButton.class, "search_and_summarize 도구 켜기");
+          assertTrue(toolSwitch.isSelected());
+          toolSwitch.fire();
+          assertFalse(server.settings.searchToolEnabled());
+          assertEquals("꺼짐", toolSwitch.getText());
+
+          List<String> shown = new ArrayList<>();
+          walk(page, node -> {
+            if (node instanceof Label label) {
+              shown.add(label.getText());
+            }
+          });
+          assertTrue(shown.contains("java virtual thread"));
+          assertTrue(shown.contains("agent-a, 방금 전"));
+          assertTrue(shown.contains("에이전트, 2시간 전"));
+          assertTrue(shown.contains("성공"));
+          assertTrue(shown.contains("실패"));
+          return null;
+        });
+  }
+
+  @Test
+  void withoutCallsThePageSaysSo() throws Exception {
+    assumeTrue(toolkitReady);
+    onFx(
+        () -> {
+          var page = new McpPage(new FakeServer(), text -> {});
+          List<String> shown = new ArrayList<>();
+          walk(page, node -> {
+            if (node instanceof Label label) {
+              shown.add(label.getText());
+            }
+          });
+          assertTrue(shown.contains("아직 에이전트가 부른 적이 없어요."));
           return null;
         });
   }

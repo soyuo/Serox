@@ -79,7 +79,11 @@ final class AppearancePage extends ScrollPane {
                   case LIGHT -> "밝게";
                   case DARK -> "어둡게";
                 },
-            mode -> update(withTheme(mode))));
+            mode -> {
+              update(withTheme(mode));
+              onApply.accept(draft);
+              message.setText("테마를 바꾸고 저장했어요.");
+            }));
   }
 
   private VBox accentSection() {

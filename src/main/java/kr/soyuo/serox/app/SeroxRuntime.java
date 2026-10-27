@@ -50,11 +50,16 @@ public record SeroxRuntime(
   public void announceServiceStatus() {
     java.time.Instant now = java.time.Instant.now();
     eventBus.publish(
-        status(now, ServiceId.SEARCH, searchService.configured(), "켜짐 (Brave)", "API 키 필요"));
+        status(
+            now,
+            ServiceId.SEARCH,
+            searchService.configured() || searchService.usesFallback(),
+            searchService.usesFallback() ? "켜짐 (DuckDuckGo · 키 없음)" : "켜짐 (Brave)",
+            "API 키 필요"));
     aiConnections.announce();
     eventBus.publish(
         new ConnectionStatusChanged(
-            now, ServiceId.MCP, ServiceStatus.DISCONNECTED, "꺼짐 (--mcp로 실행하면 켜짐)"));
+            now, ServiceId.MCP, ServiceStatus.DISCONNECTED, "꺼짐"));
     eventBus.publish(status(now, ServiceId.STORAGE, storage.isPresent(), "저장소 사용 가능", "저장소 사용 불가"));
   }
 

@@ -27,7 +27,9 @@ public final class SearchService implements AutoCloseable {
       "Search is not configured. Set SEROX_BRAVE_SEARCH_API_KEY and restart Serox.";
 
   private volatile Optional<SearchProvider> provider;
+  private volatile Optional<SearchProvider> fallback = Optional.empty();
   private volatile java.util.function.Supplier<String> safeSearch = () -> "moderate";
+  private volatile java.util.function.Supplier<String> engine = () -> "auto";
   private final BrowserEventBus eventBus;
   private final AtomicLong requestIds = new AtomicLong();
   private final Map<TabId, ActiveSearch> activeSearches = new HashMap<>();
@@ -39,12 +41,27 @@ public final class SearchService implements AutoCloseable {
     this.eventBus = Objects.requireNonNull(eventBus, "eventBus");
   }
 
+  /** Which engine to ask: {@code auto}, {@code duckduckgo} or {@code brave}. */
+  public void setEngine(java.util.function.Supplier<String> choice) {
+    engine = Objects.requireNonNull(choice, "choice");
+  }
+
   public void setSafeSearch(java.util.function.Supplier<String> mode) {
     safeSearch = Objects.requireNonNull(mode, "mode");
   }
 
   public boolean configured() {
     return provider.isPresent();
+  }
+
+  /** Used for searches only while no keyed provider is set, so searching needs no account. */
+  public void setFallback(SearchProvider value) {
+    fallback = Optional.of(Objects.requireNonNull(value, "value"));
+  }
+
+  /** True when searches run through the no-account fallback because no key is set. */
+  public boolean usesFallback() {
+    return provider.isEmpty() && fallback.isPresent();
   }
 
   public void setProvider(SearchProvider value) {
@@ -67,7 +84,13 @@ public final class SearchService implements AutoCloseable {
     }
     eventBus.publish(new SearchStarted(Instant.now(), tabId, requestId, normalizedQuery));
 
-    if (provider.isEmpty()) {
+    Optional<SearchProvider> chosen =
+        switch (engine.get()) {
+          case "duckduckgo" -> fallback;
+          case "brave" -> provider;
+          default -> provider.or(() -> fallback);
+        };
+    if (chosen.isEmpty()) {
       SearchProviderException failure = new SearchProviderException(UNCONFIGURED_MESSAGE);
       publishFailure(tabId, requestId, normalizedQuery, failure);
       return CompletableFuture.failedFuture(failure);
@@ -84,7 +107,7 @@ public final class SearchService implements AutoCloseable {
     CompletableFuture<SearchResponse> future;
     try {
       future =
-          Objects.requireNonNull(provider.orElseThrow().search(request), "search result stage")
+          Objects.requireNonNull(chosen.orElseThrow().search(request), "search result stage")
               .toCompletableFuture();
     } catch (RuntimeException exception) {
       publishFailure(tabId, requestId, normalizedQuery, exception);

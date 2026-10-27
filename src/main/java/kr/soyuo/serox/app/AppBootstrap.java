@@ -8,6 +8,8 @@ import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import kr.soyuo.serox.ai.api.AiProvider;
 import kr.soyuo.serox.ai.application.AiConnectionService;
 import kr.soyuo.serox.ai.application.AiSearchService;
@@ -32,11 +34,13 @@ import kr.soyuo.serox.search.application.SearchService;
 import kr.soyuo.serox.search.fetch.FetchLimits;
 import kr.soyuo.serox.search.fetch.PageFetcher;
 import kr.soyuo.serox.search.provider.BraveSearchProvider;
+import kr.soyuo.serox.search.provider.DuckDuckGoSearchProvider;
 import kr.soyuo.serox.storage.sqlite.SqliteStorage;
 
 /** Composition root for application-scoped adapters and configuration. */
 public final class AppBootstrap {
   private static final Logger LOGGER = Logger.getLogger(AppBootstrap.class.getName());
+  private static final Pattern VARIABLE = Pattern.compile("%([A-Za-z0-9_]+)%");
 
   /** Prevents instantiation of the composition root. */
   private AppBootstrap() {}
@@ -71,10 +75,12 @@ public final class AppBootstrap {
             .or(() -> configuration.braveSearchApiKey())
             .map(key -> (SearchProvider) new BraveSearchProvider(key.revealForRequest()));
     var searchService = new SearchService(searchProvider, eventBus);
+    searchService.setFallback(new DuckDuckGoSearchProvider());
     Optional<SqliteStorage> storage = openStorage(dataDirectory);
     var settingsService = new SettingsService(storage.map(sqlite -> sqlite.settings()), eventBus);
     settingsService.load();
     searchService.setSafeSearch(() -> settingsService.current().search().safeSearch());
+    searchService.setEngine(() -> settingsService.current().search().engine());
     Optional<UsageRecorder> usageRecorder =
         storage.map(
             sqlite ->
@@ -156,13 +162,41 @@ public final class AppBootstrap {
   static Path resolveDataDirectory(Map<String, String> environment) {
     String override = environment.get("SEROX_DATA_DIR");
     if (override != null && !override.isBlank()) {
-      return Path.of(override);
+      return Path.of(expandVariables(override.strip(), environment));
     }
     String localAppData = environment.get("LOCALAPPDATA");
     if (localAppData != null && !localAppData.isBlank()) {
       return Path.of(localAppData, "Serox");
     }
     return Path.of(System.getProperty("user.home"), ".serox");
+  }
+
+  /** Replaces {@code %NAME%} references with environment values; unknown names stay as written. */
+  static String expandVariables(String value, Map<String, String> environment) {
+    Matcher matcher = VARIABLE.matcher(value);
+    StringBuilder expanded = new StringBuilder();
+    while (matcher.find()) {
+      String name = matcher.group(1);
+      String replacement = lookup(environment, name);
+      if (replacement == null && "USERPROFILEDATA".equalsIgnoreCase(name)) {
+        replacement = lookup(environment, "USERPROFILE");
+      }
+      matcher.appendReplacement(
+          expanded, Matcher.quoteReplacement(replacement == null ? matcher.group() : replacement));
+    }
+    matcher.appendTail(expanded);
+    return expanded.toString();
+  }
+
+  private static String lookup(Map<String, String> environment, String name) {
+    for (Map.Entry<String, String> entry : environment.entrySet()) {
+      if (entry.getKey().equalsIgnoreCase(name)
+          && entry.getValue() != null
+          && !entry.getValue().isBlank()) {
+        return entry.getValue();
+      }
+    }
+    return null;
   }
 
   private static Optional<kr.soyuo.serox.core.model.SecretValue> storedSearchKey(Path directory) {
