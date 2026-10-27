@@ -6,6 +6,7 @@ import java.time.Clock;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 import kr.soyuo.serox.ai.api.AiProvider;
 import kr.soyuo.serox.ai.application.SearchSummaryService;
 import kr.soyuo.serox.ai.context.ContextBuilder;
@@ -39,6 +40,29 @@ public final class McpLauncher {
       Optional<BrowserEventBus> eventBus,
       InputStream input,
       OutputStream output) {
+    return new StdioMcpServer(endpointFactory(environment).get(), input, output, eventBus);
+  }
+
+  /** Like {@link #endpointFactory}, but the services are only built when the first agent connects. */
+  public static Supplier<McpEndpoint> lazyEndpointFactory(Map<String, String> environment) {
+    return new Supplier<>() {
+      private Supplier<McpEndpoint> built;
+
+      @Override
+      public synchronized McpEndpoint get() {
+        if (built == null) {
+          built = endpointFactory(environment);
+        }
+        return built.get();
+      }
+    };
+  }
+
+  /**
+   * Makes endpoints that offer only {@code search_and_summarize} under the same approval, rate
+   * limit and services, so every client session of an HTTP server shares them.
+   */
+  public static Supplier<McpEndpoint> endpointFactory(Map<String, String> environment) {
     var configuration = AppConfigurationLoader.fromEnvironment(environment);
     Optional<SearchProvider> search =
         configuration
@@ -58,9 +82,12 @@ public final class McpLauncher {
             MAX_CONCURRENT_CALLS,
             MAX_CALLS_PER_MINUTE,
             Clock.systemUTC());
-    var endpoint = new McpEndpoint(VERSION);
-    new ToolRegistry(policy).register(new SearchAndSummarizeTool(summary)).installInto(endpoint);
-    return new StdioMcpServer(endpoint, input, output, eventBus);
+    var registry = new ToolRegistry(policy).register(new SearchAndSummarizeTool(summary));
+    return () -> {
+      var endpoint = new McpEndpoint(VERSION);
+      registry.installInto(endpoint);
+      return endpoint;
+    };
   }
 
   /** Serves one session on the process streams without opening a window; blocks until it ends. */

@@ -2,19 +2,26 @@ package kr.soyuo.serox.app;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import kr.soyuo.serox.core.model.McpSettings;
 import kr.soyuo.serox.mcp.server.StdioMcpServer;
 import kr.soyuo.serox.ui.BrowserShellView;
 import kr.soyuo.serox.ui.UiTokens;
 
 /** Launches the Serox desktop browser application. */
 public final class SeroxApplication extends Application {
+  private static final Logger LOGGER = Logger.getLogger(SeroxApplication.class.getName());
+
   private SeroxRuntime runtime;
   private BrowserShellView browserShell;
   private StdioMcpServer mcpServer;
+  private McpHttpController mcpHttp;
 
   @Override
   public void start(Stage stage) {
@@ -49,6 +56,16 @@ public final class SeroxApplication extends Application {
               System.getenv(), Optional.of(runtime.eventBus()), System.in, System.out);
       mcpServer.start();
     }
+    mcpHttp =
+        new McpHttpController(
+            McpLauncher.lazyEndpointFactory(System.getenv()), System.getenv(), runtime.eventBus());
+    McpSettings mcpSettings = loadMcpSettings();
+    if (mcpSettings.autoStart()) {
+      var started = mcpHttp.start(mcpSettings);
+      if (!started.running()) {
+        LOGGER.log(Level.WARNING, "MCP HTTP server did not start: {0}", started.message());
+      }
+    }
     Scene scene = new Scene(browserShell, 1100, 720);
 
     stage.initStyle(StageStyle.UNDECORATED);
@@ -58,8 +75,26 @@ public final class SeroxApplication extends Application {
     stage.show();
   }
 
+  /** The saved MCP server settings; the safe defaults when nothing can be read. */
+  private McpSettings loadMcpSettings() {
+    try {
+      return runtime
+          .storage()
+          .map(
+              storage ->
+                  storage.mcpSettings().load().toCompletableFuture().orTimeout(3, TimeUnit.SECONDS).join())
+          .orElse(McpSettings.defaults());
+    } catch (RuntimeException unreadable) {
+      LOGGER.log(Level.WARNING, "MCP settings could not be read; using the defaults.");
+      return McpSettings.defaults();
+    }
+  }
+
   @Override
   public void stop() {
+    if (mcpHttp != null) {
+      mcpHttp.close();
+    }
     if (mcpServer != null) {
       mcpServer.stop();
     }

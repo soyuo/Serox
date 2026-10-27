@@ -4,6 +4,7 @@ module kr.soyuo.serox {
   requires com.github.weisj.jsvg;
   requires java.desktop;
   requires java.net.http;
+  requires jdk.httpserver;
   requires java.logging;
   requires java.sql;
   requires com.google.gson;
