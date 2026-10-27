@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.Objects;
 import kr.soyuo.serox.core.port.storage.BookmarkRepository;
 import kr.soyuo.serox.core.port.storage.HistoryRepository;
+import kr.soyuo.serox.core.port.storage.McpSettingsRepository;
 import kr.soyuo.serox.core.port.storage.RecentSearchRepository;
 import kr.soyuo.serox.core.port.storage.SearchCacheRepository;
 import kr.soyuo.serox.core.port.storage.SessionRepository;
@@ -16,6 +17,7 @@ public final class SqliteStorage implements AutoCloseable {
   private final BookmarkRepository bookmarkRepository;
   private final SessionRepository sessionRepository;
   private final SettingsRepository settingsRepository;
+  private final McpSettingsRepository mcpSettingsRepository;
   private final SearchCacheRepository searchCacheRepository;
   private final RecentSearchRepository recentSearchRepository;
 
@@ -25,6 +27,7 @@ public final class SqliteStorage implements AutoCloseable {
     bookmarkRepository = new SqliteBookmarkRepository(database);
     sessionRepository = new SqliteSessionRepository(database);
     settingsRepository = new SqliteSettingsRepository(database);
+    mcpSettingsRepository = new SqliteMcpSettingsRepository(database);
     searchCacheRepository = new SqliteSearchCacheRepository(database);
     recentSearchRepository = new SqliteRecentSearchRepository(database);
   }
@@ -43,6 +46,10 @@ public final class SqliteStorage implements AutoCloseable {
 
   public SettingsRepository settings() {
     return settingsRepository;
+  }
+
+  public McpSettingsRepository mcpSettings() {
+    return mcpSettingsRepository;
   }
 
   public SearchCacheRepository searchCache() {
