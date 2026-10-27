@@ -10,7 +10,7 @@ import java.util.function.Supplier;
 import kr.soyuo.serox.ai.api.AiProvider;
 import kr.soyuo.serox.ai.application.SearchSummaryService;
 import kr.soyuo.serox.ai.context.ContextBuilder;
-import kr.soyuo.serox.ai.provider.ClaudeProvider;
+import kr.soyuo.serox.ai.provider.AiProviders;
 import kr.soyuo.serox.core.application.AppConfigurationLoader;
 import kr.soyuo.serox.core.event.BrowserEventBus;
 import kr.soyuo.serox.mcp.security.AccessPolicy;
@@ -68,10 +68,7 @@ public final class McpLauncher {
         configuration
             .braveSearchApiKey()
             .map(key -> (SearchProvider) new BraveSearchProvider(key.revealForRequest()));
-    Optional<AiProvider> ai =
-        configuration
-            .anthropicApiKey()
-            .map(key -> (AiProvider) ClaudeProvider.create(key.revealForRequest()));
+    Optional<AiProvider> ai = AiProviders.fromConfiguration(configuration);
     var summary =
         new SearchSummaryService(
             search, ai, AppBootstrap.createPageFetcher(), new ContextBuilder(), Clock.systemUTC());

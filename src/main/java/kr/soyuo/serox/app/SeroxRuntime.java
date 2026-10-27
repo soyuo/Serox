@@ -58,8 +58,8 @@ public record SeroxRuntime(
         status(
             now,
             ServiceId.AI,
-            configuration.hasAnthropicApiKey(),
-            "켜짐 (Claude)",
+            configuration.hasAiApiKey(),
+            "켜짐 (" + configuration.aiProvider().label() + ")",
             "API 키 필요"));
     eventBus.publish(
         new ConnectionStatusChanged(
