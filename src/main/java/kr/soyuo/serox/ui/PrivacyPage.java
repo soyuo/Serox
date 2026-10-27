@@ -2,6 +2,7 @@ package kr.soyuo.serox.ui;
 
 import java.util.List;
 import java.util.function.Predicate;
+import kr.soyuo.serox.core.model.HistoryRetention;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -11,6 +12,8 @@ import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -43,11 +46,14 @@ final class PrivacyPage extends ScrollPane {
     content.getChildren().addAll(title, hint);
     for (String line :
         List.of(
-            "방문 기록은 90일 동안, 최대 5,000개까지 이 컴퓨터에만 저장해요.",
+            "방문 기록은 아래에서 고른 기간 동안, 최대 5,000개까지 이 컴퓨터에만 저장해요.",
             "북마크, 최근 검색, 열려 있던 탭도 이 컴퓨터의 데이터 폴더에만 저장해요.",
             "데이터 폴더: %LOCALAPPDATA%\\Serox")) {
       content.getChildren().add(text(line));
     }
+    content.getChildren().add(heading("저장"));
+    content.getChildren().add(saveSwitchRow());
+    content.getChildren().add(retentionRow());
     content.getChildren().add(heading("최근 검색 기록"));
     recent.getStyleClass().add("privacy-list");
     content.getChildren().add(recent);
@@ -91,6 +97,67 @@ final class PrivacyPage extends ScrollPane {
       row.getStyleClass().add("privacy-row");
       recent.getChildren().add(row);
     }
+  }
+
+  /** The "검색 기록 저장" switch: off means new searches are not remembered. */
+  private HBox saveSwitchRow() {
+    Label name = new Label("검색 기록 저장");
+    name.getStyleClass().add("privacy-query");
+    Region spacer = new Region();
+    HBox.setHgrow(spacer, Priority.ALWAYS);
+    ToggleButton toggle = new ToggleButton();
+    toggle.getStyleClass().add("switch");
+    toggle.setAccessibleText("검색 기록 저장");
+    toggle.setSelected(actions.settings().saveSearchHistory());
+    toggle.setText(toggle.isSelected() ? "켜짐" : "꺼짐");
+    toggle.setDisable(!actions.available());
+    toggle.setOnAction(
+        event -> {
+          toggle.setText(toggle.isSelected() ? "켜짐" : "꺼짐");
+          actions.save(actions.settings().withSaveSearchHistory(toggle.isSelected()));
+        });
+    HBox row = new HBox(UiTokens.SPACE_MD, name, spacer, toggle);
+    row.setAlignment(Pos.CENTER_LEFT);
+    row.getStyleClass().add("privacy-row");
+    return row;
+  }
+
+  /** The "보관 기간" choice: 7 days, 30 days or until the entry limit. */
+  private HBox retentionRow() {
+    Label name = new Label("방문 기록 보관 기간");
+    name.getStyleClass().add("privacy-query");
+    Region spacer = new Region();
+    HBox.setHgrow(spacer, Priority.ALWAYS);
+    ToggleGroup group = new ToggleGroup();
+    HBox choices = new HBox(UiTokens.SPACE_SM);
+    HistoryRetention current = actions.settings().historyRetention();
+    for (HistoryRetention retention : HistoryRetention.values()) {
+      ToggleButton option =
+          new ToggleButton(
+              switch (retention) {
+                case WEEK -> "7일";
+                case MONTH -> "30일";
+                case FOREVER -> "계속";
+              });
+      option.getStyleClass().add("segment-option");
+      option.setToggleGroup(group);
+      option.setSelected(retention == current);
+      option.setAccessibleText("방문 기록 보관 " + option.getText());
+      option.setDisable(!actions.available());
+      option.setOnAction(
+          event -> {
+            if (option.isSelected()) {
+              actions.save(actions.settings().withRetention(retention));
+            } else {
+              option.setSelected(true);
+            }
+          });
+      choices.getChildren().add(option);
+    }
+    HBox row = new HBox(UiTokens.SPACE_MD, name, spacer, choices);
+    row.setAlignment(Pos.CENTER_LEFT);
+    row.getStyleClass().add("privacy-row");
+    return row;
   }
 
   private HBox clearRow(

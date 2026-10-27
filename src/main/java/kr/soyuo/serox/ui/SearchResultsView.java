@@ -101,6 +101,19 @@ final class SearchResultsView extends BorderPane {
     return view;
   }
 
+  /** The no-internet screen from the design: one message, one retry, and a matching source pane. */
+  static SearchResultsView offline(String query, Runnable onRetry, Consumer<SearchResult> onOpen) {
+    SearchResultsView view = new SearchResultsView(query, onOpen);
+    view.results
+        .getChildren()
+        .setAll(
+            view.heading("오프라인"),
+            view.state(
+                "인터넷에 연결되어 있지 않아요", "연결을 확인한 뒤 다시 시도해 주세요.", view.action("다시 시도", onRetry)));
+    view.preview.setCenter(view.sourcePlaceholder("인터넷에 연결되지 않았어요", "연결을 확인한 뒤 다시 시도해 주세요."));
+    return view;
+  }
+
   static SearchResultsView results(
       String query, List<SearchResult> found, Consumer<SearchResult> onOpen) {
     SearchResultsView view = new SearchResultsView(query, onOpen);
@@ -346,14 +359,18 @@ final class SearchResultsView extends BorderPane {
 
   /** The dashed card shown until the user picks a source, as in the design. */
   private VBox sourcePlaceholder() {
-    Label title = new Label("출처를 누르면 원문이 열려요");
+    return sourcePlaceholder("출처를 누르면 원문이 열려요", "고른 출처의 페이지가 여기에 보여요.");
+  }
+
+  private VBox sourcePlaceholder(String heading, String detail) {
+    Label title = new Label(heading);
     title.getStyleClass().add("search-state-title");
     VBox card =
         new VBox(
             UiTokens.SPACE_MD,
             SvgIconView.icon(UiTokens.ICON_PREVIEW_PLACEHOLDER, UiTokens.PLACEHOLDER_ICON_SIZE),
             title,
-            message("고른 출처의 페이지가 여기에 보여요."));
+            message(detail));
     card.setAlignment(Pos.CENTER);
     card.getStyleClass().add("source-placeholder");
     VBox.setVgrow(card, javafx.scene.layout.Priority.ALWAYS);
@@ -363,29 +380,43 @@ final class SearchResultsView extends BorderPane {
     return holder;
   }
 
+  /** The source pane from the design: a header with the source, its address and an open button. */
   private void showEvidence(EvidenceDocument document) {
+    Label number = new Label("원문 " + document.sourceId().replaceFirst("^S", ""));
+    number.getStyleClass().add("source-pane-number");
+    Label address = new Label(document.uri().toString());
+    address.getStyleClass().add("source-pane-address");
+    address.setMaxWidth(Double.MAX_VALUE);
+    address.setTextOverrun(javafx.scene.control.OverrunStyle.ELLIPSIS);
+    javafx.scene.layout.HBox.setHgrow(address, javafx.scene.layout.Priority.ALWAYS);
+    Button open =
+        new Button("새 탭에서 열기");
+    open.getStyleClass().add("secondary-button");
+    open.setAccessibleText("새 탭에서 원문 열기");
+    open.setOnAction(
+        event ->
+            onOpenResult.accept(
+                new SearchResult(document.sourceId(), document.uri(), document.title(), "", 1)));
+    javafx.scene.layout.HBox header = new javafx.scene.layout.HBox(UiTokens.SPACE_SM, number, address, open);
+    header.setAlignment(Pos.CENTER_LEFT);
+    header.getStyleClass().add("source-pane-header");
+
     Label title = new Label(document.title());
     title.setWrapText(true);
     title.getStyleClass().add("search-preview-title");
-    Label url = new Label(document.uri().toString());
-    url.setWrapText(true);
-    url.getStyleClass().add("search-result-url");
     Label excerpt = new Label(document.text());
     excerpt.setWrapText(true);
     excerpt.getStyleClass().add("search-result-snippet");
     ScrollPane excerptScroll = new ScrollPane(excerpt);
     excerptScroll.setFitToWidth(true);
     excerptScroll.getStyleClass().add("search-results-scroll");
-    Button open =
-        action(
-            "원문 페이지 열기",
-            () ->
-                onOpenResult.accept(
-                    new SearchResult(
-                        document.sourceId(), document.uri(), document.title(), "", 1)));
-    VBox details = new VBox(14, title, url, excerptScroll, open);
-    details.setPadding(new Insets(40));
-    details.getStyleClass().add("search-preview-content");
+    VBox.setVgrow(excerptScroll, javafx.scene.layout.Priority.ALWAYS);
+    VBox card = new VBox(UiTokens.SPACE_MD, title, excerptScroll);
+    card.getStyleClass().add("source-pane-card");
+    VBox.setVgrow(card, javafx.scene.layout.Priority.ALWAYS);
+    VBox details = new VBox(UiTokens.SPACE_SM, header, card);
+    details.setPadding(new Insets(UiTokens.SPACE_LG));
+    details.getStyleClass().add("source-holder");
     preview.setCenter(details);
   }
 

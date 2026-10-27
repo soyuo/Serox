@@ -14,7 +14,9 @@ import kr.soyuo.serox.browser.api.PageSnapshot;
 import kr.soyuo.serox.core.event.InProcessBrowserEventBus;
 import kr.soyuo.serox.core.event.PageLoaded;
 import kr.soyuo.serox.core.event.SearchStarted;
+import kr.soyuo.serox.core.model.BrowserSettings;
 import kr.soyuo.serox.core.model.HistoryEntry;
+import kr.soyuo.serox.core.model.HistoryRetention;
 import kr.soyuo.serox.core.model.TabId;
 import kr.soyuo.serox.storage.sqlite.SqliteStorage;
 import org.junit.jupiter.api.Test;
@@ -92,6 +94,72 @@ class UsageRecorderTest {
       var remaining = storage.history().recent(10).toCompletableFuture().join();
       assertEquals(
           List.of("p0", "p1", "p2"), remaining.stream().map(HistoryEntry::title).toList());
+    }
+  }
+
+  @Test
+  void searchesAreNotSavedWhenTheUserTurnedHistoryOff() {
+    try (var storage = new SqliteStorage(tempDir.resolve("off.db"));
+        var bus = new InProcessBrowserEventBus();
+        var recorder =
+            new UsageRecorder(
+                bus,
+                storage.history(),
+                storage.recentSearches(),
+                Clock.systemUTC(),
+                () -> BrowserSettings.defaults().withSaveSearchHistory(false))) {
+      bus.publish(new SearchStarted(NOW, TabId.create(), 1, "private query"));
+      recorder.recordQuery("another").toCompletableFuture().join();
+
+      assertEquals(List.of(), storage.recentSearches().recent(5).toCompletableFuture().join());
+    }
+  }
+
+  @Test
+  void theRetentionChoiceDecidesHowOldAVisitMayBe() {
+    for (var retention : HistoryRetention.values()) {
+      try (var storage = new SqliteStorage(tempDir.resolve("retention-" + retention + ".db"));
+          var bus = new InProcessBrowserEventBus()) {
+        var clock = new MutableClock(NOW);
+        storage
+            .history()
+            .add(
+                new HistoryEntry(
+                    UUID.randomUUID(),
+                    URI.create("https://old.test/"),
+                    "Old",
+                    NOW.minus(Duration.ofDays(20))))
+            .toCompletableFuture()
+            .join();
+        try (var recorder =
+            new UsageRecorder(
+                bus,
+                storage.history(),
+                storage.recentSearches(),
+                clock,
+                () -> BrowserSettings.defaults().withRetention(retention))) {
+          bus.publish(
+              new PageLoaded(
+                  NOW,
+                  TabId.create(),
+                  new PageSnapshot(URI.create("https://new.test/"), "New", "", NOW)));
+        }
+
+        int expected = retention == HistoryRetention.WEEK ? 1 : 2;
+        int stored = -1;
+        for (int attempt = 0; attempt < 40 && stored != expected; attempt++) {
+          stored = storage.history().recent(10).toCompletableFuture().join().size();
+          if (stored != expected) {
+            try {
+              Thread.sleep(50);
+            } catch (InterruptedException interrupted) {
+              Thread.currentThread().interrupt();
+              break;
+            }
+          }
+        }
+        assertEquals(expected, stored, "" + retention);
+      }
     }
   }
 
