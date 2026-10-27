@@ -17,6 +17,13 @@ public record ToolResult(String text, Optional<JsonObject> structured, boolean i
   }
 
   /** A failure the model can read and react to; it is not a protocol error. */
+  public static ToolResult failure(String code, String text) {
+    JsonObject detail = new JsonObject();
+    detail.addProperty("errorCode", code);
+    return new ToolResult(text, Optional.of(detail), true);
+  }
+
+  /** A failure without a specific code. */
   public static ToolResult failure(String text) {
     return new ToolResult(text, Optional.empty(), true);
   }

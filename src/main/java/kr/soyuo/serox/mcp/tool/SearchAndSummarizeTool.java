@@ -3,6 +3,7 @@ package kr.soyuo.serox.mcp.tool;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.util.Objects;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import kr.soyuo.serox.ai.application.SearchSummary;
 import kr.soyuo.serox.ai.application.SearchSummaryService;
@@ -52,22 +53,22 @@ public final class SearchAndSummarizeTool implements McpTool {
   @Override
   public CompletionStage<ToolResult> call(JsonObject arguments, McpCall call) {
     String query = arguments.get("query").getAsString().strip();
-    return service
-        .summarize(query)
-        .handle(
-            (summary, failure) -> {
-              if (failure == null) {
-                return toResult(summary);
-              }
-              Throwable cause =
-                  failure instanceof java.util.concurrent.CompletionException && failure.getCause() != null
-                      ? failure.getCause()
-                      : failure;
-              if (cause instanceof SummaryException summaryFailure) {
-                return ToolResult.failure(summaryFailure.getMessage());
-              }
-              return ToolResult.failure("The search could not be completed.");
-            });
+    var run = service.summarize(query);
+    call.cancellation().thenRun(() -> run.cancel(true));
+    return run.handle(
+        (summary, failure) -> {
+          if (failure == null) {
+            return toResult(summary);
+          }
+          Throwable cause =
+              failure instanceof CompletionException && failure.getCause() != null
+                  ? failure.getCause()
+                  : failure;
+          if (cause instanceof SummaryException summaryFailure) {
+            return ToolResult.failure(summaryFailure.code(), summaryFailure.getMessage());
+          }
+          return ToolResult.failure("search_failed", "The search could not be completed.");
+        });
   }
 
   private static ToolResult toResult(SearchSummary summary) {
@@ -85,6 +86,7 @@ public final class SearchAndSummarizeTool implements McpTool {
     structured.addProperty("query", summary.query());
     structured.addProperty("answer", summary.answer());
     structured.add("sources", sources);
+    structured.addProperty("grounded", !summary.sources().isEmpty());
     return ToolResult.success(summary.answer(), structured);
   }
 }

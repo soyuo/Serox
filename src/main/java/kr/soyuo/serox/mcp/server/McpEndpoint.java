@@ -111,6 +111,9 @@ public final class McpEndpoint {
           .whenComplete(
               (result, failure) -> {
                 inFlight.remove(key);
+                if (call.cancellation().isDone()) {
+                  return;
+                }
                 if (failure == null) {
                   send.accept(JsonRpc.result(id, result).toString());
                 } else {
