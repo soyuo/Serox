@@ -8,11 +8,12 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 /** Figma-inspired new-tab search and connection overview. */
 final class HomeView extends VBox {
-  HomeView(Consumer<String> onSearch) {
+  HomeView(UiPreviewData previewData, Consumer<String> onSearch) {
     getStyleClass().add("home-view");
     setAlignment(Pos.TOP_CENTER);
 
@@ -50,7 +51,11 @@ final class HomeView extends VBox {
     HBox.setHgrow(searchInput, Priority.ALWAYS);
     search.getStyleClass().add("home-search");
 
-    HBox cards = new HBox(UiTokens.HOME_CARD_GAP, createRecentSearchCard(), createConnectionCard());
+    HBox cards =
+        new HBox(
+            UiTokens.HOME_CARD_GAP,
+            createRecentSearchCard(previewData.recentSearches()),
+            createConnectionCard(previewData));
     cards.setAlignment(Pos.TOP_CENTER);
     cards.getStyleClass().add("home-cards");
 
@@ -68,14 +73,11 @@ final class HomeView extends VBox {
     getChildren().add(content);
   }
 
-  private VBox createRecentSearchCard() {
+  private VBox createRecentSearchCard(java.util.List<String> recentSearches) {
     Label heading = new Label("최근 검색");
     heading.getStyleClass().add("card-heading");
-    VBox entries =
-        new VBox(
-            recentSearch("자바 가상 스레드 장점"),
-            recentSearch("Maven 의존성 충돌 해결"),
-            recentSearch("JavaFX WebView 쿠키 설정"));
+    VBox entries = new VBox();
+    recentSearches.stream().map(this::recentSearch).forEach(entries.getChildren()::add);
     entries.getStyleClass().add("recent-searches");
     VBox card = new VBox(UiTokens.SPACE_SM, heading, entries);
     card.setPrefWidth(UiTokens.HOME_CARD_WIDTH);
@@ -92,14 +94,12 @@ final class HomeView extends VBox {
     return item;
   }
 
-  private VBox createConnectionCard() {
+  private VBox createConnectionCard(UiPreviewData previewData) {
     Label heading = new Label("연결 상태");
     heading.getStyleClass().add("card-heading");
-    Label aiStatus = new Label("AI 요약 켜짐");
-    aiStatus.getStyleClass().add("connection-status");
-    Label mcpStatus = new Label("MCP 서버 켜짐");
-    mcpStatus.getStyleClass().add("connection-status");
-    Label note = new Label("다른 AI 에이전트가 search_and_summarize 도구로 Serox를 호출할 수 있어요.");
+    Label aiStatus = serviceStatus(previewData.ai());
+    Label mcpStatus = serviceStatus(previewData.mcp());
+    Label note = new Label(previewData.mcpDescription());
     note.setWrapText(true);
     note.getStyleClass().add("card-note");
     VBox card = new VBox(UiTokens.SPACE_SM, heading, aiStatus, mcpStatus, note);
@@ -109,5 +109,15 @@ final class HomeView extends VBox {
     card.getStyleClass().add("info-card");
     HBox.setHgrow(card, Priority.ALWAYS);
     return card;
+  }
+
+  private Label serviceStatus(UiPreviewData.ServicePreview service) {
+    Label status = new Label(service.statusText());
+    Region dot = new Region();
+    dot.getStyleClass().add(service.enabled() ? "connection-dot-on" : "connection-dot-off");
+    status.setGraphic(dot);
+    status.getStyleClass().add("connection-status");
+    status.setAccessibleText(service.name() + " 상태: " + (service.enabled() ? "켜짐" : "꺼짐"));
+    return status;
   }
 }

@@ -10,6 +10,7 @@
     serox-primary-hover: #1d4ed8;
     serox-logo: #3e81f4;
     serox-success: #0f7b5f;
+    serox-error: #b42318;
     serox-hover-surface: #f3f5f8;
     serox-window-close-hover: #e81123;
     -fx-background-color: serox-surface;
@@ -234,10 +235,39 @@
 .connection-status {
     -fx-pref-height: 28px;
     -fx-alignment: center-left;
-    -fx-padding: 0 0 0 12px;
-    -fx-background-color: transparent;
+    -fx-graphic-text-gap: 8px;
     -fx-text-fill: serox-text-primary;
     -fx-font-size: 12px;
+}
+
+.connection-dot-on,
+.connection-dot-off,
+.status-dot {
+    -fx-pref-width: 8px;
+    -fx-min-width: 8px;
+    -fx-max-width: 8px;
+    -fx-pref-height: 8px;
+    -fx-min-height: 8px;
+    -fx-max-height: 8px;
+    -fx-background-radius: 4px;
+}
+
+.connection-dot-on,
+.status-dot-connected {
+    -fx-background-color: serox-success;
+}
+
+.connection-dot-off,
+.status-dot-disconnected {
+    -fx-background-color: serox-text-muted;
+}
+
+.status-dot-configuring {
+    -fx-background-color: serox-primary;
+}
+
+.status-dot-failed {
+    -fx-background-color: serox-error;
 }
 
 .card-note {
@@ -270,8 +300,6 @@
     -fx-pref-height: 8px;
     -fx-min-height: 8px;
     -fx-max-height: 8px;
-    -fx-background-color: serox-success;
-    -fx-background-radius: 4px;
 }
 
 .svg-icon {

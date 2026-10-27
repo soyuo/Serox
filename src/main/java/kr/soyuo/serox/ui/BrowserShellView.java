@@ -23,8 +23,11 @@ import kr.soyuo.serox.core.event.ServiceStatus;
 
 /** Displays the Figma browser frame, home view, and service status. */
 public final class BrowserShellView extends BorderPane {
-  private final Label aiStatus = new Label("AI: Claude");
-  private final Label mcpStatus = new Label("MCP 서버 켜짐 (search_and_summarize)");
+  private final UiPreviewData previewData = UiPreviewData.sample();
+  private final Label aiStatus = new Label("AI: " + previewData.ai().detail());
+  private final Label mcpStatus =
+      new Label(previewData.mcp().statusText() + " (" + previewData.mcp().detail() + ")");
+  private final Region statusDot = new Region();
   private final EventSubscription connectionStatusSubscription;
   private final EventSubscription operationErrorSubscription;
   private double dragOffsetX;
@@ -43,7 +46,7 @@ public final class BrowserShellView extends BorderPane {
     getStyleClass().add("app-root");
     installWindowResizeHandlers();
     setTop(createBrowserChrome());
-    setCenter(new HomeView(this::showNotConnectedMessage));
+    setCenter(new HomeView(previewData, this::showNotConnectedMessage));
     setBottom(createStatusBar());
 
     var stylesheet = BrowserShellView.class.getResource("serox.css");
@@ -160,8 +163,11 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private HBox createStatusBar() {
-    Region statusDot = new Region();
-    statusDot.getStyleClass().add("status-dot");
+    statusDot
+        .getStyleClass()
+        .setAll(
+            "status-dot",
+            previewData.mcp().enabled() ? "status-dot-connected" : "status-dot-disconnected");
     mcpStatus.setGraphic(statusDot);
     Label divider = new Label("|");
     divider.getStyleClass().add("status-divider");
@@ -178,7 +184,18 @@ public final class BrowserShellView extends BorderPane {
         event.safeMessage().isBlank() ? statusName(event.status()) : event.safeMessage();
     Label target = event.service() == ServiceId.MCP ? mcpStatus : aiStatus;
     String prefix = event.service() == ServiceId.MCP ? "MCP 서버 " : "AI: ";
-    updateLabel(target, prefix + status);
+    Runnable update =
+        () -> {
+          target.setText(prefix + status);
+          if (event.service() == ServiceId.MCP) {
+            statusDot.getStyleClass().setAll("status-dot", statusStyle(event.status()));
+          }
+        };
+    if (Platform.isFxApplicationThread()) {
+      update.run();
+    } else {
+      Platform.runLater(update);
+    }
   }
 
   private void showOperationError(OperationFailed event) {
@@ -200,6 +217,15 @@ public final class BrowserShellView extends BorderPane {
       case CONFIGURING -> "확인 중";
       case CONNECTED -> "켜짐";
       case FAILED -> "연결 실패";
+    };
+  }
+
+  private String statusStyle(ServiceStatus status) {
+    return switch (status) {
+      case DISCONNECTED -> "status-dot-disconnected";
+      case CONFIGURING -> "status-dot-configuring";
+      case CONNECTED -> "status-dot-connected";
+      case FAILED -> "status-dot-failed";
     };
   }
 
