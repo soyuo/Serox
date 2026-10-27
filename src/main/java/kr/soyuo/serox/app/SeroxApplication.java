@@ -1,10 +1,12 @@
 package kr.soyuo.serox.app;
 
 import java.util.List;
+import java.util.Optional;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import kr.soyuo.serox.mcp.server.StdioMcpServer;
 import kr.soyuo.serox.ui.BrowserShellView;
 import kr.soyuo.serox.ui.UiTokens;
 
@@ -12,6 +14,7 @@ import kr.soyuo.serox.ui.UiTokens;
 public final class SeroxApplication extends Application {
   private SeroxRuntime runtime;
   private BrowserShellView browserShell;
+  private StdioMcpServer mcpServer;
 
   @Override
   public void start(Stage stage) {
@@ -32,6 +35,12 @@ public final class SeroxApplication extends Application {
     runtime.announceServiceStatus();
     browserShell.setSettingsService(runtime.settingsService());
     browserShell.setLibraryService(runtime.libraryService());
+    if (getParameters().getRaw().contains("--mcp")) {
+      mcpServer =
+          McpLauncher.create(
+              System.getenv(), Optional.of(runtime.eventBus()), System.in, System.out);
+      mcpServer.start();
+    }
     Scene scene = new Scene(browserShell, 1100, 720);
 
     stage.initStyle(StageStyle.UNDECORATED);
@@ -43,6 +52,9 @@ public final class SeroxApplication extends Application {
 
   @Override
   public void stop() {
+    if (mcpServer != null) {
+      mcpServer.stop();
+    }
     if (browserShell != null) {
       browserShell.close();
     }
@@ -52,6 +64,10 @@ public final class SeroxApplication extends Application {
   }
 
   public static void main(String[] args) {
+    if (List.of(args).contains("--mcp-headless")) {
+      McpLauncher.runHeadless(System.getenv());
+      return;
+    }
     launch(args);
   }
 }
