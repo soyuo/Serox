@@ -18,11 +18,14 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import kr.soyuo.serox.browser.render.CanvasPageView;
+import kr.soyuo.serox.core.application.BrowserController;
 import kr.soyuo.serox.core.event.ActiveTabChanged;
 import kr.soyuo.serox.core.event.BrowserEventBus;
 import kr.soyuo.serox.core.event.ConnectionStatusChanged;
 import kr.soyuo.serox.core.event.EventSubscription;
 import kr.soyuo.serox.core.event.OperationFailed;
+import kr.soyuo.serox.core.event.PageLoaded;
 import kr.soyuo.serox.core.event.ServiceId;
 import kr.soyuo.serox.core.event.ServiceStatus;
 import kr.soyuo.serox.core.event.TabClosed;
@@ -44,7 +47,9 @@ public final class BrowserShellView extends BorderPane {
   private final EventSubscription tabStateSubscription;
   private final EventSubscription activeTabSubscription;
   private final EventSubscription tabClosedSubscription;
+  private final EventSubscription pageLoadedSubscription;
   private final Map<TabId, TabSnapshot> tabSnapshots = new HashMap<>();
+  private final BrowserController browserController;
   private TabId activeTabId;
   private double dragOffsetX;
   private double dragOffsetY;
@@ -57,7 +62,9 @@ public final class BrowserShellView extends BorderPane {
   private double resizeStartScreenY;
 
   /** Creates the browser shell and subscribes to service status events. */
-  public BrowserShellView(BrowserEventBus eventBus) {
+  public BrowserShellView(BrowserController browserController) {
+    this.browserController = Objects.requireNonNull(browserController, "browserController");
+    BrowserEventBus eventBus = browserController.eventBus();
     Objects.requireNonNull(eventBus, "eventBus");
     getStyleClass().add("app-root");
     installWindowResizeHandlers();
@@ -78,6 +85,7 @@ public final class BrowserShellView extends BorderPane {
     tabStateSubscription = eventBus.subscribe(TabStateChanged.class, this::showTabState);
     activeTabSubscription = eventBus.subscribe(ActiveTabChanged.class, this::showActiveTab);
     tabClosedSubscription = eventBus.subscribe(TabClosed.class, this::removeTab);
+    pageLoadedSubscription = eventBus.subscribe(PageLoaded.class, this::showPage);
   }
 
   /** Releases event subscriptions owned by this view. */
@@ -87,6 +95,7 @@ public final class BrowserShellView extends BorderPane {
     tabStateSubscription.close();
     activeTabSubscription.close();
     tabClosedSubscription.close();
+    pageLoadedSubscription.close();
   }
 
   private VBox createBrowserChrome() {
@@ -160,6 +169,7 @@ public final class BrowserShellView extends BorderPane {
     addressField = new TextField();
     addressField.setPromptText("검색어 또는 주소를 입력하세요…");
     addressField.setAccessibleText("검색어 또는 웹 주소, Ctrl+L로 이동");
+    addressField.setOnAction(event -> navigateToAddress());
     addressField.getStyleClass().add("address-field");
     HBox.setHgrow(addressField, Priority.ALWAYS);
     HBox addressBox =
@@ -258,6 +268,26 @@ public final class BrowserShellView extends BorderPane {
 
   private void updateAddress(TabSnapshot snapshot) {
     addressField.setText(snapshot.currentUri().map(Object::toString).orElse(""));
+  }
+
+  private void navigateToAddress() {
+    if (activeTabId != null && !addressField.getText().isBlank()) {
+      browserController.navigate(activeTabId, addressField.getText().strip());
+    }
+  }
+
+  private void showPage(PageLoaded event) {
+    event
+        .page()
+        .document()
+        .ifPresent(
+            document ->
+                FxThreadExecutor.execute(
+                    () -> {
+                      if (event.tabId().equals(activeTabId)) {
+                        setCenter(new CanvasPageView(document));
+                      }
+                    }));
   }
 
   private void updateLabel(Label label, String text) {

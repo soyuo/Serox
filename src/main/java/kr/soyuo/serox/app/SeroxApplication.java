@@ -15,7 +15,8 @@ public final class SeroxApplication extends Application {
   @Override
   public void start(Stage stage) {
     runtime = AppBootstrap.createRuntime();
-    browserShell = new BrowserShellView(runtime.eventBus());
+    browserShell = new BrowserShellView(runtime.browserController());
+    runtime.browserController().createTab();
     browserShell.setStyle("-fx-font-family: \"" + UiTokens.FONT_FAMILY + "\";");
     Scene scene = new Scene(browserShell, 1100, 720);
 
