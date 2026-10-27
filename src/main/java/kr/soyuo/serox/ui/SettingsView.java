@@ -23,19 +23,33 @@ final class SettingsView extends ScrollPane {
   private static final List<String> ACCENT_PRESETS =
       List.of("#2563EB", "#7C3AED", "#0F7B5F", "#D97706", "#DB2777", "#475569");
 
-  private final Consumer<BrowserSettings> onSave;
-  private final Runnable onClose;
+  private final Consumer<BrowserSettings> onPreview;
+  private final Consumer<BrowserSettings> onApply;
+  private final Runnable onCancel;
   private final Label message = new Label();
   private final TextField accentField = new TextField();
   private BrowserSettings draft;
 
-  SettingsView(BrowserSettings saved, Consumer<BrowserSettings> onSave, Runnable onClose) {
-    this.onSave = onSave;
-    this.onClose = onClose;
+  /**
+   * Edits stay in a draft. {@code onPreview} shows the draft without saving it, {@code onApply}
+   * saves it, and {@code onCancel} abandons it; the caller restores the saved appearance.
+   */
+  SettingsView(
+      BrowserSettings saved,
+      Consumer<BrowserSettings> onPreview,
+      Consumer<BrowserSettings> onApply,
+      Runnable onCancel) {
+    this.onPreview = onPreview;
+    this.onApply = onApply;
+    this.onCancel = onCancel;
     this.draft = saved;
     getStyleClass().add("settings-scroll");
     setFitToWidth(true);
     setAccessibleText("설정");
+    rebuild();
+  }
+
+  private void rebuild() {
     VBox content = new VBox(UiTokens.SPACE_LG);
     content.getStyleClass().add("settings-view");
     content.setPadding(new Insets(28, 40, 28, 40));
@@ -43,11 +57,16 @@ final class SettingsView extends ScrollPane {
     Label title = new Label("설정");
     title.getStyleClass().add("search-query-heading");
     title.setPadding(Insets.EMPTY);
+    Label hint = new Label("변경 내용은 미리 보기로 먼저 보여 주고, ‘적용’을 눌러야 저장돼요.");
+    hint.setWrapText(true);
+    hint.getStyleClass().add("search-state-message");
     message.getStyleClass().add("search-state-message");
-    content.getChildren().addAll(title, themeSection(), accentSection(), fontSection());
+    message.setText("");
+    content.getChildren().addAll(title, hint, themeSection(), accentSection(), fontSection());
     content.getChildren().addAll(panelSection(), densitySection(), message, buttons());
     setContent(content);
   }
+
 
   private VBox themeSection() {
     return section(
@@ -124,20 +143,30 @@ final class SettingsView extends ScrollPane {
   }
 
   private HBox buttons() {
-    Button save = new Button("저장");
-    save.getStyleClass().add("primary-button");
-    save.setOnAction(
+    Button apply = new Button("적용");
+    apply.getStyleClass().add("primary-button");
+    apply.setOnAction(
         event -> {
-          onSave.accept(draft);
-          onClose.run();
+          onApply.accept(draft);
+          message.setText("설정을 저장했어요.");
         });
-    Button close = new Button("닫기");
-    close.getStyleClass().add("secondary-button");
-    close.setOnAction(event -> onClose.run());
+    Button cancel = new Button("취소");
+    cancel.getStyleClass().add("secondary-button");
+    cancel.setOnAction(event -> onCancel.run());
+    Button restore = new Button("기본값 복원");
+    restore.getStyleClass().add("secondary-button");
+    restore.setOnAction(
+        event -> {
+          draft = BrowserSettings.defaults();
+          rebuild();
+          onPreview.accept(draft);
+          message.setText("기본값을 미리 보기로 보여 주고 있어요. ‘적용’을 눌러 저장하세요.");
+        });
     Region spacer = new Region();
     HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
-    return new HBox(UiTokens.SPACE_SM, spacer, close, save);
+    return new HBox(UiTokens.SPACE_SM, restore, spacer, cancel, apply);
   }
+
 
   private void setAccent(String color) {
     if (color.matches("#[0-9A-Fa-f]{6}")) {
@@ -153,6 +182,7 @@ final class SettingsView extends ScrollPane {
   /** Called whenever the draft changes. */
   void update(BrowserSettings next) {
     draft = next;
+    onPreview.accept(next);
   }
 
   BrowserSettings draft() {

@@ -132,6 +132,13 @@ public final class BrowserShellView extends BorderPane {
     setCenter(homeView);
     setBottom(createStatusBar());
     installKeyboardShortcuts();
+    centerProperty()
+        .addListener(
+            (observable, oldView, newView) -> {
+              if (oldView instanceof SettingsView && settingsService != null) {
+                applySettings(settingsService.current());
+              }
+            });
 
     var stylesheet = BrowserShellView.class.getResource("serox.css");
     if (stylesheet != null) {
@@ -186,8 +193,14 @@ public final class BrowserShellView extends BorderPane {
     setCenter(
         new SettingsView(
             settingsService.current(),
+            preview -> AppearanceStyler.apply(this, preview),
             settings -> settingsService.save(settings),
-            this::closeSettings));
+            this::cancelSettings));
+  }
+
+  private void cancelSettings() {
+    AppearanceStyler.apply(this, settingsService.current());
+    closeSettings();
   }
 
   private void closeSettings() {
