@@ -89,7 +89,9 @@ public final class BraveSearchProvider implements SearchProvider {
     String query =
         "q="
             + encode(request.query())
-            + "&country=KR&search_lang=ko&ui_lang=ko-KR&safesearch=moderate&count="
+            + "&country=KR&search_lang=ko&ui_lang=ko-KR&safesearch="
+            + request.safeSearch()
+            + "&count="
             + Math.min(request.resultLimit(), MAX_RESULTS);
     return URI.create(endpoint + "?" + query);
   }

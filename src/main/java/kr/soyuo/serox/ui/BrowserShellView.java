@@ -1,12 +1,16 @@
 package kr.soyuo.serox.ui;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
@@ -21,18 +25,17 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import kr.soyuo.serox.ai.application.AiSearchService;
 import kr.soyuo.serox.browser.dom.Document;
 import kr.soyuo.serox.browser.render.CanvasPageView;
 import kr.soyuo.serox.core.application.BrowserController;
 import kr.soyuo.serox.core.application.DirectAddress;
+import kr.soyuo.serox.core.application.LibraryService;
 import kr.soyuo.serox.core.application.NavigationInputClassifier;
 import kr.soyuo.serox.core.application.NavigationTarget;
 import kr.soyuo.serox.core.application.SearchQuery;
-import kr.soyuo.serox.ai.application.AiSearchService;
-import kr.soyuo.serox.core.application.LibraryService;
 import kr.soyuo.serox.core.application.SettingsService;
 import kr.soyuo.serox.core.event.ActiveTabChanged;
-import kr.soyuo.serox.core.event.SettingsChanged;
 import kr.soyuo.serox.core.event.AiAnswerChanged;
 import kr.soyuo.serox.core.event.BrowserEventBus;
 import kr.soyuo.serox.core.event.ConnectionStatusChanged;
@@ -44,21 +47,17 @@ import kr.soyuo.serox.core.event.SearchCancelled;
 import kr.soyuo.serox.core.event.SearchCompleted;
 import kr.soyuo.serox.core.event.SearchFailed;
 import kr.soyuo.serox.core.event.SearchStarted;
-import kr.soyuo.serox.core.event.ServiceId;
 import kr.soyuo.serox.core.event.ServiceStatus;
+import kr.soyuo.serox.core.event.SettingsChanged;
 import kr.soyuo.serox.core.event.TabClosed;
 import kr.soyuo.serox.core.event.TabStateChanged;
-import kr.soyuo.serox.core.model.NavigationStatus;
-import kr.soyuo.serox.core.model.TabId;
-import java.net.URI;
-import java.util.Optional;
-import javafx.scene.control.ContextMenu;
-import javafx.scene.control.CustomMenuItem;
 import kr.soyuo.serox.core.model.AiPanelPosition;
 import kr.soyuo.serox.core.model.BrowserSettings;
 import kr.soyuo.serox.core.model.KeyChord;
+import kr.soyuo.serox.core.model.NavigationStatus;
 import kr.soyuo.serox.core.model.ShortcutAction;
 import kr.soyuo.serox.core.model.SiteInfo;
+import kr.soyuo.serox.core.model.TabId;
 import kr.soyuo.serox.core.model.TabSnapshot;
 import kr.soyuo.serox.search.application.SearchService;
 
@@ -67,8 +66,7 @@ public final class BrowserShellView extends BorderPane {
   private UiPreviewData previewData = UiPreviewData.pending();
   private final Label aiStatus = new Label("AI: 확인 중");
   private final Label searchStatus = new Label("검색: 확인 중");
-  private final Label mcpStatus =
-      new Label("MCP 서버 확인 중");
+  private final Label mcpStatus = new Label("MCP 서버 확인 중");
   private final Region statusDot = new Region();
   private final Label navigationStatus = new Label("Ready");
   private TextField addressField;
@@ -95,6 +93,14 @@ public final class BrowserShellView extends BorderPane {
   private boolean aiPanelOpen = true;
   private AiPanelPosition aiPanelSide = AiPanelPosition.RIGHT;
   private AiSearchService aiSearchService;
+  private kr.soyuo.serox.ai.application.AiConnectionService aiConnections;
+  private java.util.function.Consumer<java.net.URI> openBrowser;
+  private SearchActions searchActions = SearchActions.none();
+  private BrowserSettings shownAppearance = BrowserSettings.defaults();
+  private final javafx.beans.value.ChangeListener<javafx.application.ColorScheme>
+      systemThemeListener =
+          (observable, before, after) ->
+              FxThreadExecutor.execute(() -> AppearanceStyler.apply(this, shownAppearance));
   private PrivacyActions privacyActions = PrivacyActions.none();
   private McpActions mcpActions = McpActions.none();
   private SettingsService settingsService;
@@ -160,6 +166,9 @@ public final class BrowserShellView extends BorderPane {
     if (stylesheet != null) {
       getStylesheets().add(stylesheet.toExternalForm());
     }
+    javafx.application.Platform.getPreferences()
+        .colorSchemeProperty()
+        .addListener(systemThemeListener);
     connectionStatusSubscription =
         eventBus.subscribe(ConnectionStatusChanged.class, this::showConnectionStatus);
     operationErrorSubscription =
@@ -200,7 +209,10 @@ public final class BrowserShellView extends BorderPane {
           public java.util.concurrent.CompletionStage<java.util.List<String>> recentQueries() {
             return recorder
                 .map(r -> r.recentQueries(UiTokens.PRIVACY_LIST_LIMIT))
-                .orElseGet(() -> java.util.concurrent.CompletableFuture.completedFuture(java.util.List.of()));
+                .orElseGet(
+                    () ->
+                        java.util.concurrent.CompletableFuture.completedFuture(
+                            java.util.List.of()));
           }
 
           @Override
@@ -243,6 +255,20 @@ public final class BrowserShellView extends BorderPane {
     this.aiSearchService = aiSearchService;
   }
 
+  public void setSearchActions(SearchActions actions) {
+    searchActions = java.util.Objects.requireNonNull(actions, "actions");
+  }
+
+  /**
+   * Uses the operating system browser for provider authorization, outside Serox's page renderer.
+   */
+  public void setAiConnections(
+      kr.soyuo.serox.ai.application.AiConnectionService connections,
+      java.util.function.Consumer<java.net.URI> openBrowser) {
+    this.aiConnections = connections;
+    this.openBrowser = openBrowser;
+  }
+
   /** Connects history and bookmark storage to the toolbar entry points. */
   public void setLibraryService(LibraryService libraryService) {
     this.libraryService = libraryService;
@@ -279,8 +305,7 @@ public final class BrowserShellView extends BorderPane {
             added ->
                 FxThreadExecutor.execute(
                     () ->
-                        navigationStatus.setText(
-                            added ? "북마크에 추가했어요." : "이미 북마크했거나 저장할 수 없어요.")));
+                        navigationStatus.setText(added ? "북마크에 추가했어요." : "이미 북마크했거나 저장할 수 없어요.")));
   }
 
   /** Connects the settings store, applying the current values and following later changes. */
@@ -296,6 +321,7 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private void applySettings(BrowserSettings settings) {
+    shownAppearance = settings;
     AppearanceStyler.apply(this, settings);
     aiPanelSide = settings.aiPanelPosition();
     refreshAccelerators();
@@ -311,18 +337,25 @@ public final class BrowserShellView extends BorderPane {
     setCenter(
         new SettingsView(
             settingsService.current(),
-            preview -> AppearanceStyler.apply(this, preview),
+            preview -> {
+              shownAppearance = preview;
+              AppearanceStyler.apply(this, preview);
+            },
             settings ->
                 settingsService.save(
                     settings
                         .withPrivacyOf(settingsService.current())
                         .withGeneralOf(settingsService.current())
-                        .withShortcutsOf(settingsService.current())),
+                        .withShortcutsOf(settingsService.current())
+                        .withContentPreferencesOf(settingsService.current())),
             this::cancelSettings,
             new SettingsView.ServiceSummary(
                 statusText(searchStatus), statusText(aiStatus), statusText(mcpStatus)),
             privacyActions,
-            mcpActions));
+            mcpActions,
+            aiConnections,
+            openBrowser,
+            searchActions));
   }
 
   /** The status label's text without its "검색:" or "AI:" prefix. */
@@ -333,7 +366,7 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private void cancelSettings() {
-    AppearanceStyler.apply(this, settingsService.current());
+    applySettings(settingsService.current());
     closeSettings();
   }
 
@@ -345,6 +378,9 @@ public final class BrowserShellView extends BorderPane {
 
   /** Releases event subscriptions owned by this view. */
   public void close() {
+    javafx.application.Platform.getPreferences()
+        .colorSchemeProperty()
+        .removeListener(systemThemeListener);
     connectionStatusSubscription.close();
     operationErrorSubscription.close();
     tabStateSubscription.close();
@@ -464,7 +500,8 @@ public final class BrowserShellView extends BorderPane {
     addressBox.setAlignment(Pos.CENTER_LEFT);
     addressBox.getStyleClass().add("address-box");
     aiChip.getStyleClass().add("ai-chip");
-    aiChip.setGraphic(SvgIconView.icon(UiTokens.ICON_AI_SPARKLE_SMALL, UiTokens.AI_SPARKLE_SMALL_SIZE));
+    aiChip.setGraphic(
+        SvgIconView.icon(UiTokens.ICON_AI_SPARKLE_SMALL, UiTokens.AI_SPARKLE_SMALL_SIZE));
     aiChip.setAccessibleText("AI 요약 패널 열기");
     aiChip.setVisible(false);
     aiChip.managedProperty().bind(aiChip.visibleProperty());
@@ -514,8 +551,15 @@ public final class BrowserShellView extends BorderPane {
     divider.getStyleClass().add("status-divider");
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
-    HBox bar = new HBox(
-            UiTokens.SPACE_MD, navigationStatus, divider, searchStatus, aiStatus, spacer, mcpStatus);
+    HBox bar =
+        new HBox(
+            UiTokens.SPACE_MD,
+            navigationStatus,
+            divider,
+            searchStatus,
+            aiStatus,
+            spacer,
+            mcpStatus);
     bar.setAlignment(Pos.CENTER_LEFT);
     bar.getStyleClass().add("status-bar");
     return bar;
@@ -535,7 +579,8 @@ public final class BrowserShellView extends BorderPane {
             case AI -> {
               aiStatus.setText("AI: " + status);
               aiStatus.setAccessibleText("AI 연결 상태: " + status);
-              previewData = previewData.withAi(new UiPreviewData.ServicePreview("AI 요약", status, on));
+              previewData =
+                  previewData.withAi(new UiPreviewData.ServicePreview("AI 요약", status, on));
             }
             case MCP -> {
               mcpStatus.setText("MCP 서버 " + status);
@@ -616,8 +661,7 @@ public final class BrowserShellView extends BorderPane {
                   SearchResultsView.results(
                       event.query(),
                       event.response().results(),
-                      result ->
-                          browserController.navigate(event.tabId(), result.uri().toString()));
+                      result -> browserController.navigate(event.tabId(), result.uri().toString()));
               resultsView.configureAiPanel(
                   aiPanelOpen,
                   aiPanelSide,
@@ -661,6 +705,9 @@ public final class BrowserShellView extends BorderPane {
           if (event.tabId().equals(activeTabId)
               && resultsView != null
               && getCenter() == resultsView) {
+            if (settingsService != null) {
+              resultsView.setSummaryPreferences(settingsService.current().summary());
+            }
             resultsView.showAi(event);
             aiSearchActive =
                 event.phase() == AiAnswerChanged.Phase.PREPARING
@@ -670,7 +717,6 @@ public final class BrowserShellView extends BorderPane {
           }
         });
   }
-
 
   /**
    * Keeps the address bar in step with what is shown: the cyan ring and the summary chip while the
@@ -964,7 +1010,8 @@ public final class BrowserShellView extends BorderPane {
         register(accelerators, KeyChords.toCombination(chord), () -> runShortcut(action));
       }
     }
-    // Ctrl+K has always put the cursor in the home search box; it stays unless a chosen key needs it.
+    // Ctrl+K has always put the cursor in the home search box; it stays unless a chosen key needs
+    // it.
     KeyCodeCombination homeSearch = new KeyCodeCombination(KeyCode.K, KeyCombination.CONTROL_DOWN);
     if (!accelerators.containsKey(homeSearch)) {
       register(accelerators, homeSearch, () -> homeView.focusSearchField());

@@ -18,8 +18,39 @@ public record BrowserSettings(
     StartupMode startupMode,
     String startPageUrl,
     AppLanguage language,
-    Map<ShortcutAction, KeyChord> shortcutOverrides) {
+    Map<ShortcutAction, KeyChord> shortcutOverrides,
+    SearchPreferences search,
+    SummaryPreferences summary) {
   private static final int MAX_START_PAGE_LENGTH = 2048;
+
+  /** Older callers and profiles use the default search and summary preferences. */
+  public BrowserSettings(
+      ThemeMode theme,
+      String accentColor,
+      int fontScalePercent,
+      AiPanelPosition aiPanelPosition,
+      DisplayDensity displayDensity,
+      HistoryRetention historyRetention,
+      boolean saveSearchHistory,
+      StartupMode startupMode,
+      String startPageUrl,
+      AppLanguage language,
+      Map<ShortcutAction, KeyChord> shortcutOverrides) {
+    this(
+        theme,
+        accentColor,
+        fontScalePercent,
+        aiPanelPosition,
+        displayDensity,
+        historyRetention,
+        saveSearchHistory,
+        startupMode,
+        startPageUrl,
+        language,
+        shortcutOverrides,
+        SearchPreferences.defaults(),
+        SummaryPreferences.defaults());
+  }
 
   /** Appearance and privacy preferences with the default general choices and shortcuts. */
   public BrowserSettings(
@@ -78,6 +109,8 @@ public record BrowserSettings(
     Objects.requireNonNull(startPageUrl, "startPageUrl");
     Objects.requireNonNull(language, "language");
     Objects.requireNonNull(shortcutOverrides, "shortcutOverrides");
+    Objects.requireNonNull(search, "search");
+    Objects.requireNonNull(summary, "summary");
     if (!accentColor.matches("#[0-9A-Fa-f]{6}")) {
       throw new IllegalArgumentException("accentColor must be a six-digit hex color");
     }
@@ -174,7 +207,9 @@ public record BrowserSettings(
         startupMode,
         startPageUrl,
         language,
-        overrides);
+        overrides,
+        search,
+        summary);
   }
 
   /** These appearance choices with the privacy choices of {@code other}. */
@@ -190,7 +225,9 @@ public record BrowserSettings(
         startupMode,
         startPageUrl,
         language,
-        shortcutOverrides);
+        shortcutOverrides,
+        search,
+        summary);
   }
 
   /** These settings with the general choices of {@code other}. */
@@ -211,7 +248,9 @@ public record BrowserSettings(
         startupMode,
         startPageUrl,
         language,
-        shortcutOverrides);
+        shortcutOverrides,
+        search,
+        summary);
   }
 
   /** These settings with search history saving switched on or off. */
@@ -227,7 +266,9 @@ public record BrowserSettings(
         startupMode,
         startPageUrl,
         language,
-        shortcutOverrides);
+        shortcutOverrides,
+        search,
+        summary);
   }
 
   /** These settings with a different startup choice. */
@@ -257,6 +298,47 @@ public record BrowserSettings(
         mode,
         url,
         appLanguage,
-        shortcutOverrides);
+        shortcutOverrides,
+        search,
+        summary);
+  }
+
+  public BrowserSettings withSearchPreferences(SearchPreferences value) {
+    return new BrowserSettings(
+        theme,
+        accentColor,
+        fontScalePercent,
+        aiPanelPosition,
+        displayDensity,
+        historyRetention,
+        saveSearchHistory,
+        startupMode,
+        startPageUrl,
+        language,
+        shortcutOverrides,
+        value,
+        summary);
+  }
+
+  public BrowserSettings withSummaryPreferences(SummaryPreferences value) {
+    return new BrowserSettings(
+        theme,
+        accentColor,
+        fontScalePercent,
+        aiPanelPosition,
+        displayDensity,
+        historyRetention,
+        saveSearchHistory,
+        startupMode,
+        startPageUrl,
+        language,
+        shortcutOverrides,
+        search,
+        value);
+  }
+
+  /** Keeps current content choices when an appearance draft is applied. */
+  public BrowserSettings withContentPreferencesOf(BrowserSettings other) {
+    return withSearchPreferences(other.search()).withSummaryPreferences(other.summary());
   }
 }

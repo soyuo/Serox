@@ -96,4 +96,50 @@ class PageFetcherTest {
 
     assertFalse(pages.iterator().hasNext());
   }
+
+  @Test
+  void cancellationAndDeadlinesCancelTheUnderlyingTransport() throws Exception {
+    for (boolean cancel : new boolean[] {true, false}) {
+      CompletableFuture<HttpResponseData> transport = new CompletableFuture<>();
+      CompletableFuture<Void> stopped = new CompletableFuture<>();
+      transport.whenComplete(
+          (response, failure) -> {
+            if (transport.isCancelled()) stopped.complete(null);
+          });
+      var fetcher =
+          new PageFetcher(
+              request -> transport,
+              new HttpResponseHandler(),
+              new HtmlDocumentParser(),
+              new FetchLimits(1, Duration.ofMillis(100), Duration.ofMillis(200), 100));
+      var pages = fetcher.fetch(List.of(result(1, "slow"))).toCompletableFuture();
+      if (cancel) pages.cancel(true);
+      stopped.get(2, java.util.concurrent.TimeUnit.SECONDS);
+      assertTrue(transport.isCancelled());
+    }
+  }
+
+  @Test
+  void aPreferenceSnapshotControlsPageAndTextLimits() {
+    AtomicInteger requests = new AtomicInteger();
+    var fetcher =
+        new PageFetcher(
+            request -> {
+              requests.incrementAndGet();
+              return CompletableFuture.completedFuture(
+                  html(request.uri(), "<body>" + "content ".repeat(2000) + "</body>"));
+            },
+            new HttpResponseHandler(),
+            new HtmlDocumentParser(),
+            FetchLimits.defaults());
+    var pages =
+        fetcher
+            .fetch(
+                List.of(result(1, "one"), result(2, "two")),
+                new FetchLimits(1, Duration.ofSeconds(10), Duration.ofSeconds(10), 3000))
+            .toCompletableFuture()
+            .join();
+    assertEquals(1, requests.get());
+    assertEquals(3000, pages.getFirst().text().length());
+  }
 }

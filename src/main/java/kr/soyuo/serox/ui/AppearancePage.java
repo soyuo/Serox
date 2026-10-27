@@ -5,9 +5,9 @@ import java.util.function.Consumer;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -67,7 +67,6 @@ final class AppearancePage extends ScrollPane {
     setContent(content);
   }
 
-
   private VBox themeSection() {
     return section(
         "테마",
@@ -101,11 +100,14 @@ final class AppearancePage extends ScrollPane {
     accentField.setPrefColumnCount(8);
     accentField.setAccessibleText("강조색 16진수 값");
     accentField.setOnAction(event -> setAccent(accentField.getText().strip()));
-    accentField.focusedProperty().addListener((o, was, focused) -> {
-      if (!focused) {
-        setAccent(accentField.getText().strip());
-      }
-    });
+    accentField
+        .focusedProperty()
+        .addListener(
+            (o, was, focused) -> {
+              if (!focused) {
+                setAccent(accentField.getText().strip());
+              }
+            });
     return section("강조 색", new HBox(UiTokens.SPACE_LG, swatches, accentField));
   }
 
@@ -154,7 +156,7 @@ final class AppearancePage extends ScrollPane {
     restore.getStyleClass().add("secondary-button");
     restore.setOnAction(
         event -> {
-          draft = BrowserSettings.defaults();
+          draft = keepOtherPreferences(BrowserSettings.defaults());
           rebuild();
           onPreview.accept(draft);
           message.setText("기본값을 미리 보기로 보여 주고 있어요. ‘적용’을 눌러 저장하세요.");
@@ -163,7 +165,6 @@ final class AppearancePage extends ScrollPane {
     HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
     return new HBox(UiTokens.SPACE_SM, restore, spacer, cancel, apply);
   }
-
 
   private void setAccent(String color) {
     if (color.matches("#[0-9A-Fa-f]{6}")) {
@@ -178,8 +179,16 @@ final class AppearancePage extends ScrollPane {
 
   /** Called whenever the draft changes. */
   void update(BrowserSettings next) {
-    draft = next;
-    onPreview.accept(next);
+    draft = keepOtherPreferences(next);
+    onPreview.accept(draft);
+  }
+
+  private BrowserSettings keepOtherPreferences(BrowserSettings appearance) {
+    return appearance
+        .withPrivacyOf(draft)
+        .withGeneralOf(draft)
+        .withShortcutsOf(draft)
+        .withContentPreferencesOf(draft);
   }
 
   BrowserSettings draft() {
@@ -188,31 +197,46 @@ final class AppearancePage extends ScrollPane {
 
   private BrowserSettings withTheme(ThemeMode theme) {
     return new BrowserSettings(
-        theme, draft.accentColor(), draft.fontScalePercent(), draft.aiPanelPosition(),
+        theme,
+        draft.accentColor(),
+        draft.fontScalePercent(),
+        draft.aiPanelPosition(),
         draft.displayDensity());
   }
 
   private BrowserSettings withAccent(String accent) {
     return new BrowserSettings(
-        draft.theme(), accent, draft.fontScalePercent(), draft.aiPanelPosition(),
+        draft.theme(),
+        accent,
+        draft.fontScalePercent(),
+        draft.aiPanelPosition(),
         draft.displayDensity());
   }
 
   private BrowserSettings withFontScale(int percent) {
     return new BrowserSettings(
-        draft.theme(), draft.accentColor(), percent, draft.aiPanelPosition(),
+        draft.theme(),
+        draft.accentColor(),
+        percent,
+        draft.aiPanelPosition(),
         draft.displayDensity());
   }
 
   private BrowserSettings withPanel(AiPanelPosition position) {
     return new BrowserSettings(
-        draft.theme(), draft.accentColor(), draft.fontScalePercent(), position,
+        draft.theme(),
+        draft.accentColor(),
+        draft.fontScalePercent(),
+        position,
         draft.displayDensity());
   }
 
   private BrowserSettings withDensity(DisplayDensity density) {
     return new BrowserSettings(
-        draft.theme(), draft.accentColor(), draft.fontScalePercent(), draft.aiPanelPosition(),
+        draft.theme(),
+        draft.accentColor(),
+        draft.fontScalePercent(),
+        draft.aiPanelPosition(),
         density);
   }
 
@@ -227,10 +251,7 @@ final class AppearancePage extends ScrollPane {
 
   /** A row of segmented options as in the design: one is selected and tinted. */
   private static <T> HBox choice(
-      T[] values,
-      T selected,
-      java.util.function.Function<T, String> label,
-      Consumer<T> onChange) {
+      T[] values, T selected, java.util.function.Function<T, String> label, Consumer<T> onChange) {
     ToggleGroup group = new ToggleGroup();
     HBox row = new HBox(UiTokens.SPACE_SM);
     for (T value : values) {

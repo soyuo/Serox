@@ -45,19 +45,31 @@ public final class SqliteSettingsRepository implements SettingsRepository {
           return validOrDefault(
               () ->
                   new BrowserSettings(
-              enumValue(values, "theme", DEFAULTS.theme(), ThemeMode.class),
-              values.getOrDefault("accentColor", DEFAULTS.accentColor()),
-              integerValue(values, "fontScalePercent", DEFAULTS.fontScalePercent()),
-              enumValue(
-                  values, "aiPanelPosition", DEFAULTS.aiPanelPosition(), AiPanelPosition.class),
-              enumValue(values, "displayDensity", DEFAULTS.displayDensity(), DisplayDensity.class),
-              enumValue(
-                  values, "historyRetention", DEFAULTS.historyRetention(), HistoryRetention.class),
-              !"false".equals(values.get("saveSearchHistory")),
-              enumValue(values, "startupMode", DEFAULTS.startupMode(), StartupMode.class),
-              values.getOrDefault("startPageUrl", DEFAULTS.startPageUrl()),
-              enumValue(values, "language", DEFAULTS.language(), AppLanguage.class),
-              shortcutValues(values)));
+                      enumValue(values, "theme", DEFAULTS.theme(), ThemeMode.class),
+                      values.getOrDefault("accentColor", DEFAULTS.accentColor()),
+                      integerValue(values, "fontScalePercent", DEFAULTS.fontScalePercent()),
+                      enumValue(
+                          values,
+                          "aiPanelPosition",
+                          DEFAULTS.aiPanelPosition(),
+                          AiPanelPosition.class),
+                      enumValue(
+                          values,
+                          "displayDensity",
+                          DEFAULTS.displayDensity(),
+                          DisplayDensity.class),
+                      enumValue(
+                          values,
+                          "historyRetention",
+                          DEFAULTS.historyRetention(),
+                          HistoryRetention.class),
+                      !"false".equals(values.get("saveSearchHistory")),
+                      enumValue(values, "startupMode", DEFAULTS.startupMode(), StartupMode.class),
+                      values.getOrDefault("startPageUrl", DEFAULTS.startPageUrl()),
+                      enumValue(values, "language", DEFAULTS.language(), AppLanguage.class),
+                      shortcutValues(values),
+                      searchValues(values),
+                      summaryValues(values)));
         });
   }
 
@@ -87,6 +99,14 @@ public final class SqliteSettingsRepository implements SettingsRepository {
     values.put("startupMode", settings.startupMode().name());
     values.put("startPageUrl", settings.startPageUrl());
     values.put("language", settings.language().name());
+    values.put("search.evidencePages", Integer.toString(settings.search().evidencePages()));
+    values.put("search.safeSearch", settings.search().safeSearch());
+    values.put("search.timeoutSeconds", Integer.toString(settings.search().timeoutSeconds()));
+    values.put("summary.language", settings.summary().language());
+    values.put("summary.keyPoints", Boolean.toString(settings.summary().keyPoints()));
+    values.put("summary.inlineCitations", Boolean.toString(settings.summary().inlineCitations()));
+    values.put("summary.sourceCharacters", Integer.toString(settings.summary().sourceCharacters()));
+    values.put("summary.instructions", settings.summary().instructions());
     settings
         .shortcutOverrides()
         .forEach((action, chord) -> values.put(SHORTCUT_PREFIX + action.name(), chord.toString()));
@@ -123,7 +143,8 @@ public final class SqliteSettingsRepository implements SettingsRepository {
         });
   }
 
-  private static BrowserSettings validOrDefault(java.util.function.Supplier<BrowserSettings> loader) {
+  private static BrowserSettings validOrDefault(
+      java.util.function.Supplier<BrowserSettings> loader) {
     try {
       return loader.get();
     } catch (IllegalArgumentException exception) {
@@ -137,6 +158,35 @@ public final class SqliteSettingsRepository implements SettingsRepository {
       return value == null ? fallback : Integer.parseInt(value);
     } catch (NumberFormatException exception) {
       return fallback;
+    }
+  }
+
+  private static kr.soyuo.serox.core.model.SearchPreferences searchValues(
+      Map<String, String> values) {
+    try {
+      return new kr.soyuo.serox.core.model.SearchPreferences(
+          integerValue(values, "search.evidencePages", 5),
+          values.getOrDefault("search.safeSearch", "moderate"),
+          integerValue(values, "search.timeoutSeconds", 10));
+    } catch (IllegalArgumentException invalid) {
+      return kr.soyuo.serox.core.model.SearchPreferences.defaults();
+    }
+  }
+
+  private static kr.soyuo.serox.core.model.SummaryPreferences summaryValues(
+      Map<String, String> values) {
+    try {
+      return new kr.soyuo.serox.core.model.SummaryPreferences(
+          values.getOrDefault(
+              "summary.language", values.containsKey("language") ? "app" : "question"),
+          !"false".equals(values.get("summary.keyPoints")),
+          !"false".equals(values.get("summary.inlineCitations")),
+          integerValue(values, "summary.sourceCharacters", 8000),
+          values.getOrDefault(
+              "summary.instructions",
+              kr.soyuo.serox.core.model.SummaryPreferences.DEFAULT_INSTRUCTIONS));
+    } catch (IllegalArgumentException invalid) {
+      return kr.soyuo.serox.core.model.SummaryPreferences.defaults();
     }
   }
 

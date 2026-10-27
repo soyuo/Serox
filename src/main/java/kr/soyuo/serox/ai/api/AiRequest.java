@@ -8,7 +8,11 @@ import java.util.Objects;
  * names the language to answer in, such as "English"; blank means the language of the question.
  */
 public record AiRequest(
-    String question, List<EvidenceDocument> evidence, String answerLanguage) {
+    String question, List<EvidenceDocument> evidence, String answerLanguage, String instructions) {
+  public AiRequest(String question, List<EvidenceDocument> evidence, String answerLanguage) {
+    this(question, evidence, answerLanguage, "");
+  }
+
   /** A request answered in the language of the question. */
   public AiRequest(String question, List<EvidenceDocument> evidence) {
     this(question, evidence, "");
@@ -22,10 +26,18 @@ public record AiRequest(
     }
     evidence = List.copyOf(Objects.requireNonNull(evidence, "evidence"));
     answerLanguage = Objects.requireNonNull(answerLanguage, "answerLanguage").strip();
+    Objects.requireNonNull(instructions, "instructions");
+    if (instructions.length() > 2000) {
+      throw new IllegalArgumentException("Summary instructions are too long");
+    }
   }
 
   /** The same request, answered in the named language. */
   public AiRequest withAnswerLanguage(String language) {
-    return new AiRequest(question, evidence, language);
+    return new AiRequest(question, evidence, language, instructions);
+  }
+
+  public AiRequest withInstructions(String value) {
+    return new AiRequest(question, evidence, answerLanguage, value);
   }
 }

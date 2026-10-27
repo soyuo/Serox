@@ -19,6 +19,7 @@ import kr.soyuo.serox.search.extract.ContentExtractor;
 /** Fetches the top search results in parallel under page-count, size and time limits. */
 public final class PageFetcher {
   private static final Logger LOGGER = Logger.getLogger(PageFetcher.class.getName());
+  private static final java.util.concurrent.ScheduledThreadPoolExecutor DEADLINES = deadlines();
 
   private final HttpTransport transport;
   private final HttpResponseHandler responseHandler;
@@ -51,41 +52,93 @@ public final class PageFetcher {
     }
     CompletableFuture<Void> all =
         CompletableFuture.allOf(pending.toArray(CompletableFuture[]::new));
-    return all.orTimeout(limits.totalTimeout().toMillis(), TimeUnit.MILLISECONDS)
-        .handle(
-            (ignored, failure) -> {
-              if (failure != null) {
-                pending.forEach(future -> future.cancel(true));
-              }
-              return pending.stream()
-                  .filter(future -> future.isDone() && !future.isCompletedExceptionally())
-                  .map(CompletableFuture::join)
-                  .flatMap(Optional::stream)
-                  .toList();
-            });
+    CompletableFuture<List<FetchedPage>> result = new CompletableFuture<>();
+    var deadline =
+        DEADLINES.schedule(
+            () -> result.complete(completed(pending)),
+            limits.totalTimeout().toMillis(),
+            TimeUnit.MILLISECONDS);
+    all.whenComplete((ignored, failure) -> result.complete(completed(pending)));
+    result.whenComplete(
+        (pages, failure) -> {
+          deadline.cancel(false);
+          pending.forEach(
+              future -> {
+                if (!future.isDone()) future.cancel(true);
+              });
+        });
+    return result;
+  }
+
+  /** One immutable preference snapshot applies to the whole evidence-gathering run. */
+  public CompletionStage<List<FetchedPage>> fetch(
+      List<SearchResult> results, FetchLimits selected) {
+    return new PageFetcher(transport, responseHandler, parser, selected).fetch(results);
   }
 
   private CompletableFuture<Optional<FetchedPage>> fetchOne(SearchResult result) {
     try {
-      return transport
-          .dispatch(new PageLoadRequest(result.uri()))
-          .toCompletableFuture()
-          .orTimeout(limits.perPageTimeout().toMillis(), TimeUnit.MILLISECONDS)
-          .thenApply(
-              response -> {
-                var decoded = responseHandler.handle(response);
-                var document = parser.parse(decoded.uri(), decoded.html());
-                var content = extractor.extract(document);
-                return Optional.of(
-                    new FetchedPage(result, decoded.uri(), content.title(), content.text()));
-              })
-          .exceptionally(
-              failure -> {
-                LOGGER.log(Level.FINE, "Skipping a result page that could not be read.");
-                return Optional.empty();
-              });
+      var request = transport.dispatch(new PageLoadRequest(result.uri())).toCompletableFuture();
+      CompletableFuture<Optional<FetchedPage>> page = new CompletableFuture<>();
+      var deadline =
+          DEADLINES.schedule(
+              () -> page.complete(Optional.empty()),
+              limits.perPageTimeout().toMillis(),
+              TimeUnit.MILLISECONDS);
+      page.whenComplete(
+          (value, failure) -> {
+            deadline.cancel(false);
+            if (!request.isDone()) request.cancel(true);
+          });
+      request.whenComplete(
+          (response, failure) -> {
+            if (page.isDone()) return;
+            try {
+              if (failure != null) {
+                page.complete(Optional.empty());
+                return;
+              }
+              var decoded = responseHandler.handle(response);
+              var document = parser.parse(decoded.uri(), decoded.html());
+              var content = extractor.extract(document);
+              page.complete(
+                  Optional.of(
+                      new FetchedPage(result, decoded.uri(), content.title(), content.text())));
+            } catch (RuntimeException unreadable) {
+              LOGGER.log(Level.FINE, "Skipping a result page that could not be read.");
+              page.complete(Optional.empty());
+            }
+          });
+      return page;
     } catch (RuntimeException exception) {
       return CompletableFuture.completedFuture(Optional.empty());
     }
+  }
+
+  private static List<FetchedPage> completed(
+      List<CompletableFuture<Optional<FetchedPage>>> pending) {
+    List<FetchedPage> pages = new ArrayList<>();
+    for (var future : pending) {
+      try {
+        future.getNow(Optional.empty()).ifPresent(pages::add);
+      } catch (java.util.concurrent.CompletionException
+          | java.util.concurrent.CancellationException ignored) {
+        // A timed-out or cancelled source contributes no evidence.
+      }
+    }
+    return List.copyOf(pages);
+  }
+
+  private static java.util.concurrent.ScheduledThreadPoolExecutor deadlines() {
+    var executor =
+        new java.util.concurrent.ScheduledThreadPoolExecutor(
+            1,
+            runnable -> {
+              Thread thread = new Thread(runnable, "evidence-deadlines");
+              thread.setDaemon(true);
+              return thread;
+            });
+    executor.setRemoveOnCancelPolicy(true);
+    return executor;
   }
 }

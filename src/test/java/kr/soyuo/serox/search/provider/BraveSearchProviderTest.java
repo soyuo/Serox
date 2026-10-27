@@ -40,7 +40,10 @@ class BraveSearchProviderTest {
               Duration.ofSeconds(3));
 
       var response =
-          provider.search(new SearchRequest("java threads", 10)).toCompletableFuture().join();
+          provider
+              .search(new SearchRequest("java threads", 10, "strict"))
+              .toCompletableFuture()
+              .join();
       served.join();
 
       assertEquals("brave", response.providerId());
@@ -53,6 +56,7 @@ class BraveSearchProviderTest {
       assertEquals(true, requestLine.get().contains("q=java+threads"));
       assertEquals(true, requestLine.get().contains("country=KR"));
       assertEquals(true, requestLine.get().contains("search_lang=ko"));
+      assertEquals(true, requestLine.get().contains("safesearch=strict"));
     }
   }
 

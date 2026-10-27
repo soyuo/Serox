@@ -17,6 +17,10 @@ public final class UiTokens {
   public static final String ICON_CHECK = "3f63a.svg";
   public static final String ICON_AI_SPARKLE_SMALL = "4a53f.svg";
   public static final String ICON_PREVIEW_PLACEHOLDER = "11554.svg";
+  public static final String ICON_EXTERNAL_LOGIN = "4cc3c.svg";
+  public static final String ICON_ADD_PROVIDER = "43eff.svg";
+  public static final String ICON_SETTINGS_DROPDOWN = "f1603.svg";
+  public static final double SETTINGS_CONTENT_WIDTH = 1180;
 
   public static final String FONT_FAMILY = "Malgun Gothic";
   public static final double WINDOW_MIN_WIDTH = 760;
@@ -45,4 +49,3 @@ public final class UiTokens {
 
   private UiTokens() {}
 }
-

@@ -26,7 +26,8 @@ public final class SearchService implements AutoCloseable {
   private static final String UNCONFIGURED_MESSAGE =
       "Search is not configured. Set SEROX_BRAVE_SEARCH_API_KEY and restart Serox.";
 
-  private final Optional<SearchProvider> provider;
+  private volatile Optional<SearchProvider> provider;
+  private volatile java.util.function.Supplier<String> safeSearch = () -> "moderate";
   private final BrowserEventBus eventBus;
   private final AtomicLong requestIds = new AtomicLong();
   private final Map<TabId, ActiveSearch> activeSearches = new HashMap<>();
@@ -36,6 +37,18 @@ public final class SearchService implements AutoCloseable {
   public SearchService(Optional<SearchProvider> provider, BrowserEventBus eventBus) {
     this.provider = Objects.requireNonNull(provider, "provider");
     this.eventBus = Objects.requireNonNull(eventBus, "eventBus");
+  }
+
+  public void setSafeSearch(java.util.function.Supplier<String> mode) {
+    safeSearch = Objects.requireNonNull(mode, "mode");
+  }
+
+  public boolean configured() {
+    return provider.isPresent();
+  }
+
+  public void setProvider(SearchProvider value) {
+    provider = Optional.of(Objects.requireNonNull(value, "value"));
   }
 
   /** Starts a search and returns its provider response stage. */
@@ -62,7 +75,7 @@ public final class SearchService implements AutoCloseable {
 
     SearchRequest request;
     try {
-      request = new SearchRequest(normalizedQuery, RESULT_LIMIT);
+      request = new SearchRequest(normalizedQuery, RESULT_LIMIT, safeSearch.get());
     } catch (IllegalArgumentException exception) {
       publishFailure(tabId, requestId, normalizedQuery, exception);
       return CompletableFuture.failedFuture(exception);

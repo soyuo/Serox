@@ -31,6 +31,13 @@ final class AiPanelView extends VBox {
   private final VBox body = new VBox(UiTokens.SPACE_LG);
   private Runnable onCancel = () -> {};
   private Runnable onRetry = () -> {};
+  private boolean showKeyPoints = true;
+  private boolean inlineCitations = true;
+
+  void setPresentation(boolean keyPoints, boolean citations) {
+    showKeyPoints = keyPoints;
+    inlineCitations = citations;
+  }
 
   AiPanelView(Consumer<EvidenceDocument> onSource) {
     this.onSource = onSource;
@@ -88,9 +95,7 @@ final class AiPanelView extends VBox {
                       errorNote(event.message()), actionButton("다시 시도", () -> onRetry.run())));
       case CANCELLED ->
           body.getChildren()
-              .add(
-                  summaryCard(
-                      note("AI 요약을 취소했어요."), actionButton("다시 시도", () -> onRetry.run())));
+              .add(summaryCard(note("AI 요약을 취소했어요."), actionButton("다시 시도", () -> onRetry.run())));
     }
   }
 
@@ -108,12 +113,15 @@ final class AiPanelView extends VBox {
         summary.add(trimmed);
       }
     }
+    if (summary.isEmpty() && !showKeyPoints) {
+      summary.addAll(points);
+    }
     if (!summary.isEmpty()) {
       body.getChildren().add(summaryCard(citedParagraph(String.join(" ", summary))));
     } else {
       body.getChildren().add(summaryCard());
     }
-    if (!points.isEmpty()) {
+    if (showKeyPoints && !points.isEmpty()) {
       VBox rows = new VBox(UiTokens.SPACE_MD, heading("핵심 정리"));
       for (String point : points) {
         rows.getChildren().add(keyPointRow(point));
@@ -183,6 +191,9 @@ final class AiPanelView extends VBox {
 
   /** Text with each [S1] marker drawn as a small numbered chip, as in the design. */
   private TextFlow citedParagraph(String text) {
+    if (!inlineCitations) {
+      text = CITATION_MARKER.matcher(text).replaceAll("");
+    }
     TextFlow flow = new TextFlow();
     flow.getStyleClass().add("ai-panel-flow");
     Matcher matcher = CITATION_MARKER.matcher(text);
@@ -260,11 +271,16 @@ final class AiPanelView extends VBox {
     label.getStyleClass().add("ai-panel-error");
     return label;
   }
+
   /** The green-dot line above the summary: how many result pages the answer is based on. */
   private HBox readCount(int pages) {
     Region dot = new Region();
     dot.getStyleClass().addAll("status-dot", "status-dot-connected");
-    Label text = new Label("\uAC80\uC0C9 \uACB0\uACFC " + pages + "\uACF3\uC744 \uC77D\uACE0 \uC815\uB9AC\uD588\uC5B4\uC694");
+    Label text =
+        new Label(
+            "\uAC80\uC0C9 \uACB0\uACFC "
+                + pages
+                + "\uACF3\uC744 \uC77D\uACE0 \uC815\uB9AC\uD588\uC5B4\uC694");
     text.getStyleClass().add("search-state-message");
     HBox line = new HBox(UiTokens.SPACE_SM, dot, text);
     line.setAlignment(Pos.CENTER_LEFT);

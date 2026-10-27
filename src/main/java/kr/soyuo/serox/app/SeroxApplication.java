@@ -43,10 +43,10 @@ public final class SeroxApplication extends Application {
                   runtime.browserController(), general.startupMode(), general.startPageUrl());
             },
             () -> runtime.browserController().createTab());
-    runtime
-        .aiSearchService()
-        .setAnswerLanguage(() -> runtime.settingsService().current().language().englishName());
     browserShell.setAiSearchService(runtime.aiSearchService());
+    browserShell.setSearchActions(searchActions());
+    browserShell.setAiConnections(
+        runtime.aiConnections(), uri -> getHostServices().showDocument(uri.toString()));
     runtime.announceServiceStatus();
     browserShell.setSettingsService(runtime.settingsService());
     browserShell.setLibraryService(runtime.libraryService());
@@ -75,6 +75,56 @@ public final class SeroxApplication extends Application {
     stage.setMinHeight(UiTokens.WINDOW_MIN_HEIGHT);
     stage.setScene(scene);
     stage.show();
+  }
+
+  /** Applies a protected search key without restarting the browser. */
+  private kr.soyuo.serox.ui.SearchActions searchActions() {
+    return new kr.soyuo.serox.ui.SearchActions() {
+      @Override
+      public boolean configured() {
+        return runtime.searchService().configured();
+      }
+
+      @Override
+      public java.util.concurrent.CompletionStage<Void> saveKey(String key) {
+        var result = new java.util.concurrent.CompletableFuture<Void>();
+        Thread.ofVirtual()
+            .start(
+                () -> {
+                  try {
+                    if (key.isBlank()
+                        || key.length() > 16 * 1024
+                        || key.contains("\n")
+                        || key.contains("\r")) {
+                      throw new IllegalArgumentException("Invalid search key");
+                    }
+                    var directory = AppBootstrap.resolveDataDirectory(System.getenv());
+                    var store =
+                        new kr.soyuo.serox.ai.auth.ProtectedLocalStore(
+                            directory.resolve("credentials/search.dpapi"));
+                    var data = new com.google.gson.JsonObject();
+                    data.addProperty("key", key);
+                    store.write(data.toString());
+                    runtime
+                        .searchService()
+                        .setProvider(new kr.soyuo.serox.search.provider.BraveSearchProvider(key));
+                    runtime
+                        .eventBus()
+                        .publish(
+                            new kr.soyuo.serox.core.event.ConnectionStatusChanged(
+                                java.time.Instant.now(),
+                                kr.soyuo.serox.core.event.ServiceId.SEARCH,
+                                kr.soyuo.serox.core.event.ServiceStatus.CONNECTED,
+                                "키 설정됨 (Brave)"));
+                    result.complete(null);
+                  } catch (Exception failure) {
+                    result.completeExceptionally(
+                        new IllegalStateException("Search key could not be saved"));
+                  }
+                });
+        return result;
+      }
+    };
   }
 
   /** Lets the MCP page start and stop the server and keep its settings. */
@@ -129,7 +179,12 @@ public final class SeroxApplication extends Application {
           .storage()
           .map(
               storage ->
-                  storage.mcpSettings().load().toCompletableFuture().orTimeout(3, TimeUnit.SECONDS).join())
+                  storage
+                      .mcpSettings()
+                      .load()
+                      .toCompletableFuture()
+                      .orTimeout(3, TimeUnit.SECONDS)
+                      .join())
           .orElse(McpSettings.defaults());
     } catch (RuntimeException unreadable) {
       LOGGER.log(Level.WARNING, "MCP settings could not be read; using the defaults.");
