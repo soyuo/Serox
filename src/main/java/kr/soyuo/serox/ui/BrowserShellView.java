@@ -96,6 +96,7 @@ public final class BrowserShellView extends BorderPane {
   private AiPanelPosition aiPanelSide = AiPanelPosition.RIGHT;
   private AiSearchService aiSearchService;
   private PrivacyActions privacyActions = PrivacyActions.none();
+  private McpActions mcpActions = McpActions.none();
   private SettingsService settingsService;
   private LibraryService libraryService;
   private final Button bookmarkButton = new Button("★");
@@ -179,6 +180,11 @@ public final class BrowserShellView extends BorderPane {
   }
 
   /** Supplies the AI service used to cancel an in-progress answer. */
+  /** Connects the MCP settings page to the HTTP server and its saved settings. */
+  public void setMcpActions(McpActions actions) {
+    this.mcpActions = Objects.requireNonNull(actions, "actions");
+  }
+
   /** Connects the privacy page to the stored data it can delete. */
   public void setPrivacyActions(
       java.util.Optional<kr.soyuo.serox.core.application.UsageRecorder> recorder,
@@ -315,7 +321,8 @@ public final class BrowserShellView extends BorderPane {
             this::cancelSettings,
             new SettingsView.ServiceSummary(
                 statusText(searchStatus), statusText(aiStatus), statusText(mcpStatus)),
-            privacyActions));
+            privacyActions,
+            mcpActions));
   }
 
   /** The status label's text without its "검색:" or "AI:" prefix. */
