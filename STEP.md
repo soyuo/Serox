@@ -273,3 +273,18 @@ AI 제공자 오류가 일반 탐색이나 검색을 막지 않는다.
 - 긴 문장은 적절한 줄에서 줄바꿈하여 가독성을 유지한다.
 - 파일 및 외부 문서는 설명이 있는 Markdown 링크로 작성한다.
 - 코드 블록을 추가할 때는 언어를 지정하고, 실제 코드가 필요한 경우에만 사용한다.
+
+## 8. Follow-up status — 2026-10-27
+
+| STEP | Follow-up | Verification/state |
+| --- | --- | --- |
+| 6 | #73 / PR #74 | Decoded images and rendering tests implemented |
+| 10 | #75 / PR #76 | Four API provider adapters implemented; live credentials not exercised |
+| 11 | #77 / PR #78 | Connected search/summary/AI settings and appearance draft; focused UI checks pass; PR ready for review |
+| 12 | #79 / PR #81 | Existing MCP boundaries rechecked; [review](docs/release/step12-review.md) |
+| 13 | #80 / PR #82 | Existing security/recovery tests rechecked; [review](docs/release/step13-review.md) |
+| 14 | User-run verification | Latest instruction leaves integration tests, MSI build and installation to the user; not newly executed |
+
+The combined STEP 12/13 check passed 77 tests with no failures/errors/skips.
+The follow-up PRs are stacked and remain unmerged. STEP 11's CI passed.
+This status does not claim live account authorization or a newly verified installer.
