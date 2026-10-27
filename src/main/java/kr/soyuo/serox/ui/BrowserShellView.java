@@ -69,26 +69,26 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private HBox createTitleBar() {
-    HBox activeTab = new HBox(10, new Label("새 탭"));
+    HBox activeTab = new HBox(UiTokens.SPACE_SM, new Label("새 탭"));
     activeTab.setAlignment(Pos.CENTER_LEFT);
     activeTab.getStyleClass().add("active-tab");
     Button closeTab = new Button();
-    closeTab.setGraphic(SvgIconView.icon("65d4c.svg", 12));
+    closeTab.setGraphic(SvgIconView.icon(UiTokens.ICON_TAB_CLOSE, UiTokens.WINDOW_ICON_SIZE));
     closeTab.setAccessibleText("현재 탭 닫기");
     closeTab.setDisable(true);
     closeTab.getStyleClass().add("tab-close");
     activeTab.getChildren().add(closeTab);
 
-    HBox left = new HBox(12, SvgIconView.logo(16), activeTab);
+    HBox left = new HBox(UiTokens.SPACE_MD, SvgIconView.logo(16), activeTab);
     left.setAlignment(Pos.CENTER_LEFT);
     left.getStyleClass().add("titlebar-left");
     HBox.setHgrow(left, Priority.ALWAYS);
 
-    Button minimize = windowButton("89d49.svg", "창 최소화");
+    Button minimize = windowButton(UiTokens.ICON_WINDOW_MINIMIZE, "창 최소화");
     minimize.setOnAction(event -> stage().setIconified(true));
-    Button maximize = windowButton("27a5b.svg", "창 최대화");
+    Button maximize = windowButton(UiTokens.ICON_WINDOW_MAXIMIZE, "창 최대화");
     maximize.setOnAction(event -> stage().setMaximized(!stage().isMaximized()));
-    Button close = windowButton("71df2.svg", "창 닫기");
+    Button close = windowButton(UiTokens.ICON_WINDOW_CLOSE, "창 닫기");
     close.getStyleClass().add("window-close-button");
     close.setOnAction(event -> stage().close());
     HBox controls = new HBox(minimize, maximize, close);
@@ -118,15 +118,15 @@ public final class BrowserShellView extends BorderPane {
 
   private Button windowButton(String asset, String accessibleName) {
     Button button = new Button();
-    button.setGraphic(SvgIconView.icon(asset, 12));
+    button.setGraphic(SvgIconView.icon(asset, UiTokens.WINDOW_ICON_SIZE));
     button.setAccessibleText(accessibleName);
     button.getStyleClass().addAll("window-control-button");
     return button;
   }
 
   private HBox createToolbar() {
-    Button back = toolbarButton("b2c0a.svg", "뒤로");
-    Button forward = toolbarButton("5404c.svg", "앞으로");
+    Button back = toolbarButton(UiTokens.ICON_BACK, "뒤로");
+    Button forward = toolbarButton(UiTokens.ICON_FORWARD, "앞으로");
     back.setDisable(true);
     forward.setDisable(true);
 
@@ -135,16 +135,17 @@ public final class BrowserShellView extends BorderPane {
     address.setAccessibleText("검색어 또는 웹 주소");
     address.getStyleClass().add("address-field");
     HBox.setHgrow(address, Priority.ALWAYS);
-    HBox addressBox = new HBox(10, SvgIconView.icon("8b6e3.svg", 18), address);
+    HBox addressBox =
+        new HBox(UiTokens.SPACE_SM, SvgIconView.icon(UiTokens.ICON_ADDRESS_SEARCH, 18), address);
     addressBox.setAlignment(Pos.CENTER_LEFT);
     addressBox.getStyleClass().add("address-box");
     HBox.setHgrow(addressBox, Priority.ALWAYS);
 
-    Button history = toolbarButton("bf879.svg", "방문 기록");
-    Button settings = toolbarButton("43cc8.svg", "설정");
+    Button history = toolbarButton(UiTokens.ICON_HISTORY, "방문 기록");
+    Button settings = toolbarButton(UiTokens.ICON_SETTINGS, "설정");
     history.setDisable(true);
     settings.setDisable(true);
-    HBox row = new HBox(4, back, forward, addressBox, history, settings);
+    HBox row = new HBox(UiTokens.SPACE_XS, back, forward, addressBox, history, settings);
     row.setAlignment(Pos.CENTER_LEFT);
     row.getStyleClass().add("toolbar");
     return row;
@@ -152,7 +153,7 @@ public final class BrowserShellView extends BorderPane {
 
   private Button toolbarButton(String asset, String accessibleName) {
     Button button = new Button();
-    button.setGraphic(SvgIconView.icon(asset, 20));
+    button.setGraphic(SvgIconView.icon(asset, UiTokens.TOOLBAR_ICON_SIZE));
     button.setAccessibleText(accessibleName);
     button.getStyleClass().add("toolbar-button");
     return button;
@@ -166,7 +167,7 @@ public final class BrowserShellView extends BorderPane {
     divider.getStyleClass().add("status-divider");
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
-    HBox bar = new HBox(12, aiStatus, divider, spacer, mcpStatus);
+    HBox bar = new HBox(UiTokens.SPACE_MD, aiStatus, divider, spacer, mcpStatus);
     bar.setAlignment(Pos.CENTER_LEFT);
     bar.getStyleClass().add("status-bar");
     return bar;

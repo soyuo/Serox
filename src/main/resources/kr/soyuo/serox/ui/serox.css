@@ -1,18 +1,30 @@
+/* Semantic color tokens from the Serox Figma palette. */
 .app-root {
-    -fx-font-family: "Malgun Gothic";
-    -fx-background-color: #ffffff;
-    -fx-text-fill: #151a23;
+    serox-surface: #ffffff;
+    serox-surface-muted: #eef0f4;
+    serox-border: #dde1e8;
+    serox-text-primary: #151a23;
+    serox-text-secondary: #4a5468;
+    serox-text-muted: #5b6577;
+    serox-primary: #2563eb;
+    serox-primary-hover: #1d4ed8;
+    serox-logo: #3e81f4;
+    serox-success: #0f7b5f;
+    serox-hover-surface: #f3f5f8;
+    serox-window-close-hover: #e81123;
+    -fx-background-color: serox-surface;
+    -fx-text-fill: serox-text-primary;
 }
 
 .browser-chrome {
-    -fx-background-color: #ffffff;
-    -fx-border-color: transparent transparent #dde1e8 transparent;
+    -fx-background-color: serox-surface;
+    -fx-border-color: transparent transparent serox-border transparent;
 }
 
 .titlebar {
     -fx-min-height: 40px;
     -fx-pref-height: 40px;
-    -fx-background-color: #eef0f4;
+    -fx-background-color: serox-surface-muted;
 }
 
 .titlebar-left {
@@ -28,23 +40,19 @@
     -fx-min-width: 260px;
     -fx-max-width: 260px;
     -fx-pref-height: 34px;
-    -fx-background-color: #ffffff;
+    -fx-background-color: serox-surface;
     -fx-background-radius: 8px 8px 0 0;
-    -fx-text-fill: #151a23;
+    -fx-text-fill: serox-text-primary;
     -fx-font-size: 12px;
 }
 
 .brand-logo {
-    -fx-background-color: #3e81f4;
+    -fx-background-color: serox-logo;
     -fx-background-radius: 6px;
 }
 
-.brand-logo > .image-view {
-    -fx-fit-width: 100%;
-}
-
 .active-tab > .label {
-    -fx-text-fill: #151a23;
+    -fx-text-fill: serox-text-primary;
     -fx-font-weight: bold;
 }
 
@@ -76,11 +84,11 @@
 }
 
 .window-control-button:hover {
-    -fx-background-color: #dfe3eb;
+    -fx-background-color: serox-hover-surface;
 }
 
 .window-close-button:hover {
-    -fx-background-color: #e81123;
+    -fx-background-color: serox-window-close-hover;
 }
 
 .window-close-button:hover .svg-icon {
@@ -92,7 +100,7 @@
     -fx-padding: 4px 12px;
     -fx-min-height: 57px;
     -fx-pref-height: 57px;
-    -fx-background-color: #ffffff;
+    -fx-background-color: serox-surface;
 }
 
 .toolbar-button {
@@ -107,7 +115,7 @@
 }
 
 .toolbar-button:hover {
-    -fx-background-color: #f3f5f8;
+    -fx-background-color: serox-hover-surface;
 }
 
 .toolbar-button:disabled {
@@ -118,7 +126,7 @@
     -fx-spacing: 10px;
     -fx-padding: 0 14px;
     -fx-pref-height: 44px;
-    -fx-background-color: #eef0f4;
+    -fx-background-color: serox-surface-muted;
     -fx-background-radius: 24px;
 }
 
@@ -127,17 +135,13 @@
     -fx-padding: 0;
     -fx-background-color: transparent;
     -fx-border-color: transparent;
-    -fx-text-fill: #151a23;
-    -fx-prompt-text-fill: #5b6577;
+    -fx-text-fill: serox-text-primary;
+    -fx-prompt-text-fill: serox-text-muted;
     -fx-font-size: 12px;
 }
 
 .home-view {
-    -fx-background-color: #ffffff;
-}
-
-.home-content {
-    -fx-max-width: 680px;
+    -fx-background-color: serox-surface;
 }
 
 .brand-lockup {
@@ -147,12 +151,12 @@
 .brand-title {
     -fx-font-size: 32px;
     -fx-font-weight: bold;
-    -fx-text-fill: #151a23;
+    -fx-text-fill: serox-text-primary;
 }
 
 .tagline {
     -fx-padding: 16px 0 22px 0;
-    -fx-text-fill: #4a5468;
+    -fx-text-fill: serox-text-secondary;
     -fx-font-size: 12px;
 }
 
@@ -163,7 +167,7 @@
 .home-search-input {
     -fx-pref-height: 56px;
     -fx-padding: 0 16px;
-    -fx-background-color: #eef0f4;
+    -fx-background-color: serox-surface-muted;
     -fx-background-radius: 28px;
 }
 
@@ -172,8 +176,8 @@
     -fx-padding: 0;
     -fx-background-color: transparent;
     -fx-border-color: transparent;
-    -fx-text-fill: #151a23;
-    -fx-prompt-text-fill: #5b6577;
+    -fx-text-fill: serox-text-primary;
+    -fx-prompt-text-fill: serox-text-muted;
     -fx-font-size: 12px;
 }
 
@@ -183,39 +187,35 @@
     -fx-max-width: 66px;
     -fx-pref-height: 40px;
     -fx-padding: 0;
-    -fx-background-color: #2563eb;
+    -fx-background-color: serox-primary;
     -fx-background-radius: 22px;
-    -fx-text-fill: #ffffff;
+    -fx-text-fill: serox-surface;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
     -fx-cursor: hand;
 }
 
 .primary-button:hover {
-    -fx-background-color: #1d4ed8;
+    -fx-background-color: serox-primary-hover;
 }
 
 .home-cards {
-    -fx-spacing: 16px;
     -fx-padding: 22px 0 0 0;
 }
 
 .info-card {
-    -fx-pref-width: 332px;
     -fx-min-width: 0;
-    -fx-pref-height: 215px;
-    -fx-max-height: 215px;
     -fx-spacing: 10px;
     -fx-padding: 16px;
-    -fx-background-color: #ffffff;
+    -fx-background-color: serox-surface;
     -fx-background-radius: 12px;
-    -fx-border-color: #dde1e8;
+    -fx-border-color: serox-border;
     -fx-border-radius: 12px;
     -fx-border-width: 1px;
 }
 
 .card-heading {
-    -fx-text-fill: #4a5468;
+    -fx-text-fill: serox-text-secondary;
     -fx-font-size: 11px;
     -fx-font-weight: bold;
 }
@@ -227,7 +227,7 @@
 .recent-search-item {
     -fx-pref-height: 32px;
     -fx-alignment: center-left;
-    -fx-text-fill: #151a23;
+    -fx-text-fill: serox-text-primary;
     -fx-font-size: 12px;
 }
 
@@ -236,12 +236,12 @@
     -fx-alignment: center-left;
     -fx-padding: 0 0 0 12px;
     -fx-background-color: transparent;
-    -fx-text-fill: #151a23;
+    -fx-text-fill: serox-text-primary;
     -fx-font-size: 12px;
 }
 
 .card-note {
-    -fx-text-fill: #5b6577;
+    -fx-text-fill: serox-text-muted;
     -fx-font-size: 10px;
 }
 
@@ -250,17 +250,17 @@
     -fx-padding: 0 16px;
     -fx-min-height: 33px;
     -fx-pref-height: 33px;
-    -fx-background-color: #ffffff;
-    -fx-border-color: #dde1e8 transparent transparent transparent;
+    -fx-background-color: serox-surface;
+    -fx-border-color: serox-border transparent transparent transparent;
 }
 
 .status-bar > .label {
-    -fx-text-fill: #4a5468;
+    -fx-text-fill: serox-text-secondary;
     -fx-font-size: 11px;
 }
 
 .status-divider {
-    -fx-text-fill: #dde1e8;
+    -fx-text-fill: serox-border;
 }
 
 .status-dot {
@@ -270,7 +270,7 @@
     -fx-pref-height: 8px;
     -fx-min-height: 8px;
     -fx-max-height: 8px;
-    -fx-background-color: #0f7b5f;
+    -fx-background-color: serox-success;
     -fx-background-radius: 4px;
 }
 

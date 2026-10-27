@@ -46,7 +46,7 @@ final class SvgIconView {
   }
 
   private static String logoPath() {
-    var resource = SvgIconView.class.getResource("assets/5e811.svg");
+    var resource = SvgIconView.class.getResource("assets/" + UiTokens.LOGO_ASSET);
     if (resource == null) {
       throw new IllegalArgumentException("Missing UI asset: 5e811.svg");
     }

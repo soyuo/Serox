@@ -16,7 +16,8 @@ final class HomeView extends VBox {
     getStyleClass().add("home-view");
     setAlignment(Pos.TOP_CENTER);
 
-    HBox brand = new HBox(14, SvgIconView.logo(48), new Label("Serox"));
+    HBox brand =
+        new HBox(UiTokens.SPACE_MD, SvgIconView.logo(UiTokens.HOME_LOGO_SIZE), new Label("Serox"));
     brand.setAlignment(Pos.CENTER);
     brand.getStyleClass().add("brand-lockup");
     brand.getChildren().get(1).getStyleClass().add("brand-title");
@@ -28,7 +29,11 @@ final class HomeView extends VBox {
     searchField.setPromptText("궁금한 것을 검색해 보세요…");
     searchField.setAccessibleText("Serox 검색어");
     searchField.getStyleClass().add("home-search-field");
-    HBox searchInput = new HBox(12, SvgIconView.icon("eff36.svg", 20), searchField);
+    HBox searchInput =
+        new HBox(
+            UiTokens.SPACE_MD,
+            SvgIconView.icon(UiTokens.ICON_HOME_SEARCH, UiTokens.TOOLBAR_ICON_SIZE),
+            searchField);
     searchInput.setAlignment(Pos.CENTER_LEFT);
     HBox.setHgrow(searchField, Priority.ALWAYS);
     searchInput.getStyleClass().add("home-search-input");
@@ -39,19 +44,19 @@ final class HomeView extends VBox {
     searchButton.setDefaultButton(true);
     searchButton.setOnAction(event -> onSearch.accept(searchField.getText()));
     searchField.setOnAction(event -> onSearch.accept(searchField.getText()));
-    HBox search = new HBox(10, searchInput, searchButton);
+    HBox search = new HBox(UiTokens.SPACE_SM, searchInput, searchButton);
     search.setAlignment(Pos.CENTER);
     search.setMaxWidth(Double.MAX_VALUE);
     HBox.setHgrow(searchInput, Priority.ALWAYS);
     search.getStyleClass().add("home-search");
 
-    HBox cards = new HBox(16, createRecentSearchCard(), createConnectionCard());
+    HBox cards = new HBox(UiTokens.HOME_CARD_GAP, createRecentSearchCard(), createConnectionCard());
     cards.setAlignment(Pos.TOP_CENTER);
     cards.getStyleClass().add("home-cards");
 
     VBox content = new VBox(0, brand, tagline, search, cards);
     content.setAlignment(Pos.TOP_CENTER);
-    content.setMaxWidth(680);
+    content.setMaxWidth(UiTokens.HOME_CONTENT_WIDTH);
     content.setPadding(new Insets(106, 0, 40, 0));
     content.getStyleClass().add("home-content");
     heightProperty()
@@ -72,7 +77,10 @@ final class HomeView extends VBox {
             recentSearch("Maven 의존성 충돌 해결"),
             recentSearch("JavaFX WebView 쿠키 설정"));
     entries.getStyleClass().add("recent-searches");
-    VBox card = new VBox(10, heading, entries);
+    VBox card = new VBox(UiTokens.SPACE_SM, heading, entries);
+    card.setPrefWidth(UiTokens.HOME_CARD_WIDTH);
+    card.setPrefHeight(UiTokens.HOME_CARD_HEIGHT);
+    card.setMaxHeight(UiTokens.HOME_CARD_HEIGHT);
     card.getStyleClass().add("info-card");
     HBox.setHgrow(card, Priority.ALWAYS);
     return card;
@@ -94,7 +102,10 @@ final class HomeView extends VBox {
     Label note = new Label("다른 AI 에이전트가 search_and_summarize 도구로 Serox를 호출할 수 있어요.");
     note.setWrapText(true);
     note.getStyleClass().add("card-note");
-    VBox card = new VBox(10, heading, aiStatus, mcpStatus, note);
+    VBox card = new VBox(UiTokens.SPACE_SM, heading, aiStatus, mcpStatus, note);
+    card.setPrefWidth(UiTokens.HOME_CARD_WIDTH);
+    card.setPrefHeight(UiTokens.HOME_CARD_HEIGHT);
+    card.setMaxHeight(UiTokens.HOME_CARD_HEIGHT);
     card.getStyleClass().add("info-card");
     HBox.setHgrow(card, Priority.ALWAYS);
     return card;
