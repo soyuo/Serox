@@ -18,7 +18,7 @@ became readable. The canvas holds about 100 frames; only the screens below were 
 - AI summary card: light-blue `#e6effe` card with the sparkle label, 16 px text, 14 px radius.
 - Citation markers `[S1]` are drawn as small numbered chips (`#2563eb`, 6 px radius) inside the text.
 - Sources are cards with a numbered badge, title and URL, and the "AI summaries may contain errors" note.
-- Settings: segmented options (selected `#e6effe` with a `#3e81f4` border) instead of radio buttons,
+- Settings: the sidebar with eight sections and a live preview card; segmented options (selected `#e6effe` with a `#3e81f4` border) instead of radio buttons,
   44 px accent swatches with a check mark, and the design's labels (밝게 / 어둡게 / 시스템,
   작게 / 보통 / 크게, 여유롭게 / 촘촘하게) and accent palette.
 - Design assets used: AI sparkle `df725.svg` and check mark `3f63a.svg`.
@@ -29,9 +29,11 @@ became readable. The canvas holds about 100 frames; only the screens below were 
   preview pane on the right (a dashed "click a source to open the page" placeholder). Serox shows
   the result list with the AI panel beside it. Moving to the design layout is a larger change.
 - **"Claude 요약" chip** inside the address bar and the **inactive tab** styling in the result frame.
-- **Settings sidebar and live preview card.** The design has eight sections (일반, 검색, AI 제공자, 요약,
-  디자인, 기록과 개인정보, MCP 서버, 단축키) and a preview. Serox has one appearance page; keys are read from
-  environment variables, so the provider pages have nothing to edit.
+- **Settings pages other than the design page.** The sidebar and live preview now exist (checked in a
+  rendered image against the design). Only appearance is editable. The other seven pages show real
+  status and explanations; the design's provider, summary, history and shortcut pages contain controls
+  (sign-in, clear history, remap keys) that Serox does not have, because keys come from environment
+  variables. The preview follows the accent color but not the theme.
 - **Font size** has three steps (90 / 100 / 115 %) instead of a free slider, as in the design; an
   older saved value outside these steps shows no selected option until the user picks one.
 - **Default accent.** The design's first swatch is `#3e81f4`, while the buttons use `#2563eb`. Serox

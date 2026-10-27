@@ -42,8 +42,8 @@ release; see the roadmap in the README.
 ## Known gaps to close before a public release
 
 - **Figma comparison (STEP 3, 10, 11):** the home, search-result and design-settings screens were
-  compared and the mismatches that fit the current layout were fixed. The result layout, the
-  settings sidebar and preview, and most other frames still differ or were not compared; see
+  compared and the mismatches that fit the current layout were fixed. The result layout and
+  most other frames still differ or were not compared; see
   [figma-comparison.md](figma-comparison.md).
 - **Live providers:** neither the Brave Search nor the Claude API has been called with a real key.
 - **Installer:** install, upgrade and uninstall were not exercised on a clean Windows machine, and
