@@ -23,6 +23,7 @@ import kr.soyuo.serox.core.event.AiAnswerChanged;
 /** Shows the AI summary, key points and verified sources for one search. */
 final class AiPanelView extends VBox {
   private static final Pattern CITATION_MARKER = Pattern.compile("\\[S(\\d+)]");
+  private static final int MAX_LABEL_CHARS = 12;
   private static final String DISCLAIMER = "AI 요약에는 오류가 있을 수 있어요. 중요한 내용은 출처에서 확인하세요.";
 
   private final Consumer<EvidenceDocument> onSource;
@@ -114,7 +115,7 @@ final class AiPanelView extends VBox {
     if (!points.isEmpty()) {
       VBox rows = new VBox(UiTokens.SPACE_MD, heading("핵심 정리"));
       for (String point : points) {
-        rows.getChildren().add(citedParagraph(point));
+        rows.getChildren().add(keyPointRow(point));
       }
       body.getChildren().add(rows);
     }
@@ -134,6 +135,29 @@ final class AiPanelView extends VBox {
     }
     sources.getChildren().add(footnote(DISCLAIMER));
     body.getChildren().add(sources);
+  }
+
+  /**
+   * One key point: a bold label column and the explanation, as in the design. A point without a
+   * short "label: text" start is shown as plain text across the full width.
+   */
+  private javafx.scene.Node keyPointRow(String point) {
+    int colon = point.indexOf(':');
+    boolean labelled =
+        colon > 0 && colon <= MAX_LABEL_CHARS && !point.substring(0, colon).contains("[");
+    if (!labelled) {
+      return citedParagraph(point);
+    }
+    Label label = new Label(point.substring(0, colon).strip());
+    label.getStyleClass().add("key-point-label");
+    label.setMinWidth(UiTokens.KEY_POINT_LABEL_WIDTH);
+    label.setPrefWidth(UiTokens.KEY_POINT_LABEL_WIDTH);
+    label.setAlignment(Pos.TOP_LEFT);
+    TextFlow text = citedParagraph(point.substring(colon + 1).strip());
+    HBox.setHgrow(text, Priority.ALWAYS);
+    HBox row = new HBox(UiTokens.SPACE_MD + 2, label, text);
+    row.setAlignment(Pos.TOP_LEFT);
+    return row;
   }
 
   /** The tinted card with the sparkle label that holds the summary text. */

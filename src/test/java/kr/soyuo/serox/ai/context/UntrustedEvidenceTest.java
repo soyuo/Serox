@@ -51,4 +51,10 @@ class UntrustedEvidenceTest {
   void systemPromptTellsTheModelToTreatDocumentsAsData() {
     assertTrue(PromptBuilder.systemPrompt().contains("untrusted"));
   }
+
+  @Test
+  void systemPromptAsksForLabelledKeyPoints() {
+    assertTrue(PromptBuilder.systemPrompt().contains("label"));
+    assertTrue(PromptBuilder.systemPrompt().contains("colon"));
+  }
 }

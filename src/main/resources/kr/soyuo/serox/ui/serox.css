@@ -937,3 +937,10 @@
     -fx-font-weight: bold;
     -fx-background-radius: 8px;
 }
+
+/* Key point label column from the Figma summary. */
+.key-point-label {
+    -fx-text-fill: serox-text-primary;
+    -fx-font-size: 1.071em;
+    -fx-font-weight: bold;
+}
