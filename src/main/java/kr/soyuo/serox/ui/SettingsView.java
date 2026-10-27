@@ -247,11 +247,15 @@ final class SettingsView extends HBox {
     return appearance.draft();
   }
 
-  /** The small mock of the result screen that reacts to the accent color. */
+  /** The small result preview follows every appearance choice without saving it. */
   private static final class PreviewCard extends VBox {
     private final Label summaryBox = new Label("AI 요약");
     private final Label chip = new Label("출처 1");
     private final VBox summaryCard = new VBox(UiTokens.SPACE_XS);
+    private final Label text = new Label("가상 스레드는 OS 스레드보다 훨씬 가볍다.");
+    private final VBox left = new VBox(UiTokens.SPACE_SM);
+    private final VBox right = new VBox(UiTokens.SPACE_SM);
+    private final HBox body = new HBox();
 
     PreviewCard(BrowserSettings initial) {
       super(UiTokens.SPACE_SM);
@@ -262,22 +266,21 @@ final class SettingsView extends HBox {
       Label heading = new Label("미리보기");
       heading.getStyleClass().add("search-section-heading");
       summaryBox.getStyleClass().add("preview-summary-label");
-      Label text = new Label("가상 스레드는 OS 스레드보다 훨씬 가볍다.");
       text.setWrapText(true);
       text.getStyleClass().add("preview-summary-text");
       summaryCard.getStyleClass().add("preview-summary-card");
       summaryCard.getChildren().addAll(summaryBox, text);
       chip.getStyleClass().add("preview-chip");
-      VBox left = new VBox(UiTokens.SPACE_SM, summaryCard, line(176), line(106), chip);
+      left.getChildren().setAll(summaryCard, line(176), line(106), chip);
       left.setPadding(new Insets(12));
       left.getStyleClass().add("preview-left");
-      VBox right = new VBox(UiTokens.SPACE_SM, line(-1), line(-1), line(116));
+      right.getChildren().setAll(line(-1), line(-1), line(116));
       right.setPadding(new Insets(12));
       right.getStyleClass().add("preview-right");
       HBox.setHgrow(right, Priority.ALWAYS);
       Region topBar = new Region();
       topBar.getStyleClass().add("preview-topbar");
-      HBox body = new HBox(left, right);
+      body.getChildren().setAll(left, right);
       left.setPrefWidth(200);
       VBox frame = new VBox(topBar, body);
       frame.getStyleClass().add("preview-frame");
@@ -295,11 +298,25 @@ final class SettingsView extends HBox {
       return line;
     }
 
-    /** Tints the mock with the draft's accent color. */
+    /** Applies theme, accent, text size, density and panel position to the local preview. */
     void show(BrowserSettings settings) {
+      AppearanceStyler.apply(this, settings);
       String accent = settings.accentColor();
-      chip.setStyle("-fx-background-color: " + accent + ";");
+      double scale = settings.fontScalePercent() / 100.0;
+      chip.setStyle("-fx-background-color: " + accent + "; -fx-font-size: " + 11 * scale + "px;");
+      text.setStyle("-fx-font-size: " + 13 * scale + "px;");
+      summaryBox.setStyle("-fx-font-size: " + 12 * scale + "px;");
       summaryCard.setStyle("-fx-background-color: " + accent + "1F;");
+      double padding = AppearanceStyler.compact(settings) ? 8 : 12;
+      left.setPadding(new Insets(padding));
+      right.setPadding(new Insets(padding));
+      left.setSpacing(AppearanceStyler.compact(settings) ? 4 : 8);
+      right.setSpacing(AppearanceStyler.compact(settings) ? 4 : 8);
+      if (settings.aiPanelPosition() == kr.soyuo.serox.core.model.AiPanelPosition.LEFT) {
+        body.getChildren().setAll(left, right);
+      } else {
+        body.getChildren().setAll(right, left);
+      }
     }
   }
 }

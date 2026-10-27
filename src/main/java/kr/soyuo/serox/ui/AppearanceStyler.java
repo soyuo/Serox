@@ -32,12 +32,17 @@ final class AppearanceStyler {
         + ";";
   }
 
-  /**
-   * Whether the dark palette is used. The system theme follows the light palette because the
-   * operating-system preference is not read yet.
-   */
+  /** Follows JavaFX's operating-system color preference; headless callers use the light default. */
   static boolean dark(BrowserSettings settings) {
-    return settings.theme() == ThemeMode.DARK;
+    if (settings.theme() != ThemeMode.SYSTEM) {
+      return settings.theme() == ThemeMode.DARK;
+    }
+    try {
+      return javafx.application.Platform.getPreferences().getColorScheme()
+          == javafx.application.ColorScheme.DARK;
+    } catch (IllegalStateException notStarted) {
+      return false;
+    }
   }
 
   static boolean compact(BrowserSettings settings) {

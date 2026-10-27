@@ -12,6 +12,7 @@ pages remain connected to their current services. Figma references are search
 | S-SUMMARY-PREFS | `SummaryPreferences`, `PromptBuilder`, AI panel | Language, redacted style instructions and presentation choices affect later summaries without disabling grounding | `SummaryInstructionsTest`, preference storage and UI tests |
 | S-CONTENT-RECOVERY | SQLite settings repository | Choices survive reopen; older profiles keep their existing answer language; malformed new values do not erase general/appearance settings | `ContentSettingsStorageTest` |
 | S-CANCEL-COLLECTION | `AiSearchService`, `PageFetcher` | Cancel and deadlines reach the original HTTP futures, including when a user chooses a longer collection timeout | `PageFetcherTest`, AI cancellation tests |
+| S-APPEARANCE-DRAFT | Appearance page and preview, `AppearanceStyler` | Theme, accent, font size, panel side and density preview without saving; restore/cancel/apply stay separate and preserve other settings | `AppearanceDraftTest`, `AppearanceStylerTest`, UI layout tests |
 
 ## Behavior and limits
 
@@ -39,3 +40,9 @@ pages remain connected to their current services. Figma references are search
 The reusable row layout stacks controls below labels at small widths. Provider cards
 use three, two or one column according to available width. Static Figma icons are
 bundled locally; switches, segmented choices and the slider are live JavaFX controls.
+
+System theme follows the operating-system color scheme reported by
+[JavaFX platform preferences](https://openjfx.io/javadoc/25/javafx.graphics/javafx/application/Platform.Preferences.html).
+The shell listens for later changes and removes that listener when closed. An
+appearance draft preserves general, privacy, shortcut, search and summary choices,
+including when restoring appearance defaults.

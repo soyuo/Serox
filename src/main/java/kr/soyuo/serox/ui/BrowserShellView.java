@@ -96,6 +96,11 @@ public final class BrowserShellView extends BorderPane {
   private kr.soyuo.serox.ai.application.AiConnectionService aiConnections;
   private java.util.function.Consumer<java.net.URI> openBrowser;
   private SearchActions searchActions = SearchActions.none();
+  private BrowserSettings shownAppearance = BrowserSettings.defaults();
+  private final javafx.beans.value.ChangeListener<javafx.application.ColorScheme>
+      systemThemeListener =
+          (observable, before, after) ->
+              FxThreadExecutor.execute(() -> AppearanceStyler.apply(this, shownAppearance));
   private PrivacyActions privacyActions = PrivacyActions.none();
   private McpActions mcpActions = McpActions.none();
   private SettingsService settingsService;
@@ -161,6 +166,9 @@ public final class BrowserShellView extends BorderPane {
     if (stylesheet != null) {
       getStylesheets().add(stylesheet.toExternalForm());
     }
+    javafx.application.Platform.getPreferences()
+        .colorSchemeProperty()
+        .addListener(systemThemeListener);
     connectionStatusSubscription =
         eventBus.subscribe(ConnectionStatusChanged.class, this::showConnectionStatus);
     operationErrorSubscription =
@@ -313,6 +321,7 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private void applySettings(BrowserSettings settings) {
+    shownAppearance = settings;
     AppearanceStyler.apply(this, settings);
     aiPanelSide = settings.aiPanelPosition();
     refreshAccelerators();
@@ -328,7 +337,10 @@ public final class BrowserShellView extends BorderPane {
     setCenter(
         new SettingsView(
             settingsService.current(),
-            preview -> AppearanceStyler.apply(this, preview),
+            preview -> {
+              shownAppearance = preview;
+              AppearanceStyler.apply(this, preview);
+            },
             settings ->
                 settingsService.save(
                     settings
@@ -354,7 +366,7 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private void cancelSettings() {
-    AppearanceStyler.apply(this, settingsService.current());
+    applySettings(settingsService.current());
     closeSettings();
   }
 
@@ -366,6 +378,9 @@ public final class BrowserShellView extends BorderPane {
 
   /** Releases event subscriptions owned by this view. */
   public void close() {
+    javafx.application.Platform.getPreferences()
+        .colorSchemeProperty()
+        .removeListener(systemThemeListener);
     connectionStatusSubscription.close();
     operationErrorSubscription.close();
     tabStateSubscription.close();

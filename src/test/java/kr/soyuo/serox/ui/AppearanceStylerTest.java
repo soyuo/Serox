@@ -25,8 +25,10 @@ class AppearanceStylerTest {
   }
 
   @Test
-  void defaultsUseTheLightComfortablePalette() {
-    var defaults = BrowserSettings.defaults();
+  void explicitLightUsesTheLightComfortablePalette() {
+    var defaults =
+        new BrowserSettings(
+            ThemeMode.LIGHT, "#2563EB", 100, AiPanelPosition.RIGHT, DisplayDensity.COMFORTABLE);
 
     assertFalse(AppearanceStyler.dark(defaults));
     assertFalse(AppearanceStyler.compact(defaults));
