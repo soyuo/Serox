@@ -15,6 +15,7 @@ public final class UiTokens {
   public static final String ICON_HOME_SEARCH = "eff36.svg";
   public static final String ICON_AI_SPARKLE = "df725.svg";
   public static final String ICON_CHECK = "3f63a.svg";
+  public static final String ICON_AI_SPARKLE_SMALL = "4a53f.svg";
   public static final String ICON_PREVIEW_PLACEHOLDER = "11554.svg";
 
   public static final String FONT_FAMILY = "Malgun Gothic";
@@ -32,6 +33,7 @@ public final class UiTokens {
   public static final double TOOLBAR_ICON_SIZE = 20;
   public static final double AI_SPARKLE_SIZE = 16;
   public static final double CHECK_SIZE = 18;
+  public static final double AI_SPARKLE_SMALL_SIZE = 14;
   public static final double SOURCE_PANE_WIDTH = 532;
   public static final double PLACEHOLDER_ICON_SIZE = 40;
   public static final double WINDOW_ICON_SIZE = 12;

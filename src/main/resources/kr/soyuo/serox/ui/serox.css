@@ -847,3 +847,15 @@
 .source-holder {
     -fx-background-color: serox-surface-muted;
 }
+
+/* "Claude 요약" chip inside the address bar. */
+.ai-chip {
+    -fx-min-height: 32px;
+    -fx-padding: 0 12px;
+    -fx-background-color: serox-ai-surface;
+    -fx-background-radius: 16px;
+    -fx-graphic-text-gap: 6px;
+    -fx-text-fill: serox-ai-accent;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}

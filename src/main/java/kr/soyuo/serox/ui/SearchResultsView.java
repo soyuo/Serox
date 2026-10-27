@@ -223,6 +223,15 @@ final class SearchResultsView extends BorderPane {
     refreshLayout();
   }
 
+  /** Opens the AI panel if it was closed; used by the address bar's summary chip. */
+  void openAiPanel() {
+    if (!panelOpen) {
+      panelOpen = true;
+      applyPanel();
+      onPanelChanged.accept(panelOpen, panelSide);
+    }
+  }
+
   /** Forwards the latest AI answer state to the panel; search results are unaffected. */
   void showAi(AiAnswerChanged event) {
     aiPanel.show(event);
