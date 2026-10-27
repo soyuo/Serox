@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import kr.soyuo.serox.ai.api.AiCompleted;
@@ -43,6 +44,7 @@ public final class AiSearchService implements AutoCloseable {
   private final Clock clock;
   private final Map<TabId, Active> active = new HashMap<>();
   private final List<EventSubscription> subscriptions;
+  private volatile Supplier<String> answerLanguage = () -> "";
   private boolean closed;
 
   /** Subscribes to search events; the provider is absent when no API key is configured. */
@@ -62,6 +64,14 @@ public final class AiSearchService implements AutoCloseable {
             eventBus.subscribe(SearchCompleted.class, this::onSearchCompleted),
             eventBus.subscribe(SearchStarted.class, event -> stop(event.tabId(), false)),
             eventBus.subscribe(SearchCancelled.class, event -> stop(event.tabId(), false)));
+  }
+
+  /**
+   * Chooses the language of later answers by its English name, read for each new answer; blank
+   * means the language of the question.
+   */
+  public void setAnswerLanguage(Supplier<String> language) {
+    this.answerLanguage = Objects.requireNonNull(language, "language");
   }
 
   /** Cancels the active AI answer in one tab and publishes the cancellation. */
@@ -96,7 +106,10 @@ public final class AiSearchService implements AutoCloseable {
                     return;
                   }
                   try {
-                    AiRequest request = contextBuilder.build(event.query(), pages, clock.instant());
+                    AiRequest request =
+                        contextBuilder
+                            .build(event.query(), pages, clock.instant())
+                            .withAnswerLanguage(answerLanguage.get());
                     if (request.evidence().isEmpty()) {
                       fail(event, run, NO_EVIDENCE_MESSAGE);
                     } else {

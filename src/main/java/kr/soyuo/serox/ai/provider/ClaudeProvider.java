@@ -69,7 +69,7 @@ public final class ClaudeProvider implements AiProvider {
     body.addProperty("model", model);
     body.addProperty("max_tokens", MAX_OUTPUT_TOKENS);
     body.addProperty("stream", true);
-    body.addProperty("system", PromptBuilder.systemPrompt());
+    body.addProperty("system", PromptBuilder.systemPrompt(request.answerLanguage()));
     com.google.gson.JsonArray messages = new com.google.gson.JsonArray();
     messages.add(message);
     body.add("messages", messages);
