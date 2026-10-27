@@ -21,6 +21,9 @@ import kr.soyuo.serox.browser.network.HttpBrowserEngine;
 import kr.soyuo.serox.browser.network.HttpRequestDispatcher;
 import kr.soyuo.serox.browser.network.HttpResponseHandler;
 import kr.soyuo.serox.browser.network.PublicAddressPolicy;
+import kr.soyuo.serox.browser.network.TransportScriptFetcher;
+import kr.soyuo.serox.browser.script.RhinoScriptRunner;
+import kr.soyuo.serox.browser.script.ScriptLimits;
 import kr.soyuo.serox.core.application.AppConfigurationLoader;
 import kr.soyuo.serox.core.application.BrowserController;
 import kr.soyuo.serox.core.application.DefaultBrowserController;
@@ -62,12 +65,15 @@ public final class AppBootstrap {
       kr.soyuo.serox.core.application.AppConfiguration configuration, Path dataDirectory) {
     var eventBus = new InProcessBrowserEventBus();
     var engineExecutor = Executors.newVirtualThreadPerTaskExecutor();
+    var transport =
+        HttpRequestDispatcher.createDefault(
+            Duration.ofSeconds(10), Duration.ofSeconds(30), 8 * 1024 * 1024);
+    var scripts =
+        new RhinoScriptRunner(
+            new TransportScriptFetcher(transport), address -> true, ScriptLimits.defaults());
     var engine =
         new HttpBrowserEngine(
-            HttpRequestDispatcher.createDefault(
-                Duration.ofSeconds(10), Duration.ofSeconds(30), 8 * 1024 * 1024),
-            new HttpResponseHandler(),
-            new HtmlDocumentParser());
+            transport, new HttpResponseHandler(), new HtmlDocumentParser(), scripts);
     BrowserController browserController =
         new DefaultBrowserController(engine, eventBus, engineExecutor);
     var searchProvider =

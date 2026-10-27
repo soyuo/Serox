@@ -10,6 +10,7 @@ import kr.soyuo.serox.browser.api.PageLoadRequest;
 import kr.soyuo.serox.browser.api.PageSnapshot;
 import kr.soyuo.serox.browser.dom.Document;
 import kr.soyuo.serox.browser.html.HtmlDocumentParser;
+import kr.soyuo.serox.browser.script.ScriptRunner;
 import kr.soyuo.serox.core.error.ApplicationError;
 import kr.soyuo.serox.core.error.ErrorCode;
 import kr.soyuo.serox.core.model.UntrustedText;
@@ -19,15 +20,26 @@ public final class HttpBrowserEngine implements BrowserEngine {
   private final HttpTransport transport;
   private final HttpResponseHandler responseHandler;
   private final HtmlDocumentParser documentParser;
+  private final ScriptRunner scriptRunner;
 
-  /** Creates a browser engine from injectable transport and parser boundaries. */
+  /** Creates an engine that runs no page scripts. */
   public HttpBrowserEngine(
       HttpTransport transport,
       HttpResponseHandler responseHandler,
       HtmlDocumentParser documentParser) {
+    this(transport, responseHandler, documentParser, ScriptRunner.NONE);
+  }
+
+  /** Creates a browser engine from injectable transport, parser and script boundaries. */
+  public HttpBrowserEngine(
+      HttpTransport transport,
+      HttpResponseHandler responseHandler,
+      HtmlDocumentParser documentParser,
+      ScriptRunner scriptRunner) {
     this.transport = Objects.requireNonNull(transport, "transport");
     this.responseHandler = Objects.requireNonNull(responseHandler, "responseHandler");
     this.documentParser = Objects.requireNonNull(documentParser, "documentParser");
+    this.scriptRunner = Objects.requireNonNull(scriptRunner, "scriptRunner");
   }
 
   @Override
@@ -58,6 +70,11 @@ public final class HttpBrowserEngine implements BrowserEngine {
 
   private PageSnapshot toPageSnapshot(DecodedHtmlResponse response) {
     Document document = documentParser.parse(response.uri(), response.html());
+    try {
+      scriptRunner.run(document);
+    } catch (RuntimeException scriptFailure) {
+      // A script problem must never stop the page from showing.
+    }
     String title =
         document.getElementsByTagName("title").stream()
             .findFirst()
