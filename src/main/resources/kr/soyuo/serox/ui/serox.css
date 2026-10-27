@@ -522,3 +522,28 @@
 .status-bar > .label {
     -fx-text-overrun: ellipsis;
 }
+
+.site-info-button {
+    -fx-padding: 2px 8px;
+    -fx-background-color: transparent;
+    -fx-background-radius: 10px;
+    -fx-font-size: 11px;
+    -fx-cursor: hand;
+}
+
+.site-info-secure {
+    -fx-text-fill: serox-success;
+}
+
+.site-info-insecure {
+    -fx-text-fill: serox-error;
+}
+
+.site-info-none {
+    -fx-text-fill: serox-text-muted;
+}
+
+.site-info-popup {
+    -fx-padding: 12px;
+    -fx-background-color: serox-surface;
+}

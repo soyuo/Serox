@@ -46,7 +46,12 @@ import kr.soyuo.serox.core.event.TabClosed;
 import kr.soyuo.serox.core.event.TabStateChanged;
 import kr.soyuo.serox.core.model.NavigationStatus;
 import kr.soyuo.serox.core.model.TabId;
+import java.net.URI;
+import java.util.Optional;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.CustomMenuItem;
 import kr.soyuo.serox.core.model.AiPanelPosition;
+import kr.soyuo.serox.core.model.SiteInfo;
 import kr.soyuo.serox.core.model.TabSnapshot;
 import kr.soyuo.serox.search.application.SearchService;
 
@@ -75,6 +80,8 @@ public final class BrowserShellView extends BorderPane {
   private boolean aiPanelOpen = true;
   private AiPanelPosition aiPanelSide = AiPanelPosition.RIGHT;
   private AiSearchService aiSearchService;
+  private final Button siteInfoButton = new Button();
+  private SiteInfo siteInfo = SiteInfo.of(Optional.empty());
   private final Map<TabId, TabSnapshot> tabSnapshots = new HashMap<>();
   private final Map<TabId, PageLoaded> loadedPages = new HashMap<>();
   private final Map<TabId, HBox> tabButtons = new HashMap<>();
@@ -245,10 +252,15 @@ public final class BrowserShellView extends BorderPane {
           }
         });
     addressField.getStyleClass().add("address-field");
+    updateSiteInfo(Optional.empty());
+    siteInfoButton.setOnAction(event -> showSiteInfo());
     HBox.setHgrow(addressField, Priority.ALWAYS);
     HBox addressBox =
         new HBox(
-            UiTokens.SPACE_SM, SvgIconView.icon(UiTokens.ICON_ADDRESS_SEARCH, 18), addressField);
+            UiTokens.SPACE_SM,
+            SvgIconView.icon(UiTokens.ICON_ADDRESS_SEARCH, 18),
+            siteInfoButton,
+            addressField);
     addressBox.setAlignment(Pos.CENTER_LEFT);
     addressBox.getStyleClass().add("address-box");
     HBox.setHgrow(addressBox, Priority.ALWAYS);
@@ -322,6 +334,7 @@ public final class BrowserShellView extends BorderPane {
         () -> {
           if (event.tabId().equals(activeTabId)) {
             addressField.setText(event.query());
+            updateSiteInfo(Optional.empty());
             navigationStatus.setText("검색 중…");
             setCenter(
                 SearchResultsView.loading(
@@ -337,6 +350,7 @@ public final class BrowserShellView extends BorderPane {
         () -> {
           if (event.tabId().equals(activeTabId)) {
             addressField.setText(event.query());
+            updateSiteInfo(Optional.empty());
             int count = event.response().results().size();
             navigationStatus.setText("검색 결과 " + count + "개");
             if (count == 0) {
@@ -377,6 +391,7 @@ public final class BrowserShellView extends BorderPane {
         () -> {
           if (event.tabId().equals(activeTabId)) {
             addressField.setText(event.query());
+            updateSiteInfo(Optional.empty());
             navigationStatus.setText(event.safeMessage());
             setCenter(
                 SearchResultsView.error(
@@ -505,6 +520,44 @@ public final class BrowserShellView extends BorderPane {
     addressField.setText(snapshot.currentUri().map(Object::toString).orElse(""));
   }
 
+  private void updateSiteInfo(Optional<URI> pageAddress) {
+    siteInfo = SiteInfo.of(pageAddress);
+    String label =
+        switch (siteInfo.level()) {
+          case SECURE -> "보안 연결";
+          case INSECURE -> "보안 주의";
+          case NONE -> "Serox";
+        };
+    siteInfoButton.setText(label);
+    siteInfoButton.setAccessibleText("사이트 연결 정보: " + label);
+    siteInfoButton
+        .getStyleClass()
+        .setAll(
+            "button",
+            "site-info-button",
+            switch (siteInfo.level()) {
+              case SECURE -> "site-info-secure";
+              case INSECURE -> "site-info-insecure";
+              case NONE -> "site-info-none";
+            });
+  }
+
+  private void showSiteInfo() {
+    Label host = new Label(siteInfo.host().isBlank() ? "Serox" : siteInfo.host());
+    host.getStyleClass().add("search-result-title");
+    Label summary = new Label(siteInfo.summary());
+    summary.setWrapText(true);
+    summary.setMaxWidth(280);
+    summary.getStyleClass().add("search-result-snippet");
+    VBox content = new VBox(UiTokens.SPACE_SM, host, summary);
+    content.getStyleClass().add("site-info-popup");
+    content.setStyle(
+        "serox-text-primary: #151a23; serox-text-secondary: #4a5468; serox-success: #0f7b5f;");
+    CustomMenuItem item = new CustomMenuItem(content, false);
+    ContextMenu popup = new ContextMenu(item);
+    popup.show(siteInfoButton, javafx.geometry.Side.BOTTOM, 0, 4);
+  }
+
   private void navigateToAddress() {
     if (activeTabId != null && !addressField.getText().isBlank()) {
       String input = addressField.getText().strip();
@@ -527,6 +580,7 @@ public final class BrowserShellView extends BorderPane {
         () -> {
           loadedPages.put(event.tabId(), event);
           if (event.tabId().equals(activeTabId)) {
+            updateSiteInfo(Optional.of(event.page().uri()));
             event.page().document().ifPresent(this::showDocument);
           }
         });
@@ -544,6 +598,7 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private void showHomeView() {
+    updateSiteInfo(Optional.empty());
     homeView = new HomeView(previewData, recentSearches.queries(), this::searchFromHome);
     setCenter(homeView);
   }
