@@ -17,6 +17,7 @@ import kr.soyuo.serox.core.event.InProcessBrowserEventBus;
 import kr.soyuo.serox.core.event.TabStateChanged;
 import kr.soyuo.serox.core.model.NavigationStatus;
 import kr.soyuo.serox.core.model.SessionSnapshot;
+import kr.soyuo.serox.core.model.StartupMode;
 import kr.soyuo.serox.core.model.TabId;
 import kr.soyuo.serox.core.model.TabSnapshot;
 import kr.soyuo.serox.core.port.storage.SessionRepository;
@@ -60,6 +61,63 @@ class SessionKeeperTest {
         var keeper = new SessionKeeper(bus, storage.sessions())) {
       var commands = new StubCommands(bus);
       keeper.restoreOrStart(commands);
+
+      assertEquals(1, commands.tabs.size());
+      assertTrue(commands.navigations.isEmpty());
+    }
+  }
+
+  private void rememberTwoPages(Path file) {
+    try (var storage = new SqliteStorage(file);
+        var bus = new InProcessBrowserEventBus();
+        var keeper = new SessionKeeper(bus, storage.sessions())) {
+      var commands = new StubCommands(bus);
+      keeper.restoreOrStart(commands);
+      TabSnapshot second = commands.createTab().toCompletableFuture().join();
+      commands.navigate(commands.tabs.getFirst().id(), "https://one.test/");
+      commands.navigate(second.id(), "https://two.test/");
+    }
+  }
+
+  @Test
+  void homeStartupIgnoresThePreviousSession() {
+    Path file = tempDir.resolve("serox.db");
+    rememberTwoPages(file);
+
+    try (var storage = new SqliteStorage(file);
+        var bus = new InProcessBrowserEventBus();
+        var keeper = new SessionKeeper(bus, storage.sessions())) {
+      var commands = new StubCommands(bus);
+      keeper.restoreOrStart(commands, StartupMode.HOME, "https://start.test/");
+
+      assertEquals(1, commands.tabs.size());
+      assertTrue(commands.navigations.isEmpty());
+    }
+  }
+
+  @Test
+  void specificPageStartupOpensOnlyTheStartPage() {
+    Path file = tempDir.resolve("serox.db");
+    rememberTwoPages(file);
+
+    try (var storage = new SqliteStorage(file);
+        var bus = new InProcessBrowserEventBus();
+        var keeper = new SessionKeeper(bus, storage.sessions())) {
+      var commands = new StubCommands(bus);
+      keeper.restoreOrStart(commands, StartupMode.SPECIFIC_PAGE, "https://start.test/");
+
+      assertEquals(1, commands.tabs.size());
+      assertEquals(List.of("https://start.test/"), commands.navigations);
+    }
+  }
+
+  @Test
+  void specificPageStartupWithoutAUsableAddressStartsBlank() {
+    try (var storage = new SqliteStorage(tempDir.resolve("serox.db"));
+        var bus = new InProcessBrowserEventBus();
+        var keeper = new SessionKeeper(bus, storage.sessions())) {
+      var commands = new StubCommands(bus);
+      keeper.restoreOrStart(commands, StartupMode.SPECIFIC_PAGE, "");
 
       assertEquals(1, commands.tabs.size());
       assertTrue(commands.navigations.isEmpty());

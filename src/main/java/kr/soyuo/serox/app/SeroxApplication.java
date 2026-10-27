@@ -37,8 +37,15 @@ public final class SeroxApplication extends Application {
     runtime
         .sessionKeeper()
         .ifPresentOrElse(
-            keeper -> keeper.restoreOrStart(runtime.browserController()),
+            keeper -> {
+              var general = runtime.settingsService().current();
+              keeper.restoreOrStart(
+                  runtime.browserController(), general.startupMode(), general.startPageUrl());
+            },
             () -> runtime.browserController().createTab());
+    runtime
+        .aiSearchService()
+        .setAnswerLanguage(() -> runtime.settingsService().current().language().englishName());
     browserShell.setAiSearchService(runtime.aiSearchService());
     runtime.announceServiceStatus();
     browserShell.setSettingsService(runtime.settingsService());

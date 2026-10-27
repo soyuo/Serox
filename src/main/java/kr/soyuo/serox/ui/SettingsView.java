@@ -130,6 +130,10 @@ final class SettingsView extends HBox {
       page.getChildren().setAll(design);
     } else if (section == Section.MCP) {
       page.getChildren().setAll(new McpPage(mcp));
+    } else if (section == Section.GENERAL) {
+      page.getChildren().setAll(new GeneralPage(privacy));
+    } else if (section == Section.SHORTCUTS) {
+      page.getChildren().setAll(new ShortcutsPage(privacy));
     } else if (section == Section.PRIVACY) {
       page.getChildren().setAll(new PrivacyPage(privacy));
     } else {
@@ -159,10 +163,7 @@ final class SettingsView extends HBox {
 
   private List<String> lines(Section section) {
     return switch (section) {
-      case GENERAL ->
-          List.of(
-              "Serox는 별도의 일반 설정이 없어요.",
-              "모양은 ‘디자인’에서, 키와 연결은 아래 각 항목에서 확인할 수 있어요.");
+      case GENERAL -> List.of();
       case SEARCH ->
           List.of(
               "상태: " + summary.search(),
@@ -179,7 +180,13 @@ final class SettingsView extends HBox {
               "AI로 보내기 전에 이메일, 토큰, 카드번호 같은 민감한 정보는 가려요.",
               "AI 요약에는 오류가 있을 수 있어요. 중요한 내용은 출처에서 확인하세요.");
       case PRIVACY -> List.of();
-      case MCP -> List.of();
+      case MCP ->
+          List.of(
+              "상태: " + summary.mcp(),
+              "다른 AI 에이전트가 search_and_summarize 도구로 Serox를 호출할 수 있어요.",
+              "사용하려면 에이전트 설정에 SEROX_MCP_APPROVED_TOOLS=search_and_summarize를 적고"
+                  + " Serox를 --mcp 또는 --mcp-headless로 실행하세요.",
+              "허용하지 않은 도구와 브라우저 제어, 파일 접근은 지원하지 않아요.");
       case SHORTCUTS ->
           List.of("Ctrl+L  주소창으로 이동", "Ctrl+T  새 탭", "Ctrl+W  탭 닫기", "Ctrl+K  검색창으로 이동");
       case DESIGN -> List.of();
