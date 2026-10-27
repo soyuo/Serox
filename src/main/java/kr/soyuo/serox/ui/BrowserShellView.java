@@ -30,6 +30,7 @@ import kr.soyuo.serox.core.event.ServiceId;
 import kr.soyuo.serox.core.event.ServiceStatus;
 import kr.soyuo.serox.core.event.TabClosed;
 import kr.soyuo.serox.core.event.TabStateChanged;
+import kr.soyuo.serox.core.model.NavigationStatus;
 import kr.soyuo.serox.core.model.TabId;
 import kr.soyuo.serox.core.model.TabSnapshot;
 
@@ -40,6 +41,7 @@ public final class BrowserShellView extends BorderPane {
   private final Label mcpStatus =
       new Label(previewData.mcp().statusText() + " (" + previewData.mcp().detail() + ")");
   private final Region statusDot = new Region();
+  private final Label navigationStatus = new Label("Ready");
   private TextField addressField;
   private HomeView homeView;
   private final EventSubscription connectionStatusSubscription;
@@ -211,7 +213,7 @@ public final class BrowserShellView extends BorderPane {
     divider.getStyleClass().add("status-divider");
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
-    HBox bar = new HBox(UiTokens.SPACE_MD, aiStatus, divider, spacer, mcpStatus);
+    HBox bar = new HBox(UiTokens.SPACE_MD, navigationStatus, divider, aiStatus, spacer, mcpStatus);
     bar.setAlignment(Pos.CENTER_LEFT);
     bar.getStyleClass().add("status-bar");
     return bar;
@@ -235,7 +237,7 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private void showOperationError(OperationFailed event) {
-    updateLabel(aiStatus, event.error().safeMessage());
+    updateLabel(navigationStatus, event.error().safeMessage());
   }
 
   private void showTabState(TabStateChanged event) {
@@ -244,6 +246,7 @@ public final class BrowserShellView extends BorderPane {
           TabSnapshot snapshot = event.snapshot();
           tabSnapshots.put(snapshot.id(), snapshot);
           if (snapshot.id().equals(activeTabId)) {
+            navigationStatus.setText(statusText(snapshot.navigationStatus()));
             updateAddress(snapshot);
           }
         });
@@ -285,7 +288,11 @@ public final class BrowserShellView extends BorderPane {
                 FxThreadExecutor.execute(
                     () -> {
                       if (event.tabId().equals(activeTabId)) {
-                        setCenter(new CanvasPageView(document));
+                        setCenter(
+                            new CanvasPageView(
+                                document,
+                                event.page().uri(),
+                                uri -> browserController.navigate(event.tabId(), uri.toString())));
                       }
                     }));
   }
@@ -293,6 +300,16 @@ public final class BrowserShellView extends BorderPane {
   private void updateLabel(Label label, String text) {
     Runnable update = () -> label.setText(text);
     FxThreadExecutor.execute(update);
+  }
+
+  private String statusText(NavigationStatus status) {
+    return switch (status) {
+      case IDLE -> "Ready";
+      case LOADING -> "Loading…";
+      case SUCCEEDED -> "Done";
+      case FAILED -> "Page failed to load";
+      case CANCELLED -> "Navigation cancelled";
+    };
   }
 
   private String statusName(ServiceStatus status) {
