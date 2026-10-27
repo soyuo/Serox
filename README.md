@@ -23,9 +23,17 @@ mvn clean javafx:run
 최종 배포는 자체 실행 런타임을 포함한 MSI 설치 파일을 기본으로 한다.
 설치 후 시작 메뉴와 바탕 화면에서 `Serox.exe`를 실행할 수 있다.
 
-필요 환경은 Windows, JDK 25 이상, Maven 3.9 이상이다. MSI 또는 EXE 설치 파일을
-만들려면 WiX Toolset 3.x의 `candle.exe`와 `light.exe`가 PATH에 있어야 한다.
-`jpackage`는 JDK에 포함되며, JavaFX 런타임은 앱 패키지에 포함된다.
+필요 환경은 Windows, JDK 25 이상, Maven 3.9 이상이다. `jpackage`는 JDK에 포함되며,
+JavaFX 런타임은 앱 패키지에 포함된다. MSI 또는 EXE 설치 파일을 만들기 위한 WiX
+Toolset 3.14.1은 아래 스크립트로 사용자 로컬 도구 경로에 준비한다. 관리자 권한이나
+시스템 PATH 변경 없이 실행할 수 있다. 스크립트는 공식 [WiX 3.14.1 바이너리 배포물]
+을 내려받아 SHA-256을 확인한다.
+
+```powershell
+.\scripts\prepare-wix.ps1
+```
+
+[WiX 3.14.1 바이너리 배포물]: https://github.com/wixtoolset/wix3/releases/tag/wix3141rtm
 
 ```powershell
 # Serox.exe와 런타임이 들어 있는 실행 폴더

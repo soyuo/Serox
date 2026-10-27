@@ -47,7 +47,9 @@ Search, AI, Storage, Security 모듈을 통해 동작하도록 연결한다.
 4. API 키와 토큰은 환경 변수 또는 OS 보안 저장소에서 읽도록 정하고,
    저장소와 로그에 비밀값이 남지 않게 한다.
 5. 포맷·정적 분석·테스트 실행 명령과 브랜치/커밋 규칙을 README에 기록한다.
-6. MSI 패키징용 Windows 빌드 환경에 JDK의 `jpackage`와 WiX Toolset 3.x를 준비한다.
+6. MSI 패키징용 Windows 빌드 환경에 JDK의 `jpackage`와 WiX Toolset 3.14.1을 준비한다.
+   [`scripts/prepare-wix.ps1`](scripts/prepare-wix.ps1)은 공식 바이너리와 SHA-256을 확인해
+   사용자 로컬 도구 경로에 설치한다.
 
 **완료 기준:** 새 개발 환경에서 빌드와 기본 테스트를 재현할 수 있고,
 선택한 기술 및 미확정 사항이 문서화되어 있다.
