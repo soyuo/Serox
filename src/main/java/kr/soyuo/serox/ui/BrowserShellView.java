@@ -56,6 +56,8 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.CustomMenuItem;
 import kr.soyuo.serox.core.model.AiPanelPosition;
 import kr.soyuo.serox.core.model.BrowserSettings;
+import kr.soyuo.serox.core.model.KeyChord;
+import kr.soyuo.serox.core.model.ShortcutAction;
 import kr.soyuo.serox.core.model.SiteInfo;
 import kr.soyuo.serox.core.model.TabSnapshot;
 import kr.soyuo.serox.search.application.SearchService;
@@ -88,6 +90,8 @@ public final class BrowserShellView extends BorderPane {
   private final EventSubscription aiAnswerSubscription;
   private final EventSubscription navigationFailedSubscription;
   private SearchResultsView resultsView;
+  private javafx.scene.Scene acceleratorScene;
+  private final List<KeyCombination> installedAccelerators = new java.util.ArrayList<>();
   private boolean aiPanelOpen = true;
   private AiPanelPosition aiPanelSide = AiPanelPosition.RIGHT;
   private AiSearchService aiSearchService;
@@ -288,6 +292,7 @@ public final class BrowserShellView extends BorderPane {
   private void applySettings(BrowserSettings settings) {
     AppearanceStyler.apply(this, settings);
     aiPanelSide = settings.aiPanelPosition();
+    refreshAccelerators();
   }
 
   private void showSettings() {
@@ -305,7 +310,8 @@ public final class BrowserShellView extends BorderPane {
                 settingsService.save(
                     settings
                         .withPrivacyOf(settingsService.current())
-                        .withGeneralOf(settingsService.current())),
+                        .withGeneralOf(settingsService.current())
+                        .withShortcutsOf(settingsService.current())),
             this::cancelSettings,
             new SettingsView.ServiceSummary(
                 statusText(searchStatus), statusText(aiStatus), statusText(mcpStatus)),
@@ -930,36 +936,71 @@ public final class BrowserShellView extends BorderPane {
     sceneProperty()
         .addListener(
             (observable, oldScene, newScene) -> {
-              if (newScene != null) {
-                newScene
-                    .getAccelerators()
-                    .put(
-                        new KeyCodeCombination(KeyCode.L, KeyCombination.CONTROL_DOWN),
-                        () -> {
-                          addressField.requestFocus();
-                          addressField.selectAll();
-                        });
-                newScene
-                    .getAccelerators()
-                    .put(
-                        new KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN),
-                        () -> browserController.createTab());
-                newScene
-                    .getAccelerators()
-                    .put(
-                        new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN),
-                        () -> {
-                          if (activeTabId != null) {
-                            browserController.closeTab(activeTabId);
-                          }
-                        });
-                newScene
-                    .getAccelerators()
-                    .put(
-                        new KeyCodeCombination(KeyCode.K, KeyCombination.CONTROL_DOWN),
-                        homeView::focusSearchField);
-              }
+              acceleratorScene = newScene;
+              refreshAccelerators();
             });
+  }
+
+  /** Registers the keys the user chose (or the defaults), replacing the ones set before. */
+  private void refreshAccelerators() {
+    if (acceleratorScene == null) {
+      return;
+    }
+    var accelerators = acceleratorScene.getAccelerators();
+    installedAccelerators.forEach(accelerators::remove);
+    installedAccelerators.clear();
+    BrowserSettings settings =
+        settingsService == null ? BrowserSettings.defaults() : settingsService.current();
+    for (ShortcutAction action : ShortcutAction.values()) {
+      KeyChord chord = settings.shortcut(action);
+      if (chord.assigned()) {
+        register(accelerators, KeyChords.toCombination(chord), () -> runShortcut(action));
+      }
+    }
+    // Ctrl+K has always put the cursor in the home search box; it stays unless a chosen key needs it.
+    KeyCodeCombination homeSearch = new KeyCodeCombination(KeyCode.K, KeyCombination.CONTROL_DOWN);
+    if (!accelerators.containsKey(homeSearch)) {
+      register(accelerators, homeSearch, () -> homeView.focusSearchField());
+    }
+  }
+
+  private void register(
+      Map<KeyCombination, Runnable> accelerators, KeyCombination combination, Runnable action) {
+    accelerators.put(combination, action);
+    installedAccelerators.add(combination);
+  }
+
+  private void runShortcut(ShortcutAction action) {
+    SearchResultsView results = getCenter() instanceof SearchResultsView view ? view : null;
+    switch (action) {
+      case FOCUS_SEARCH -> {
+        addressField.requestFocus();
+        addressField.selectAll();
+      }
+      case TOGGLE_AI -> {
+        if (results != null) {
+          results.togglePanel();
+        }
+      }
+      case NEXT_SOURCE -> {
+        if (results != null) {
+          results.selectRelative(1);
+        }
+      }
+      case PREVIOUS_SOURCE -> {
+        if (results != null) {
+          results.selectRelative(-1);
+        }
+      }
+      case NEW_TAB -> browserController.createTab();
+      case CLOSE_TAB -> {
+        if (activeTabId != null) {
+          browserController.closeTab(activeTabId);
+        }
+      }
+      case OPEN_HISTORY -> showLibrary(LibraryView.Section.HISTORY);
+      case OPEN_SETTINGS -> showSettings();
+    }
   }
 
   private void installWindowResizeHandlers() {

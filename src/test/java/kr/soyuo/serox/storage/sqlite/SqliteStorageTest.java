@@ -171,6 +171,29 @@ class SqliteStorageTest {
   }
 
   @Test
+  void shortcutChoicesSurviveReopeningAndResetsAreRemembered() {
+    var custom =
+        BrowserSettings.defaults()
+            .withShortcut(
+                kr.soyuo.serox.core.model.ShortcutAction.NEW_TAB,
+                kr.soyuo.serox.core.model.KeyChord.parse("Ctrl+N").orElseThrow())
+            .withShortcut(
+                kr.soyuo.serox.core.model.ShortcutAction.CLOSE_TAB,
+                kr.soyuo.serox.core.model.KeyChord.UNASSIGNED);
+    try (var storage = new SqliteStorage(tempDir.resolve("shortcuts.db"))) {
+      storage.settings().save(custom).toCompletableFuture().join();
+    }
+    try (var reopened = new SqliteStorage(tempDir.resolve("shortcuts.db"))) {
+      assertEquals(custom, reopened.settings().load().toCompletableFuture().join());
+      reopened.settings().save(custom.withDefaultShortcuts()).toCompletableFuture().join();
+    }
+    try (var again = new SqliteStorage(tempDir.resolve("shortcuts.db"))) {
+      assertEquals(
+          BrowserSettings.defaults(), again.settings().load().toCompletableFuture().join());
+    }
+  }
+
+  @Test
   void generalChoicesSurviveReopening() {
     var chosen =
         BrowserSettings.defaults()
