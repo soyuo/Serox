@@ -43,6 +43,11 @@ public final class SqliteSessionRepository implements SessionRepository {
               statement.executeUpdate();
             }
             try (PreparedStatement statement =
+                connection.prepareStatement("DELETE FROM sessions WHERE id <> ?")) {
+              statement.setString(1, session.id().toString());
+              statement.executeUpdate();
+            }
+            try (PreparedStatement statement =
                 connection.prepareStatement("DELETE FROM tabs WHERE session_id = ?")) {
               statement.setString(1, session.id().toString());
               statement.executeUpdate();

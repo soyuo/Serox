@@ -15,6 +15,7 @@ import kr.soyuo.serox.browser.network.HttpResponseHandler;
 import kr.soyuo.serox.core.application.AppConfigurationLoader;
 import kr.soyuo.serox.core.application.BrowserController;
 import kr.soyuo.serox.core.application.DefaultBrowserController;
+import kr.soyuo.serox.core.application.SessionKeeper;
 import kr.soyuo.serox.core.application.UsageRecorder;
 import kr.soyuo.serox.core.event.InProcessBrowserEventBus;
 import kr.soyuo.serox.search.api.SearchProvider;
@@ -65,6 +66,8 @@ public final class AppBootstrap {
             sqlite ->
                 new UsageRecorder(
                     eventBus, sqlite.history(), sqlite.recentSearches(), Clock.systemUTC()));
+    Optional<SessionKeeper> sessionKeeper =
+        storage.map(sqlite -> new SessionKeeper(eventBus, sqlite.sessions()));
     return new SeroxRuntime(
         configuration,
         eventBus,
@@ -72,7 +75,8 @@ public final class AppBootstrap {
         engineExecutor,
         searchService,
         storage,
-        usageRecorder);
+        usageRecorder,
+        sessionKeeper);
   }
 
   /** Resolves the per-user profile directory that holds the local database. */

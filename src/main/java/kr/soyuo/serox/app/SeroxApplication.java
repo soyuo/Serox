@@ -23,7 +23,11 @@ public final class SeroxApplication extends Application {
             .orElse(List.of());
     browserShell =
         new BrowserShellView(runtime.browserController(), runtime.searchService(), recentQueries);
-    runtime.browserController().createTab();
+    runtime
+        .sessionKeeper()
+        .ifPresentOrElse(
+            keeper -> keeper.restoreOrStart(runtime.browserController()),
+            () -> runtime.browserController().createTab());
     browserShell.setStyle("-fx-font-family: \"" + UiTokens.FONT_FAMILY + "\";");
     Scene scene = new Scene(browserShell, 1100, 720);
 
