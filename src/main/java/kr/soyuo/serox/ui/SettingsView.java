@@ -117,6 +117,8 @@ final class SettingsView extends HBox {
       page.getChildren().setAll(design);
     } else if (section == Section.GENERAL) {
       page.getChildren().setAll(new GeneralPage(privacy));
+    } else if (section == Section.SHORTCUTS) {
+      page.getChildren().setAll(new ShortcutsPage(privacy));
     } else if (section == Section.PRIVACY) {
       page.getChildren().setAll(new PrivacyPage(privacy));
     } else {
@@ -170,8 +172,7 @@ final class SettingsView extends HBox {
               "사용하려면 에이전트 설정에 SEROX_MCP_APPROVED_TOOLS=search_and_summarize를 적고"
                   + " Serox를 --mcp 또는 --mcp-headless로 실행하세요.",
               "허용하지 않은 도구와 브라우저 제어, 파일 접근은 지원하지 않아요.");
-      case SHORTCUTS ->
-          List.of("Ctrl+L  주소창으로 이동", "Ctrl+T  새 탭", "Ctrl+W  탭 닫기", "Ctrl+K  검색창으로 이동");
+      case SHORTCUTS -> List.of();
       case DESIGN -> List.of();
     };
   }

@@ -898,6 +898,49 @@
     -fx-font-size: 1.000em;
 }
 
+/* Shortcuts page: a list card with key caps, and the waiting and conflict row states. */
+.shortcut-list {
+    -fx-background-color: serox-surface;
+    -fx-background-radius: 12px;
+    -fx-border-color: serox-border;
+    -fx-border-radius: 12px;
+}
+
+.shortcut-row {
+    -fx-min-height: 54px;
+    -fx-padding: 0 16px;
+    -fx-spacing: 12px;
+    -fx-border-color: transparent transparent serox-border transparent;
+}
+
+.shortcut-row-waiting {
+    -fx-background-color: serox-ai-surface;
+}
+
+.shortcut-row-conflict {
+    -fx-background-color: serox-error-surface;
+}
+
+.shortcut-prompt {
+    -fx-text-fill: serox-primary;
+    -fx-font-weight: bold;
+}
+
+.shortcut-warning {
+    -fx-text-fill: serox-error;
+    -fx-font-weight: bold;
+}
+
+.keycap {
+    -fx-padding: 3px 8px;
+    -fx-background-color: serox-surface-muted;
+    -fx-background-radius: 6px;
+    -fx-border-color: serox-border;
+    -fx-border-radius: 6px;
+    -fx-text-fill: serox-text-primary;
+    -fx-font-weight: bold;
+}
+
 .danger-button {
     -fx-min-height: 36px;
     -fx-padding: 0 16px;
