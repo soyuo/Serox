@@ -59,7 +59,7 @@ public record SeroxRuntime(
     aiConnections.announce();
     eventBus.publish(
         new ConnectionStatusChanged(
-            now, ServiceId.MCP, ServiceStatus.DISCONNECTED, "꺼짐 (--mcp로 실행하면 켜짐)"));
+            now, ServiceId.MCP, ServiceStatus.DISCONNECTED, "꺼짐"));
     eventBus.publish(status(now, ServiceId.STORAGE, storage.isPresent(), "저장소 사용 가능", "저장소 사용 불가"));
   }
 

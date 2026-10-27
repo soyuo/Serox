@@ -160,7 +160,11 @@ public final class AiConnectionService implements AutoCloseable {
             ServiceId.AI,
             connected ? ServiceStatus.CONNECTED : ServiceStatus.DISCONNECTED,
             connected
-                ? "켜짐 (" + (value.browser() ? "ChatGPT" : value.provider().label()) + ")"
+                ? "켜짐 ("
+                    + (value.browser() ? "ChatGPT" : value.provider().label())
+                    + " · "
+                    + value.model()
+                    + ")"
                 : "연결 필요"));
   }
 
