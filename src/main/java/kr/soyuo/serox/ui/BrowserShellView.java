@@ -2,17 +2,16 @@ package kr.soyuo.serox.ui;
 
 import java.util.Objects;
 import javafx.application.Platform;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 import kr.soyuo.serox.core.event.BrowserEventBus;
 import kr.soyuo.serox.core.event.ConnectionStatusChanged;
 import kr.soyuo.serox.core.event.EventSubscription;
@@ -20,13 +19,16 @@ import kr.soyuo.serox.core.event.OperationFailed;
 import kr.soyuo.serox.core.event.ServiceId;
 import kr.soyuo.serox.core.event.ServiceStatus;
 
-/** Displays the browser chrome, home view, and application status. */
+/** Displays the Figma browser frame, home view, and service status. */
 public final class BrowserShellView extends BorderPane {
-  private final Label statusLabel = new Label("Serox · 준비됨");
+  private final Label aiStatus = new Label("AI: Claude");
+  private final Label mcpStatus = new Label("MCP 서버 켜짐 (search_and_summarize)");
   private final EventSubscription connectionStatusSubscription;
   private final EventSubscription operationErrorSubscription;
+  private double dragOffsetX;
+  private double dragOffsetY;
 
-  /** Creates the initial browser shell and subscribes to owned service status events. */
+  /** Creates the browser shell and subscribes to service status events. */
   public BrowserShellView(BrowserEventBus eventBus) {
     Objects.requireNonNull(eventBus, "eventBus");
     getStyleClass().add("app-root");
@@ -50,20 +52,130 @@ public final class BrowserShellView extends BorderPane {
     operationErrorSubscription.close();
   }
 
+  private VBox createBrowserChrome() {
+    VBox chrome = new VBox(createTitleBar(), createToolbar());
+    chrome.getStyleClass().add("browser-chrome");
+    return chrome;
+  }
+
+  private HBox createTitleBar() {
+    HBox activeTab = new HBox(10, new Label("새 탭"));
+    activeTab.setAlignment(Pos.CENTER_LEFT);
+    activeTab.getStyleClass().add("active-tab");
+    Button closeTab = new Button();
+    closeTab.setGraphic(SvgIconView.icon("65d4c.svg", 12));
+    closeTab.setAccessibleText("현재 탭 닫기");
+    closeTab.setDisable(true);
+    closeTab.getStyleClass().add("tab-close");
+    activeTab.getChildren().add(closeTab);
+
+    HBox left = new HBox(12, SvgIconView.logo(16), activeTab);
+    left.setAlignment(Pos.CENTER_LEFT);
+    left.getStyleClass().add("titlebar-left");
+    HBox.setHgrow(left, Priority.ALWAYS);
+
+    Button minimize = windowButton("89d49.svg", "창 최소화");
+    minimize.setOnAction(event -> stage().setIconified(true));
+    Button maximize = windowButton("27a5b.svg", "창 최대화");
+    maximize.setOnAction(event -> stage().setMaximized(!stage().isMaximized()));
+    Button close = windowButton("71df2.svg", "창 닫기");
+    close.getStyleClass().add("window-close-button");
+    close.setOnAction(event -> stage().close());
+    HBox controls = new HBox(minimize, maximize, close);
+    controls.getStyleClass().add("window-controls");
+
+    HBox bar = new HBox(left, controls);
+    bar.setAlignment(Pos.CENTER_LEFT);
+    bar.getStyleClass().add("titlebar");
+    bar.setOnMousePressed(
+        event -> {
+          if (event.getClickCount() == 2) {
+            stage().setMaximized(!stage().isMaximized());
+          } else {
+            dragOffsetX = event.getScreenX() - stage().getX();
+            dragOffsetY = event.getScreenY() - stage().getY();
+          }
+        });
+    bar.setOnMouseDragged(
+        event -> {
+          if (!stage().isMaximized() && event.getTarget() == bar) {
+            stage().setX(event.getScreenX() - dragOffsetX);
+            stage().setY(event.getScreenY() - dragOffsetY);
+          }
+        });
+    return bar;
+  }
+
+  private Button windowButton(String asset, String accessibleName) {
+    Button button = new Button();
+    button.setGraphic(SvgIconView.icon(asset, 12));
+    button.setAccessibleText(accessibleName);
+    button.getStyleClass().addAll("window-control-button");
+    return button;
+  }
+
+  private HBox createToolbar() {
+    Button back = toolbarButton("b2c0a.svg", "뒤로");
+    Button forward = toolbarButton("5404c.svg", "앞으로");
+    back.setDisable(true);
+    forward.setDisable(true);
+
+    TextField address = new TextField();
+    address.setPromptText("검색어 또는 주소를 입력하세요…");
+    address.setAccessibleText("검색어 또는 웹 주소");
+    address.getStyleClass().add("address-field");
+    HBox.setHgrow(address, Priority.ALWAYS);
+    HBox addressBox = new HBox(10, SvgIconView.icon("8b6e3.svg", 18), address);
+    addressBox.setAlignment(Pos.CENTER_LEFT);
+    addressBox.getStyleClass().add("address-box");
+    HBox.setHgrow(addressBox, Priority.ALWAYS);
+
+    Button history = toolbarButton("bf879.svg", "방문 기록");
+    Button settings = toolbarButton("43cc8.svg", "설정");
+    history.setDisable(true);
+    settings.setDisable(true);
+    HBox row = new HBox(4, back, forward, addressBox, history, settings);
+    row.setAlignment(Pos.CENTER_LEFT);
+    row.getStyleClass().add("toolbar");
+    return row;
+  }
+
+  private Button toolbarButton(String asset, String accessibleName) {
+    Button button = new Button();
+    button.setGraphic(SvgIconView.icon(asset, 20));
+    button.setAccessibleText(accessibleName);
+    button.getStyleClass().add("toolbar-button");
+    return button;
+  }
+
+  private HBox createStatusBar() {
+    Region statusDot = new Region();
+    statusDot.getStyleClass().add("status-dot");
+    mcpStatus.setGraphic(statusDot);
+    Label divider = new Label("|");
+    divider.getStyleClass().add("status-divider");
+    Region spacer = new Region();
+    HBox.setHgrow(spacer, Priority.ALWAYS);
+    HBox bar = new HBox(12, aiStatus, divider, spacer, mcpStatus);
+    bar.setAlignment(Pos.CENTER_LEFT);
+    bar.getStyleClass().add("status-bar");
+    return bar;
+  }
+
   private void showConnectionStatus(ConnectionStatusChanged event) {
-    String detail =
-        event.safeMessage().isBlank()
-            ? serviceName(event.service()) + " · " + statusName(event.status())
-            : event.safeMessage();
-    updateStatusLabel(detail);
+    String status =
+        event.safeMessage().isBlank() ? statusName(event.status()) : event.safeMessage();
+    Label target = event.service() == ServiceId.MCP ? mcpStatus : aiStatus;
+    String prefix = event.service() == ServiceId.MCP ? "MCP 서버 " : "AI: ";
+    updateLabel(target, prefix + status);
   }
 
   private void showOperationError(OperationFailed event) {
-    updateStatusLabel(event.error().safeMessage());
+    updateLabel(aiStatus, event.error().safeMessage());
   }
 
-  private void updateStatusLabel(String text) {
-    Runnable update = () -> statusLabel.setText(text);
+  private void updateLabel(Label label, String text) {
+    Runnable update = () -> label.setText(text);
     if (Platform.isFxApplicationThread()) {
       update.run();
     } else {
@@ -71,113 +183,22 @@ public final class BrowserShellView extends BorderPane {
     }
   }
 
-  private String serviceName(ServiceId service) {
-    return switch (service) {
-      case BROWSER_ENGINE -> "브라우저";
-      case SEARCH -> "검색";
-      case AI -> "AI";
-      case MCP -> "MCP";
-      case STORAGE -> "저장소";
-    };
-  }
-
   private String statusName(ServiceStatus status) {
     return switch (status) {
-      case DISCONNECTED -> "연결 안 됨";
+      case DISCONNECTED -> "꺼짐";
       case CONFIGURING -> "확인 중";
-      case CONNECTED -> "연결됨";
+      case CONNECTED -> "켜짐";
       case FAILED -> "연결 실패";
     };
   }
 
-  private VBox createBrowserChrome() {
-    VBox chrome = new VBox(createTabBar(), createToolbar());
-    chrome.getStyleClass().add("browser-chrome");
-    return chrome;
-  }
-
-  private HBox createTabBar() {
-    Label brandMark = new Label("S");
-    brandMark.getStyleClass().add("brand-mark-small");
-
-    Label activeTab = new Label("새 탭");
-    activeTab.getStyleClass().add("active-tab");
-
-    Button closeTab = new Button("×");
-    closeTab.getStyleClass().add("tab-close");
-    closeTab.setAccessibleText("현재 탭 닫기");
-    closeTab.setDisable(true);
-
-    HBox tab = new HBox(10, activeTab, closeTab);
-    tab.setAlignment(Pos.CENTER_LEFT);
-    tab.getStyleClass().add("tab-chip");
-
-    Button addTab = new Button("+");
-    addTab.getStyleClass().add("quiet-button");
-    addTab.setAccessibleText("새 탭");
-    addTab.setDisable(true);
-    addTab.setTooltip(new Tooltip("탭 기능은 탐색 코어 단계에서 연결됩니다."));
-
-    Region spacer = new Region();
-    HBox.setHgrow(spacer, Priority.ALWAYS);
-
-    HBox row = new HBox(12, brandMark, tab, addTab, spacer);
-    row.setAlignment(Pos.CENTER_LEFT);
-    row.setPadding(new Insets(6, 14, 0, 14));
-    row.getStyleClass().add("tab-bar");
-    return row;
-  }
-
-  private HBox createToolbar() {
-    Button back = toolbarButton("‹", "뒤로");
-    Button forward = toolbarButton("›", "앞으로");
-    Button reload = toolbarButton("↻", "새로고침");
-    back.setDisable(true);
-    forward.setDisable(true);
-    reload.setDisable(true);
-
-    TextField addressBar = new TextField();
-    addressBar.setPromptText("검색어 또는 주소를 입력하세요");
-    addressBar.setAccessibleText("검색어 또는 웹 주소");
-    addressBar.getStyleClass().add("address-bar");
-    HBox.setHgrow(addressBar, Priority.ALWAYS);
-
-    Button history = toolbarButton("◷", "방문 기록");
-    Button settings = toolbarButton("⚙", "설정");
-    history.setDisable(true);
-    settings.setDisable(true);
-
-    HBox row = new HBox(8, back, forward, reload, addressBar, history, settings);
-    row.setAlignment(Pos.CENTER);
-    row.setPadding(new Insets(10, 16, 12, 16));
-    row.getStyleClass().add("toolbar");
-    return row;
-  }
-
-  private Button toolbarButton(String text, String accessibleText) {
-    Button button = new Button(text);
-    button.getStyleClass().add("icon-button");
-    button.setAccessibleText(accessibleText);
-    button.setTooltip(new Tooltip(accessibleText + " 기능은 이후 단계에서 연결됩니다."));
-    return button;
-  }
-
-  private HBox createStatusBar() {
-    Label status = new Label("MVP UI · 탐색 엔진 미연결");
-    status.getStyleClass().add("status-muted");
-
-    Region spacer = new Region();
-    HBox.setHgrow(spacer, Priority.ALWAYS);
-
-    HBox bar = new HBox(statusLabel, spacer, status);
-    bar.setAlignment(Pos.CENTER_LEFT);
-    bar.setPadding(new Insets(8, 16, 8, 16));
-    bar.getStyleClass().add("status-bar");
-    return bar;
-  }
-
   private void showNotConnectedMessage(String query) {
-    String value = query == null || query.isBlank() ? "" : " · " + query.trim();
-    statusLabel.setText("검색 엔진 연결 예정" + value);
+    if (query != null && !query.isBlank()) {
+      updateLabel(aiStatus, "검색 엔진 연결 예정 · " + query.trim());
+    }
+  }
+
+  private Stage stage() {
+    return (Stage) getScene().getWindow();
   }
 }

@@ -1,189 +1,280 @@
 .app-root {
-    -fx-font-family: "Segoe UI", "Noto Sans KR", sans-serif;
+    -fx-font-family: "Malgun Gothic";
     -fx-background-color: #ffffff;
-    -fx-text-fill: #171b24;
+    -fx-text-fill: #151a23;
 }
 
 .browser-chrome {
     -fx-background-color: #ffffff;
-    -fx-border-color: transparent transparent #e6e9ef transparent;
+    -fx-border-color: transparent transparent #dde1e8 transparent;
 }
 
-.tab-bar {
-    -fx-min-height: 42px;
-    -fx-background-color: #f7f8fa;
+.titlebar {
+    -fx-min-height: 40px;
+    -fx-pref-height: 40px;
+    -fx-background-color: #eef0f4;
 }
 
-.brand-mark-small,
-.brand-mark-large {
-    -fx-alignment: center;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-background-color: #3478f6;
-    -fx-background-radius: 9px;
-}
-
-.brand-mark-small {
-    -fx-min-width: 26px;
-    -fx-min-height: 26px;
-    -fx-font-size: 14px;
-}
-
-.brand-mark-large {
-    -fx-min-width: 48px;
-    -fx-min-height: 48px;
-    -fx-font-size: 25px;
-    -fx-background-radius: 12px;
-}
-
-.tab-chip {
-    -fx-padding: 0 10px;
-    -fx-min-width: 220px;
-    -fx-min-height: 34px;
-    -fx-background-color: white;
-    -fx-background-radius: 9px 9px 0 0;
-    -fx-border-color: #e6e9ef #e6e9ef white #e6e9ef;
-    -fx-border-radius: 9px 9px 0 0;
+.titlebar-left {
+    -fx-spacing: 12px;
+    -fx-padding: 0 0 0 12px;
 }
 
 .active-tab {
-    -fx-text-fill: #202633;
+    -fx-alignment: center-left;
+    -fx-spacing: 10px;
+    -fx-padding: 0 12px;
+    -fx-pref-width: 260px;
+    -fx-min-width: 260px;
+    -fx-max-width: 260px;
+    -fx-pref-height: 34px;
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 8px 8px 0 0;
+    -fx-text-fill: #151a23;
     -fx-font-size: 12px;
 }
 
-.tab-close,
-.quiet-button,
-.icon-button {
-    -fx-background-color: transparent;
-    -fx-text-fill: #586276;
-    -fx-cursor: hand;
+.brand-logo {
+    -fx-background-color: #3e81f4;
+    -fx-background-radius: 6px;
+}
+
+.brand-logo > .image-view {
+    -fx-fit-width: 100%;
+}
+
+.active-tab > .label {
+    -fx-text-fill: #151a23;
+    -fx-font-weight: bold;
 }
 
 .tab-close {
-    -fx-font-size: 16px;
-    -fx-padding: 0 4px;
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+    -fx-cursor: hand;
 }
 
-.quiet-button {
-    -fx-font-size: 20px;
+.tab-close:disabled {
+    -fx-opacity: 1;
+}
+
+.window-controls {
+    -fx-pref-width: 138px;
+    -fx-min-width: 138px;
+    -fx-max-width: 138px;
+}
+
+.window-control-button {
+    -fx-pref-width: 46px;
+    -fx-min-width: 46px;
+    -fx-max-width: 46px;
+    -fx-pref-height: 40px;
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-cursor: hand;
+}
+
+.window-control-button:hover {
+    -fx-background-color: #dfe3eb;
+}
+
+.window-close-button:hover {
+    -fx-background-color: #e81123;
+}
+
+.window-close-button:hover .svg-icon {
+    -fx-opacity: 1;
 }
 
 .toolbar {
-    -fx-background-color: white;
+    -fx-spacing: 4px;
+    -fx-padding: 4px 12px;
+    -fx-min-height: 57px;
+    -fx-pref-height: 57px;
+    -fx-background-color: #ffffff;
 }
 
-.icon-button {
-    -fx-min-width: 36px;
-    -fx-min-height: 36px;
-    -fx-background-radius: 18px;
-    -fx-font-size: 17px;
+.toolbar-button {
+    -fx-pref-width: 44px;
+    -fx-min-width: 44px;
+    -fx-max-width: 44px;
+    -fx-pref-height: 44px;
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+    -fx-background-radius: 10px;
+    -fx-cursor: hand;
 }
 
-.address-bar,
-.home-search-field {
-    -fx-background-color: #eff1f5;
-    -fx-background-radius: 22px;
+.toolbar-button:hover {
+    -fx-background-color: #f3f5f8;
+}
+
+.toolbar-button:disabled {
+    -fx-opacity: 0.65;
+}
+
+.address-box {
+    -fx-spacing: 10px;
+    -fx-padding: 0 14px;
+    -fx-pref-height: 44px;
+    -fx-background-color: #eef0f4;
+    -fx-background-radius: 24px;
+}
+
+.address-field,
+.address-field:focused {
+    -fx-padding: 0;
+    -fx-background-color: transparent;
     -fx-border-color: transparent;
-    -fx-text-fill: #202633;
-    -fx-prompt-text-fill: #6b7485;
-}
-
-.address-bar {
-    -fx-padding: 0 16px;
-    -fx-min-height: 40px;
-    -fx-font-size: 13px;
+    -fx-text-fill: #151a23;
+    -fx-prompt-text-fill: #5b6577;
+    -fx-font-size: 12px;
 }
 
 .home-view {
-    -fx-background-color: white;
+    -fx-background-color: #ffffff;
 }
 
 .home-content {
-    -fx-padding: 0 0 48px 0;
+    -fx-max-width: 680px;
+}
+
+.brand-lockup {
+    -fx-pref-height: 48px;
 }
 
 .brand-title {
-    -fx-font-size: 38px;
+    -fx-font-size: 32px;
     -fx-font-weight: bold;
-    -fx-text-fill: #171b24;
+    -fx-text-fill: #151a23;
 }
 
 .tagline {
-    -fx-padding: 0 0 14px 0;
-    -fx-text-fill: #606b80;
-    -fx-font-size: 14px;
+    -fx-padding: 16px 0 22px 0;
+    -fx-text-fill: #4a5468;
+    -fx-font-size: 12px;
 }
 
 .home-search {
-    -fx-padding: 8px;
-    -fx-background-color: #eff1f5;
-    -fx-background-radius: 30px;
+    -fx-pref-height: 56px;
 }
 
-.home-search-field {
+.home-search-input {
+    -fx-pref-height: 56px;
+    -fx-padding: 0 16px;
+    -fx-background-color: #eef0f4;
+    -fx-background-radius: 28px;
+}
+
+.home-search-field,
+.home-search-field:focused {
+    -fx-padding: 0;
     -fx-background-color: transparent;
-    -fx-padding: 0 12px;
-    -fx-min-height: 40px;
-    -fx-font-size: 14px;
+    -fx-border-color: transparent;
+    -fx-text-fill: #151a23;
+    -fx-prompt-text-fill: #5b6577;
+    -fx-font-size: 12px;
 }
 
 .primary-button {
-    -fx-background-color: #2869ed;
+    -fx-pref-width: 66px;
+    -fx-min-width: 66px;
+    -fx-max-width: 66px;
+    -fx-pref-height: 40px;
+    -fx-padding: 0;
+    -fx-background-color: #2563eb;
     -fx-background-radius: 22px;
-    -fx-text-fill: white;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-padding: 10px 18px;
     -fx-cursor: hand;
 }
 
 .primary-button:hover {
-    -fx-background-color: #1e5bd5;
+    -fx-background-color: #1d4ed8;
 }
 
 .home-cards {
-    -fx-padding: 12px 0 0 0;
+    -fx-spacing: 16px;
+    -fx-padding: 22px 0 0 0;
 }
 
 .info-card {
+    -fx-pref-width: 332px;
+    -fx-min-width: 0;
+    -fx-pref-height: 215px;
+    -fx-max-height: 215px;
     -fx-spacing: 10px;
-    -fx-padding: 18px 20px;
-    -fx-min-height: 168px;
-    -fx-background-color: white;
-    -fx-background-radius: 14px;
-    -fx-border-color: #dce1ea;
-    -fx-border-radius: 14px;
+    -fx-padding: 16px;
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 12px;
+    -fx-border-color: #dde1e8;
+    -fx-border-radius: 12px;
     -fx-border-width: 1px;
 }
 
 .card-heading {
-    -fx-text-fill: #647087;
-    -fx-font-size: 12px;
+    -fx-text-fill: #4a5468;
+    -fx-font-size: 11px;
     -fx-font-weight: bold;
 }
 
 .recent-searches {
-    -fx-spacing: 4px;
+    -fx-spacing: 8px;
 }
 
 .recent-search-item {
-    -fx-padding: 7px 0;
-    -fx-text-fill: #252b37;
-    -fx-font-size: 13px;
+    -fx-pref-height: 32px;
+    -fx-alignment: center-left;
+    -fx-text-fill: #151a23;
+    -fx-font-size: 12px;
 }
 
 .connection-status {
-    -fx-text-fill: #596579;
-    -fx-font-size: 13px;
+    -fx-pref-height: 28px;
+    -fx-alignment: center-left;
+    -fx-padding: 0 0 0 12px;
+    -fx-background-color: transparent;
+    -fx-text-fill: #151a23;
+    -fx-font-size: 12px;
 }
 
-.card-note,
-.status-muted {
-    -fx-text-fill: #7b8494;
-    -fx-font-size: 11px;
+.card-note {
+    -fx-text-fill: #5b6577;
+    -fx-font-size: 10px;
 }
 
 .status-bar {
-    -fx-min-height: 34px;
-    -fx-background-color: #fafbfc;
-    -fx-border-color: #e6e9ef transparent transparent transparent;
+    -fx-spacing: 12px;
+    -fx-padding: 0 16px;
+    -fx-min-height: 33px;
+    -fx-pref-height: 33px;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #dde1e8 transparent transparent transparent;
+}
+
+.status-bar > .label {
+    -fx-text-fill: #4a5468;
+    -fx-font-size: 11px;
+}
+
+.status-divider {
+    -fx-text-fill: #dde1e8;
+}
+
+.status-dot {
+    -fx-pref-width: 8px;
+    -fx-min-width: 8px;
+    -fx-max-width: 8px;
+    -fx-pref-height: 8px;
+    -fx-min-height: 8px;
+    -fx-max-height: 8px;
+    -fx-background-color: #0f7b5f;
+    -fx-background-radius: 4px;
+}
+
+.svg-icon {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
 }
