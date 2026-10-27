@@ -47,7 +47,9 @@ Search, AI, Storage, Security 모듈을 통해 동작하도록 연결한다.
 4. API 키와 토큰은 환경 변수 또는 OS 보안 저장소에서 읽도록 정하고,
    저장소와 로그에 비밀값이 남지 않게 한다.
 5. 포맷·정적 분석·테스트 실행 명령과 브랜치/커밋 규칙을 README에 기록한다.
-6. MSI 패키징용 Windows 빌드 환경에 JDK의 `jpackage`와 WiX Toolset 3.x를 준비한다.
+6. MSI 패키징용 Windows 빌드 환경에 JDK의 `jpackage`와 WiX Toolset 3.14.1을 준비한다.
+   [`scripts/prepare-wix.ps1`](scripts/prepare-wix.ps1)은 공식 바이너리와 SHA-256을 확인해
+   사용자 로컬 도구 경로에 설치한다.
 
 **완료 기준:** 새 개발 환경에서 빌드와 기본 테스트를 재현할 수 있고,
 선택한 기술 및 미확정 사항이 문서화되어 있다.
@@ -242,6 +244,10 @@ AI 제공자 오류가 일반 탐색이나 검색을 막지 않는다.
 
 ## 6. 범위 관리 및 문서 유지
 
+- 각 `### STEP n` 큰 작업마다 전용 GitHub 이슈, 브랜치, PR을 하나씩 만든다.
+- 각 STEP 안의 번호가 붙은 작업 단위마다 전용 커밋을 하나씩 만든다. 커밋 메시지는 `type: lowercase summary` 형식으로 쓴다. 예: `feat: add browser navigation`.
+- 선행 STEP PR이 아직 합쳐지지 않아 의존성이 필요한 경우 브랜치와 PR을 선행 작업에 쌓고, 선행 PR이 합쳐진 뒤 대상 브랜치를 정리한다.
+- 모든 STEP PR은 GitHub의 **Create a merge commit** 방식으로 합친다. Squash 및 rebase 방식은 사용하지 않는다.
 - 각 단계의 기능은 구현 전에 요구사항 ID, 담당 모듈, 완료 기준과 테스트를 연결한다.
 - 디자인 변경은 기존 기능의 상태·오류·빈 화면에 미치는 영향을 함께 기록한다.
 - 장기 로드맵 기능은 MVP 완료 기준에 섞지 않고 별도 이슈로 관리한다.

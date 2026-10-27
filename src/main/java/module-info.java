@@ -1,5 +1,5 @@
 module kr.soyuo.serox {
-    requires javafx.controls;
+  requires javafx.controls;
 
-    exports kr.soyuo.serox.app;
+  exports kr.soyuo.serox.app;
 }

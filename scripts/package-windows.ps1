@@ -33,9 +33,15 @@ function Resolve-Jpackage {
 }
 
 if ($Type -in @('msi', 'exe')) {
+    $localWixDirectory = Join-Path $env:LOCALAPPDATA 'Serox\tools\wix-3.14.1'
+    if ((Test-Path (Join-Path $localWixDirectory 'candle.exe')) -and
+        (Test-Path (Join-Path $localWixDirectory 'light.exe'))) {
+        $env:Path = "$localWixDirectory;$env:Path"
+    }
+
     foreach ($tool in @('candle.exe', 'light.exe')) {
         if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
-            throw "${tool} was not found. Install WiX Toolset 3.x and add its bin directory to PATH to build an installer."
+            throw "${tool} was not found. Run scripts/prepare-wix.ps1 or install WiX Toolset 3.x and add its bin directory to PATH."
         }
     }
 }
