@@ -35,7 +35,13 @@ public final class CssStyleEngine {
           "border-color",
           "width",
           "height",
-          "display");
+          "display",
+          "flex-direction",
+          "justify-content",
+          "align-items",
+          "gap",
+          "flex-grow",
+          "flex");
   private static final Set<String> INHERITED =
       Set.of("color", "font-size", "font-weight", "font-family");
   private final CssParser parser;
@@ -139,7 +145,16 @@ public final class CssStyleEngine {
       return false;
     }
     return switch (property) {
-      case "display" -> Set.of("block", "inline", "none").contains(normalized);
+      case "display" -> Set.of("block", "inline", "none", "flex").contains(normalized);
+      case "flex-direction" -> Set.of("row", "column").contains(normalized);
+      case "justify-content" ->
+          Set.of("flex-start", "center", "flex-end", "space-between", "space-around")
+              .contains(normalized);
+      case "align-items" ->
+          Set.of("stretch", "flex-start", "center", "flex-end").contains(normalized);
+      case "gap" -> isLength(normalized);
+      case "flex-grow" -> isNonNegativeNumber(normalized);
+      case "flex" -> isNonNegativeNumber(normalized.split("\\s+")[0]);
       case "color", "background", "background-color", "border-color" ->
           CssColor.parse(normalized).isPresent();
       case "font-size" -> isLength(normalized);
@@ -161,6 +176,14 @@ public final class CssStyleEngine {
       case "border" -> isBorderValue(normalized);
       default -> true;
     };
+  }
+
+  private boolean isNonNegativeNumber(String value) {
+    try {
+      return Double.parseDouble(value) >= 0;
+    } catch (NumberFormatException exception) {
+      return false;
+    }
   }
 
   private boolean isLength(String value) {
@@ -196,6 +219,11 @@ public final class CssStyleEngine {
     defaults.put("border-color", "black");
     defaults.put("width", "auto");
     defaults.put("height", "auto");
+    defaults.put("flex-direction", "row");
+    defaults.put("justify-content", "flex-start");
+    defaults.put("align-items", "stretch");
+    defaults.put("gap", "0px");
+    defaults.put("flex-grow", "0");
     if (element.tagName().equals("body")) {
       defaults.put("margin", "8px");
     }

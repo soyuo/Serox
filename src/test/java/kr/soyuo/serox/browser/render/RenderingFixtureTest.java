@@ -24,7 +24,7 @@ class RenderingFixtureTest {
     var layout = new LayoutEngine().layout(document, styles, new LayoutConstraints(240, 160, 0, 0));
     DisplayList displayList = new DisplayListBuilder().build(layout);
 
-    assertTrue(styles.unsupportedDeclarations().contains("display: flex"));
+    assertTrue(styles.unsupportedDeclarations().contains("display: grid"));
     assertEquals(
         "block",
         styles.styleOf(document.getElementById("unsupported").orElseThrow()).value("display"));
@@ -171,7 +171,7 @@ class RenderingFixtureTest {
 
   @Test
   void supportedContentMatchesItsGoldenSnapshots() throws IOException {
-    for (String name : java.util.List.of("article", "forms")) {
+    for (String name : java.util.List.of("article", "forms", "flex")) {
       String actual = render(readFixture(name + ".html"), 320, 200);
       java.nio.file.Path golden =
           java.nio.file.Path.of("src/test/resources/fixtures/renderer/" + name + ".expected");
