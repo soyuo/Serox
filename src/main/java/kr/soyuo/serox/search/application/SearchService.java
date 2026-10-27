@@ -27,6 +27,7 @@ public final class SearchService implements AutoCloseable {
       "Search is not configured. Set SEROX_BRAVE_SEARCH_API_KEY and restart Serox.";
 
   private volatile Optional<SearchProvider> provider;
+  private volatile Optional<SearchProvider> fallback = Optional.empty();
   private volatile java.util.function.Supplier<String> safeSearch = () -> "moderate";
   private final BrowserEventBus eventBus;
   private final AtomicLong requestIds = new AtomicLong();
@@ -45,6 +46,16 @@ public final class SearchService implements AutoCloseable {
 
   public boolean configured() {
     return provider.isPresent();
+  }
+
+  /** Used for searches only while no keyed provider is set, so searching needs no account. */
+  public void setFallback(SearchProvider value) {
+    fallback = Optional.of(Objects.requireNonNull(value, "value"));
+  }
+
+  /** True when searches run through the no-account fallback because no key is set. */
+  public boolean usesFallback() {
+    return provider.isEmpty() && fallback.isPresent();
   }
 
   public void setProvider(SearchProvider value) {
@@ -67,7 +78,8 @@ public final class SearchService implements AutoCloseable {
     }
     eventBus.publish(new SearchStarted(Instant.now(), tabId, requestId, normalizedQuery));
 
-    if (provider.isEmpty()) {
+    Optional<SearchProvider> chosen = provider.or(() -> fallback);
+    if (chosen.isEmpty()) {
       SearchProviderException failure = new SearchProviderException(UNCONFIGURED_MESSAGE);
       publishFailure(tabId, requestId, normalizedQuery, failure);
       return CompletableFuture.failedFuture(failure);
@@ -84,7 +96,7 @@ public final class SearchService implements AutoCloseable {
     CompletableFuture<SearchResponse> future;
     try {
       future =
-          Objects.requireNonNull(provider.orElseThrow().search(request), "search result stage")
+          Objects.requireNonNull(chosen.orElseThrow().search(request), "search result stage")
               .toCompletableFuture();
     } catch (RuntimeException exception) {
       publishFailure(tabId, requestId, normalizedQuery, exception);

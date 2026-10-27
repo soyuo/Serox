@@ -39,7 +39,8 @@ class SeroxRuntimeStatusTest {
     assertEquals(ServiceStatus.DISCONNECTED, configured.get(ServiceId.MCP));
 
     var bare = announce(Map.of("SEROX_DATA_DIR", tempDir.resolve("b").toString()));
-    assertEquals(ServiceStatus.DISCONNECTED, bare.get(ServiceId.SEARCH));
+    // Search has a no-account fallback, so it is usable without a key.
+    assertEquals(ServiceStatus.CONNECTED, bare.get(ServiceId.SEARCH));
     assertEquals(ServiceStatus.DISCONNECTED, bare.get(ServiceId.AI));
   }
 }

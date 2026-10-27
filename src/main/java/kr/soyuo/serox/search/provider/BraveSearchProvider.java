@@ -12,7 +12,6 @@ import java.net.http.HttpRequest;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.LinkedHashMap;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.CompletionStage;
 import kr.soyuo.serox.browser.network.HttpRequestDispatcher;
@@ -137,10 +136,10 @@ public final class BraveSearchProvider implements SearchProvider {
     }
     try {
       URI uri = URI.create(url);
-      if (!isWebUri(uri)) {
+      if (!ResultUrls.isWebUri(uri)) {
         return;
       }
-      String canonical = canonicalUrl(uri);
+      String canonical = ResultUrls.canonical(uri);
       unique.putIfAbsent(
           canonical,
           new SearchResult(
@@ -157,39 +156,6 @@ public final class BraveSearchProvider implements SearchProvider {
   private String stringValue(JsonObject object, String name) {
     JsonElement value = object.get(name);
     return value == null || value.isJsonNull() ? "" : value.getAsString();
-  }
-
-  private boolean isWebUri(URI uri) {
-    String scheme = uri.getScheme();
-    return uri.isAbsolute()
-        && ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme))
-        && uri.getHost() != null
-        && !uri.getHost().isBlank()
-        && uri.getUserInfo() == null
-        && !UntrustedText.hasHiddenCharacters(uri.toString());
-  }
-
-  private String canonicalUrl(URI uri) {
-    String scheme = uri.getScheme().toLowerCase(Locale.ROOT);
-    String host = uri.getHost().toLowerCase(Locale.ROOT);
-    int port = uri.getPort();
-    boolean defaultPort =
-        port == -1
-            || (scheme.equals("http") && port == 80)
-            || (scheme.equals("https") && port == 443);
-    String path = uri.normalize().getRawPath();
-    if (path == null || path.isBlank()) {
-      path = "/";
-    }
-    if (path.length() > 1 && path.endsWith("/")) {
-      path = path.substring(0, path.length() - 1);
-    }
-    return scheme
-        + "://"
-        + host
-        + (defaultPort ? "" : ":" + port)
-        + path
-        + (uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery());
   }
 
   private String encode(String value) {

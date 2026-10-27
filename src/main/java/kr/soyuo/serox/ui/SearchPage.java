@@ -22,10 +22,12 @@ final class SearchPage extends ScrollPane {
     provider.setContentDisplay(javafx.scene.control.ContentDisplay.RIGHT);
     provider.setPrefWidth(220);
     provider.setDisable(true);
-    card.getChildren().add(SettingsControls.row("검색 API", "현재는 Brave Search API를 지원해요.", provider));
+    card.getChildren().add(SettingsControls.row("검색 API", "키가 없으면 DuckDuckGo, 키가 있으면 Brave Search API를 써요.", provider));
     Label message =
         SettingsControls.label(
-            search.configured() ? "API 키 설정됨 · 다음 검색에서 연결을 확인해요." : "API 키를 연결하세요.",
+            search.configured()
+                ? "API 키 설정됨 · 다음 검색에서 연결을 확인해요."
+                : "키 없이 DuckDuckGo로 검색하고 있어요. Brave 키를 넣으면 Brave로 바뀌어요.",
             "search-state-message");
     PasswordField key = new PasswordField();
     key.setPrefWidth(260);

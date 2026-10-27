@@ -32,6 +32,7 @@ import kr.soyuo.serox.search.application.SearchService;
 import kr.soyuo.serox.search.fetch.FetchLimits;
 import kr.soyuo.serox.search.fetch.PageFetcher;
 import kr.soyuo.serox.search.provider.BraveSearchProvider;
+import kr.soyuo.serox.search.provider.DuckDuckGoSearchProvider;
 import kr.soyuo.serox.storage.sqlite.SqliteStorage;
 
 /** Composition root for application-scoped adapters and configuration. */
@@ -71,6 +72,7 @@ public final class AppBootstrap {
             .or(() -> configuration.braveSearchApiKey())
             .map(key -> (SearchProvider) new BraveSearchProvider(key.revealForRequest()));
     var searchService = new SearchService(searchProvider, eventBus);
+    searchService.setFallback(new DuckDuckGoSearchProvider());
     Optional<SqliteStorage> storage = openStorage(dataDirectory);
     var settingsService = new SettingsService(storage.map(sqlite -> sqlite.settings()), eventBus);
     settingsService.load();

@@ -69,7 +69,7 @@ class McpLauncherTest {
               + "{\"name\":\"search_and_summarize\",\"arguments\":{\"query\":\"hello\"}}}");
       JsonObject call = JsonParser.parseString(responses.readLine()).getAsJsonObject();
       assertEquals(
-          "search_unconfigured",
+          "ai_unconfigured",
           call.getAsJsonObject("result")
               .getAsJsonObject("structuredContent")
               .get("errorCode")
