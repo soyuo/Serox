@@ -17,6 +17,17 @@
     serox-ai-ring: #22d3ee;
     serox-error-surface: #fde8e8;
     serox-window-close-hover: #e81123;
+    /* Modena derives every stock control (fields, combo boxes, scroll bars) from these. */
+    -fx-base: serox-surface-muted;
+    -fx-background: serox-surface;
+    -fx-control-inner-background: serox-surface;
+    -fx-text-base-color: serox-text-primary;
+    -fx-text-inner-color: serox-text-primary;
+    -fx-prompt-text-fill: serox-text-muted;
+    -fx-accent: serox-primary;
+    -fx-focus-color: serox-primary;
+    -fx-faint-focus-color: transparent;
+    -fx-text-box-border: serox-border;
     -fx-background-color: serox-surface;
     -fx-text-fill: serox-text-primary;
 }
@@ -551,6 +562,9 @@
     serox-ai-surface: #1b2a4a;
     serox-ai-accent: #93b4f8;
     serox-error-surface: #3a1d1d;
+    -fx-base: #232a36;
+    -fx-background: #14181f;
+    -fx-control-inner-background: #1c222c;
 }
 
 /* Compact density tightens list rows and toolbars. */
@@ -1066,26 +1080,26 @@
 /* Shared rows and connection cards from the Figma settings screens. */
 .connected-settings-card {
     -fx-background-color: serox-surface;
-    -fx-border-color: #DDE1E8;
+    -fx-border-color: serox-border;
     -fx-border-radius: 14;
     -fx-background-radius: 14;
 }
 .connected-settings-row {
     -fx-padding: 20 24;
-    -fx-border-color: transparent transparent #DDE1E8 transparent;
+    -fx-border-color: transparent transparent serox-border transparent;
     -fx-min-height: 84;
 }
-.settings-row-title { -fx-font-size: 15px; -fx-font-weight: bold; }
+.settings-row-title { -fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: serox-text-primary; }
 .provider-card {
     -fx-background-color: serox-surface;
     -fx-background-radius: 12;
     -fx-border-radius: 12;
-    -fx-border-color: #DDE1E8;
+    -fx-border-color: serox-border;
     -fx-padding: 16;
     -fx-min-height: 73;
     -fx-font-size: 16px;
 }
-.provider-card:selected { -fx-background-color: #E6EFFE; -fx-border-color: #3E81F4; }
+.provider-card:selected { -fx-background-color: serox-ai-surface; -fx-border-color: serox-primary; }
 .connection-content { -fx-padding: 24; -fx-spacing: 20; }
 .connection-content .text-field, .connection-content .combo-box { -fx-pref-height: 44; }
 .connection-primary { -fx-background-color: #3E81F4; -fx-text-fill: white; -fx-pref-height: 44; -fx-background-radius: 8; }
@@ -1097,3 +1111,7 @@
 .settings-switch { -fx-background-color: #C9CFDA; -fx-background-radius: 16; -fx-padding: 3; -fx-min-width: 52; -fx-max-width: 52; -fx-min-height: 32; -fx-max-height: 32; }
 .settings-switch:selected { -fx-background-color: #3E81F4; }
 .settings-switch-thumb { -fx-background-color: white; -fx-background-radius: 13; -fx-min-width: 26; -fx-max-width: 26; -fx-min-height: 26; -fx-max-height: 26; }
+
+.text-input {
+    -fx-prompt-text-fill: serox-text-muted;
+}
