@@ -19,6 +19,7 @@ became readable. The canvas holds about 100 frames; only the screens below were 
 - Citation markers `[S1]` are drawn as small numbered chips (`#2563eb`, 6 px radius) inside the text.
 - Sources are cards with a numbered badge, title and URL, and the "AI summaries may contain errors" note.
 - "Claude 요약" chip in the address bar (opens the AI panel).
+- AI not connected, failed or cancelled: a banner above the result list with a retry button instead of a side panel (checked in a rendered image against frames 31:2809 and 31:2639).
 - Result screen with a finished summary: wide summary, fixed source pane with the dashed placeholder.
 - Settings: the sidebar with eight sections and a live preview card; segmented options (selected `#e6effe` with a `#3e81f4` border) instead of radio buttons,
   44 px accent swatches with a check mark, and the design's labels (밝게 / 어둡게 / 시스템,
@@ -43,5 +44,5 @@ became readable. The canvas holds about 100 frames; only the screens below were 
   older saved value outside these steps shows no selected option until the user picks one.
 - **Default accent.** The design's first swatch is `#3e81f4`, while the buttons use `#2563eb`. Serox
   keeps `#2563EB` as the default and uses it as the first swatch.
-- **Not compared at all:** search states 1-16, error and loading frames, site information and
+- **Not compared at all:** search states other than the two above, error and loading frames, site information and
   permission frames, the other settings sections, and the keyboard shortcuts page.

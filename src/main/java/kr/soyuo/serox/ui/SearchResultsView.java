@@ -31,6 +31,8 @@ final class SearchResultsView extends BorderPane {
   private SearchResult selected;
   private final ScrollPane listScroll;
   private boolean summaryFocus;
+  private boolean hasResults;
+  private VBox banner;
 
   private SearchResultsView(String query, Consumer<SearchResult> onOpenResult) {
     this.query = query;
@@ -177,6 +179,7 @@ final class SearchResultsView extends BorderPane {
   }
 
   private void installPanelControls() {
+    hasResults = true;
     panelToggle.getStyleClass().add("secondary-button");
     panelToggle.setOnAction(
         event -> {
@@ -207,7 +210,7 @@ final class SearchResultsView extends BorderPane {
     setLeft(null);
     setRight(null);
     aiPanel.getStyleClass().removeAll("ai-panel-left");
-    if (panelOpen) {
+    if (panelOpen && banner == null) {
       if (panelSide == AiPanelPosition.LEFT) {
         aiPanel.getStyleClass().add("ai-panel-left");
         setLeft(aiPanel);
@@ -223,6 +226,41 @@ final class SearchResultsView extends BorderPane {
     refreshLayout();
   }
 
+  /** The card above the result list that explains why there is no summary, as in the design. */
+  private VBox banner(AiAnswerChanged event) {
+    boolean failed = event.phase() == AiAnswerChanged.Phase.FAILED;
+    String title =
+        switch (event.phase()) {
+          case FAILED -> "요약하지 못했어요";
+          case CANCELLED -> "요약을 취소했어요";
+          default -> "AI를 연결하면 요약해 드려요";
+        };
+    String detail =
+        event.message().isBlank() ? "검색 결과 목록은 그대로 볼 수 있어요." : event.message();
+    Label heading = new Label(title);
+    heading.getStyleClass().add("ai-banner-title");
+    VBox card = new VBox(UiTokens.SPACE_SM, heading, message(detail));
+    if (failed || event.phase() == AiAnswerChanged.Phase.CANCELLED) {
+      card.getChildren().add(action("다시 시도", () -> aiPanel.retry()));
+    }
+    card.getStyleClass().add("ai-banner");
+    if (failed) {
+      card.getStyleClass().add("ai-banner-error");
+    }
+    return card;
+  }
+
+  private void showBanner(VBox next) {
+    if (banner != null) {
+      results.getChildren().remove(banner);
+    }
+    banner = next;
+    if (banner != null) {
+      results.getChildren().add(Math.min(1, results.getChildren().size()), banner);
+    }
+    applyPanel();
+  }
+
   /** Opens the AI panel if it was closed; used by the address bar's summary chip. */
   void openAiPanel() {
     if (!panelOpen) {
@@ -234,6 +272,12 @@ final class SearchResultsView extends BorderPane {
 
   /** Forwards the latest AI answer state to the panel; search results are unaffected. */
   void showAi(AiAnswerChanged event) {
+    boolean unavailable =
+        hasResults
+            && (event.phase() == AiAnswerChanged.Phase.UNAVAILABLE
+                || event.phase() == AiAnswerChanged.Phase.FAILED
+                || event.phase() == AiAnswerChanged.Phase.CANCELLED);
+    showBanner(unavailable ? banner(event) : null);
     aiPanel.show(event);
     boolean focus = event.phase() == AiAnswerChanged.Phase.COMPLETED;
     if (focus != summaryFocus) {
