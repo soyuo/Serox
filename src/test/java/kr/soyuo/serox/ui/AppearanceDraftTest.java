@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import javafx.application.Platform;
 import javafx.scene.control.Button;
+import javafx.scene.control.ToggleButton;
 import kr.soyuo.serox.core.model.*;
 import org.junit.jupiter.api.Test;
 
@@ -54,6 +55,37 @@ class AppearanceDraftTest {
             assertNull(applied.get());
             button(page, "적용").fire();
             assertEquals(saved.summary(), applied.get().summary());
+            checked.complete(null);
+          } catch (Throwable failure) {
+            checked.completeExceptionally(failure);
+          }
+        });
+    checked.get(15, TimeUnit.SECONDS);
+  }
+
+  @Test
+  void choosingThemeSavesItRightAway() throws Exception {
+    CompletableFuture<Void> started = new CompletableFuture<>();
+    try {
+      Platform.startup(() -> started.complete(null));
+    } catch (IllegalStateException alreadyStarted) {
+      started.complete(null);
+    }
+    started.get(10, TimeUnit.SECONDS);
+    CompletableFuture<Void> checked = new CompletableFuture<>();
+    Platform.runLater(
+        () -> {
+          try {
+            AtomicReference<BrowserSettings> applied = new AtomicReference<>();
+            AppearancePage page =
+                new AppearancePage(BrowserSettings.defaults(), draft -> {}, applied::set, () -> {});
+            page.getContent().lookupAll(".segment-option").stream()
+                .filter(node -> node instanceof ToggleButton option && "어둡게".equals(option.getText()))
+                .map(ToggleButton.class::cast)
+                .findFirst()
+                .orElseThrow()
+                .fire();
+            assertEquals(ThemeMode.DARK, applied.get().theme());
             checked.complete(null);
           } catch (Throwable failure) {
             checked.completeExceptionally(failure);
