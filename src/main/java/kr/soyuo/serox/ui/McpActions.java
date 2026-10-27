@@ -1,11 +1,21 @@
 package kr.soyuo.serox.ui;
 
+import java.time.Instant;
+import java.util.List;
 import kr.soyuo.serox.core.model.McpSettings;
 
 /** What the MCP settings page can do with the HTTP server and its saved settings. */
 public interface McpActions {
   /** The outcome of starting the server; {@code message} says why it did not start. */
   record Result(boolean running, boolean portInUse, String message) {}
+
+  /** One tool call an agent made: the query text, who asked, when, and whether it worked. */
+  record Call(String summary, String client, Instant at, boolean success) {}
+
+  /** The latest calls, newest first; empty when none were made since Serox started. */
+  default List<Call> recentCalls() {
+    return List.of();
+  }
 
   /** The saved settings. */
   McpSettings settings();

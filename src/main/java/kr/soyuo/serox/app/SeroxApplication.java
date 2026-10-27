@@ -23,6 +23,9 @@ public final class SeroxApplication extends Application {
   private BrowserShellView browserShell;
   private StdioMcpServer mcpServer;
   private McpHttpController mcpHttp;
+  private final kr.soyuo.serox.mcp.tool.McpCallLog mcpCalls =
+      new kr.soyuo.serox.mcp.tool.McpCallLog();
+  private volatile McpSettings mcpNow = McpSettings.defaults();
 
   @Override
   public void start(Stage stage) {
@@ -59,8 +62,12 @@ public final class SeroxApplication extends Application {
     }
     mcpHttp =
         new McpHttpController(
-            McpLauncher.lazyEndpointFactory(System.getenv()), System.getenv(), runtime.eventBus());
+            McpLauncher.lazyEndpointFactory(
+                System.getenv(), mcpCalls, name -> mcpNow.searchToolEnabled()),
+            System.getenv(),
+            runtime.eventBus());
     McpSettings mcpSettings = loadMcpSettings();
+    mcpNow = mcpSettings;
     if (mcpSettings.autoStart()) {
       var started = mcpHttp.start(mcpSettings);
       if (!started.running()) {
@@ -144,6 +151,7 @@ public final class SeroxApplication extends Application {
       @Override
       public synchronized void save(McpSettings settings) {
         current = settings;
+        mcpNow = settings;
         runtime
             .storage()
             .ifPresent(
@@ -161,6 +169,13 @@ public final class SeroxApplication extends Application {
       @Override
       public boolean running() {
         return mcpHttp.isRunning();
+      }
+
+      @Override
+      public java.util.List<Call> recentCalls() {
+        return mcpCalls.recent().stream()
+            .map(entry -> new Call(entry.summary(), entry.client(), entry.at(), entry.success()))
+            .toList();
       }
 
       @Override

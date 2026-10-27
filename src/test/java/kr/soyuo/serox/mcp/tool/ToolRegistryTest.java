@@ -140,4 +140,48 @@ class ToolRegistryTest {
       assertEquals(-32602, response.getAsJsonObject("error").get("code").getAsInt(), params);
     }
   }
+
+  @Test
+  void aSwitchedOffToolIsHiddenAndCannotBeCalled() {
+    var enabled = new java.util.concurrent.atomic.AtomicBoolean(false);
+    new ToolRegistry(approvingPolicy())
+        .register(new SearchAndSummarizeTool(summaryService()))
+        .setEnabled(name -> enabled.get())
+        .installInto(endpoint);
+    endpoint.receive("{\"jsonrpc\":\"2.0\",\"id\":0,\"method\":\"initialize\",\"params\":{}}", line -> {});
+    endpoint.receive("{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}", line -> {});
+    String call =
+        "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":"
+            + "{\"name\":\"search_and_summarize\",\"arguments\":{\"query\":\"x\"}}}";
+
+    var listed = ask("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}");
+    assertEquals(0, listed.getAsJsonObject("result").getAsJsonArray("tools").size());
+    assertTrue(ask(call).has("error"));
+
+    enabled.set(true);
+    assertFalse(ask(call).has("error"));
+  }
+
+  @Test
+  void finishedCallsAreRecordedWithTheCleanedQuery() {
+    var log = new McpCallLog();
+    new ToolRegistry(approvingPolicy())
+        .register(new SearchAndSummarizeTool(summaryService()))
+        .setCallLog(log)
+        .installInto(endpoint);
+    endpoint.receive(
+        "{\"jsonrpc\":\"2.0\",\"id\":0,\"method\":\"initialize\",\"params\":"
+            + "{\"clientInfo\":{\"name\":\"agent-a\"}}}",
+        line -> {});
+    endpoint.receive("{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}", line -> {});
+
+    ask(
+        "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":"
+            + "{\"name\":\"search_and_summarize\",\"arguments\":{\"query\":\"<b>java</b> thread\"}}}");
+
+    var entry = log.recent().getFirst();
+    assertEquals("java thread", entry.summary());
+    assertEquals("agent-a", entry.client());
+    assertTrue(entry.success());
+  }
 }

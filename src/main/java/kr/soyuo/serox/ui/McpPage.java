@@ -1,7 +1,12 @@
 package kr.soyuo.serox.ui;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.function.Consumer;
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
+import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -32,6 +37,7 @@ final class McpPage extends ScrollPane {
   private final McpActions actions;
   private final Consumer<String> copier;
   private final Label chip = new Label();
+  private final VBox calls = new VBox();
   private final ToggleButton serverSwitch = new ToggleButton();
   private final TextField portField = new TextField();
   private final Label portError = new Label();
@@ -153,10 +159,89 @@ final class McpPage extends ScrollPane {
     detail.getStyleClass().add("search-state-message");
     Label input = new Label("query: string");
     input.getStyleClass().add("tool-name");
-    VBox tool = new VBox(UiTokens.SPACE_XS, name, detail, input);
+    VBox text = new VBox(UiTokens.SPACE_XS, name, detail, input);
+    HBox.setHgrow(text, Priority.ALWAYS);
+    ToggleButton toolSwitch = new ToggleButton();
+    toolSwitch.getStyleClass().add("switch");
+    toolSwitch.setAccessibleText("search_and_summarize 도구 켜기");
+    toolSwitch.setSelected(actions.settings().searchToolEnabled());
+    toolSwitch.setText(toolSwitch.isSelected() ? "켜짐" : "꺼짐");
+    toolSwitch.setOnAction(
+        event -> {
+          toolSwitch.setText(toolSwitch.isSelected() ? "켜짐" : "꺼짐");
+          actions.save(actions.settings().withSearchToolEnabled(toolSwitch.isSelected()));
+        });
+    HBox tool = new HBox(UiTokens.SPACE_MD, text, toolSwitch);
+    tool.setAlignment(Pos.CENTER_LEFT);
     tool.getStyleClass().add("privacy-row");
     tool.setPadding(new Insets(12, 16, 12, 16));
-    return new VBox(UiTokens.SPACE_SM, heading, tool);
+
+    Label callsHeading = new Label("최근 호출");
+    callsHeading.getStyleClass().add("search-section-heading");
+    callsHeading.setPadding(Insets.EMPTY);
+    calls.getStyleClass().add("settings-section");
+    refreshCalls();
+    // Calls arrive while the page is open, so the list follows them until the page leaves.
+    Timeline refresher =
+        new Timeline(new KeyFrame(Duration.seconds(3), event -> refreshCalls()));
+    refresher.setCycleCount(Animation.INDEFINITE);
+    sceneProperty()
+        .addListener(
+            (observable, before, after) -> {
+              if (after == null) {
+                refresher.stop();
+              } else {
+                refreshCalls();
+                refresher.play();
+              }
+            });
+    return new VBox(UiTokens.SPACE_SM, heading, tool, callsHeading, calls);
+  }
+
+  /** Rebuilds the recent-calls list from the log. */
+  void refreshCalls() {
+    List<McpActions.Call> recent = actions.recentCalls();
+    calls.getChildren().clear();
+    if (recent.isEmpty()) {
+      Label none = new Label("아직 에이전트가 부른 적이 없어요.");
+      none.getStyleClass().add("search-state-message");
+      none.setPadding(new Insets(12, 16, 12, 16));
+      calls.getChildren().add(none);
+      return;
+    }
+    Instant now = Instant.now();
+    for (McpActions.Call call : recent.subList(0, Math.min(5, recent.size()))) {
+      Label query = new Label(call.summary().isBlank() ? "(검색어 없음)" : call.summary());
+      query.getStyleClass().add("privacy-query");
+      String who = call.client().isBlank() ? "에이전트" : call.client();
+      Label when = new Label(who + ", " + ago(call.at(), now));
+      when.getStyleClass().add("search-state-message");
+      VBox text = new VBox(2, query, when);
+      HBox.setHgrow(text, Priority.ALWAYS);
+      Label result = new Label(call.success() ? "성공" : "실패");
+      result
+          .getStyleClass()
+          .addAll("status-chip", call.success() ? "status-chip-ok" : "status-chip-error");
+      HBox row = new HBox(UiTokens.SPACE_MD, text, result);
+      row.setAlignment(Pos.CENTER_LEFT);
+      row.getStyleClass().add("privacy-row");
+      calls.getChildren().add(row);
+    }
+  }
+
+  /** A short "how long ago" in the app's wording. */
+  static String ago(Instant at, Instant now) {
+    long seconds = Math.max(0, java.time.Duration.between(at, now).getSeconds());
+    if (seconds < 60) {
+      return "방금 전";
+    }
+    if (seconds < 3600) {
+      return seconds / 60 + "분 전";
+    }
+    if (seconds < 86400) {
+      return seconds / 3600 + "시간 전";
+    }
+    return seconds / 86400 + "일 전";
   }
 
   private VBox guide() {
