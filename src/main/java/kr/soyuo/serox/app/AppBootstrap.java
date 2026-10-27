@@ -77,6 +77,7 @@ public final class AppBootstrap {
     var settingsService = new SettingsService(storage.map(sqlite -> sqlite.settings()), eventBus);
     settingsService.load();
     searchService.setSafeSearch(() -> settingsService.current().search().safeSearch());
+    searchService.setEngine(() -> settingsService.current().search().engine());
     Optional<UsageRecorder> usageRecorder =
         storage.map(
             sqlite ->
