@@ -22,7 +22,9 @@ public final class LayoutEngine {
             .body()
             .map(body -> pass.layoutBlock(body, 0, 0, constraints.viewportWidth()))
             .orElse(0.0);
-    return new LayoutResult(constraints, pass.boxes, pass.textRuns, documentHeight);
+    double documentWidth =
+        pass.boxes.stream().mapToDouble(box -> box.x() + box.width()).max().orElse(0);
+    return new LayoutResult(constraints, pass.boxes, pass.textRuns, documentWidth, documentHeight);
   }
 
   private static final class Pass {
@@ -30,10 +32,15 @@ public final class LayoutEngine {
     private final URI documentUri;
     private final List<LayoutBox> boxes = new ArrayList<>();
     private final List<TextRun> textRuns = new ArrayList<>();
+    private int paintOrder;
 
     private Pass(StyleSnapshot styles, URI documentUri) {
       this.styles = styles;
       this.documentUri = documentUri;
+    }
+
+    private int nextPaintOrder() {
+      return paintOrder++;
     }
 
     private double layoutBlock(
@@ -72,6 +79,7 @@ public final class LayoutEngine {
       double contentX = outerX + borderWidth + paddingLeft;
       double contentY = outerY + borderWidth + paddingTop;
       final int boxIndex = boxes.size();
+      final int boxPaintOrder = nextPaintOrder();
       boxes.add(null);
 
       InlineFlow flow = new InlineFlow(contentX, contentWidth, contentY);
@@ -111,7 +119,8 @@ public final class LayoutEngine {
               contentY,
               contentWidth,
               contentHeight,
-              style));
+              style,
+              boxPaintOrder));
       return marginTop + borderBoxHeight + marginBottom;
     }
 
@@ -249,7 +258,8 @@ public final class LayoutEngine {
                     controlY + (controlHeight + fontSize) / 2,
                     label,
                     style,
-                    Optional.ofNullable(link)));
+                    Optional.ofNullable(link),
+                    nextPaintOrder()));
           }
           return;
         }
@@ -267,7 +277,12 @@ public final class LayoutEngine {
           double fontSize = style.pixels("font-size", 16);
           textRuns.add(
               new TextRun(
-                  runX, cursorY + fontSize, run.toString(), style, Optional.ofNullable(link)));
+                  runX,
+                  cursorY + fontSize,
+                  run.toString(),
+                  style,
+                  Optional.ofNullable(link),
+                  nextPaintOrder()));
           run.setLength(0);
         }
       }
@@ -315,7 +330,17 @@ public final class LayoutEngine {
         }
         boxes.add(
             new LayoutBox(
-                element, cursorX, cursorY, width, height, cursorX, cursorY, width, height, style));
+                element,
+                cursorX,
+                cursorY,
+                width,
+                height,
+                cursorX,
+                cursorY,
+                width,
+                height,
+                style,
+                nextPaintOrder()));
         cursorX += width;
         lineHeight = Math.max(lineHeight, height);
       }

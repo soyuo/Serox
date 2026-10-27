@@ -7,6 +7,7 @@ public record DisplayList(
     List<PaintCommand> commands,
     double viewportWidth,
     double viewportHeight,
+    double documentWidth,
     double documentHeight,
     double scrollX,
     double scrollY) {

@@ -14,4 +14,5 @@ public record LayoutBox(
     double contentY,
     double contentWidth,
     double contentHeight,
-    ComputedStyle style) {}
+    ComputedStyle style,
+    int paintOrder) {}

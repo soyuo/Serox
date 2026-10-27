@@ -7,6 +7,7 @@ public record LayoutResult(
     LayoutConstraints constraints,
     List<LayoutBox> boxes,
     List<TextRun> textRuns,
+    double documentWidth,
     double documentHeight) {
   public LayoutResult {
     boxes = List.copyOf(boxes);

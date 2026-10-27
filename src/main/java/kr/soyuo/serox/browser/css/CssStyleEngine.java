@@ -63,6 +63,13 @@ public final class CssStyleEngine {
             .toList()) {
       Map<String, Candidate> cascade = new HashMap<>();
       for (CssRule rule : rules) {
+        if (rule.selector().contains(":")
+            || rule.selector().contains(">")
+            || rule.selector().contains("+")
+            || rule.selector().contains("~")) {
+          unsupported.add("selector: " + rule.selector());
+          continue;
+        }
         if (document.querySelectorAll(rule.selector()).contains(element)) {
           Specificity specificity = Specificity.of(rule.selector());
           rule.declarations()
@@ -118,12 +125,61 @@ public final class CssStyleEngine {
       Specificity specificity,
       int sourceOrder,
       List<String> unsupported) {
-    if (!SUPPORTED_PROPERTIES.contains(property)) {
+    if (!SUPPORTED_PROPERTIES.contains(property) || !isSupportedValue(property, value)) {
       unsupported.add(property + ": " + value);
       return;
     }
     Candidate candidate = new Candidate(value, specificity, sourceOrder);
     cascade.merge(property, candidate, (left, right) -> left.compareTo(right) <= 0 ? right : left);
+  }
+
+  private boolean isSupportedValue(String property, String value) {
+    String normalized = value.trim().toLowerCase(java.util.Locale.ROOT);
+    if (normalized.contains("!important")) {
+      return false;
+    }
+    return switch (property) {
+      case "display" -> Set.of("block", "inline", "none").contains(normalized);
+      case "color", "background", "background-color", "border-color" ->
+          CssColor.parse(normalized).isPresent();
+      case "font-size" -> isLength(normalized);
+      case "font-weight" -> Set.of("normal", "bold", "400", "700").contains(normalized);
+      case "text-decoration" -> Set.of("none", "underline").contains(normalized);
+      case "width", "height" -> normalized.equals("auto") || isLength(normalized);
+      case "margin",
+          "margin-top",
+          "margin-right",
+          "margin-bottom",
+          "margin-left",
+          "padding",
+          "padding-top",
+          "padding-right",
+          "padding-bottom",
+          "padding-left",
+          "border-width" ->
+          java.util.Arrays.stream(normalized.split("\\s+")).allMatch(this::isLength);
+      case "border" -> isBorderValue(normalized);
+      default -> true;
+    };
+  }
+
+  private boolean isLength(String value) {
+    String normalized = value.endsWith("px") ? value.substring(0, value.length() - 2) : value;
+    try {
+      Double.parseDouble(normalized);
+      return true;
+    } catch (NumberFormatException exception) {
+      return false;
+    }
+  }
+
+  private boolean isBorderValue(String value) {
+    String[] parts = value.split("\\s+");
+    return parts.length >= 1
+        && isLength(parts[0])
+        && java.util.Arrays.stream(parts)
+            .skip(1)
+            .allMatch(part -> part.equals("solid") || CssColor.parse(part).isPresent());
   }
 
   private Map<String, String> defaults(Element element) {

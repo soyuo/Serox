@@ -1,6 +1,7 @@
 package kr.soyuo.serox.browser.render;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import kr.soyuo.serox.browser.css.CssColor;
@@ -12,7 +13,7 @@ import kr.soyuo.serox.browser.layout.TextRun;
 public final class DisplayListBuilder {
   /** Creates paint commands for backgrounds, borders, replaced elements, and text. */
   public DisplayList build(LayoutResult layout) {
-    List<PaintCommand> commands = new ArrayList<>();
+    List<OrderedCommand> orderedCommands = new ArrayList<>();
     for (LayoutBox box : layout.boxes()) {
       CssColor background =
           box.style()
@@ -20,48 +21,73 @@ public final class DisplayListBuilder {
               .or(() -> box.style().color("background"))
               .orElse(new CssColor(0, 0, 0, 0));
       if (background.opacity() > 0) {
-        commands.add(
-            new PaintCommand.FillRect(box.x(), box.y(), box.width(), box.height(), background));
+        orderedCommands.add(
+            new OrderedCommand(
+                box.paintOrder(),
+                0,
+                new PaintCommand.FillRect(
+                    box.x(), box.y(), box.width(), box.height(), background)));
       }
     }
     for (LayoutBox box : layout.boxes()) {
       String tagName = box.element().tagName();
       if (tagName.equals("img")) {
-        commands.add(
-            new PaintCommand.ImagePlaceholder(
-                box.x(),
-                box.y(),
-                box.width(),
-                box.height(),
-                box.element().attribute("alt").orElse("Image"),
-                box.style()));
+        orderedCommands.add(
+            new OrderedCommand(
+                box.paintOrder(),
+                1,
+                new PaintCommand.ImagePlaceholder(
+                    box.x(),
+                    box.y(),
+                    box.width(),
+                    box.height(),
+                    box.element().attribute("alt").orElse("Image"),
+                    box.style())));
       } else if (tagName.equals("input") || tagName.equals("button")) {
-        commands.add(
-            new PaintCommand.FormControl(
-                box.x(), box.y(), box.width(), box.height(), tagName, box.style()));
+        orderedCommands.add(
+            new OrderedCommand(
+                box.paintOrder(),
+                1,
+                new PaintCommand.FormControl(
+                    box.x(), box.y(), box.width(), box.height(), tagName, box.style())));
       }
       double borderWidth =
           borderWidth(box.style().value("border"), box.style().pixels("border-width", 0));
       if (borderWidth > 0) {
         Optional<CssColor> borderColor = box.style().color("border-color");
-        commands.add(
-            new PaintCommand.StrokeRect(
-                box.x(),
-                box.y(),
-                box.width(),
-                box.height(),
-                borderColor.orElse(new CssColor(0, 0, 0, 1)),
-                borderWidth));
+        orderedCommands.add(
+            new OrderedCommand(
+                box.paintOrder(),
+                2,
+                new PaintCommand.StrokeRect(
+                    box.x(),
+                    box.y(),
+                    box.width(),
+                    box.height(),
+                    borderColor.orElse(new CssColor(0, 0, 0, 1)),
+                    borderWidth)));
       }
     }
     for (TextRun run : layout.textRuns()) {
-      commands.add(
-          new PaintCommand.Text(run.x(), run.baselineY(), run.text(), run.style(), run.link()));
+      orderedCommands.add(
+          new OrderedCommand(
+              run.paintOrder(),
+              3,
+              new PaintCommand.Text(
+                  run.x(), run.baselineY(), run.text(), run.style(), run.link())));
     }
+    List<PaintCommand> commands =
+        orderedCommands.stream()
+            .sorted(
+                Comparator.comparingInt(OrderedCommand::order)
+                    .thenComparingInt(OrderedCommand::priority))
+            .map(OrderedCommand::command)
+            .toList();
     return new DisplayList(
         commands,
         layout.constraints().viewportWidth(),
         layout.constraints().viewportHeight(),
+        layout.documentWidth(),
         layout.documentHeight(),
         layout.constraints().scrollX(),
         layout.constraints().scrollY());
@@ -77,4 +103,6 @@ public final class DisplayListBuilder {
       return 0;
     }
   }
+
+  private record OrderedCommand(int order, int priority, PaintCommand command) {}
 }

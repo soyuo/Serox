@@ -6,4 +6,9 @@ import kr.soyuo.serox.browser.css.ComputedStyle;
 
 /** Positioned line of inline text with style and optional link destination. */
 public record TextRun(
-    double x, double baselineY, String text, ComputedStyle style, Optional<URI> link) {}
+    double x,
+    double baselineY,
+    String text,
+    ComputedStyle style,
+    Optional<URI> link,
+    int paintOrder) {}
