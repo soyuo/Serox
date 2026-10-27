@@ -1,9 +1,14 @@
 package kr.soyuo.serox.browser.render;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import javafx.application.Platform;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Orientation;
 import javafx.scene.Cursor;
 import javafx.scene.canvas.Canvas;
@@ -24,6 +29,7 @@ import kr.soyuo.serox.browser.layout.TextRun;
 
 /** Resizable, scrollable JavaFX viewport for the initial page renderer. */
 public final class CanvasPageView extends BorderPane {
+  private static final PageImageLoader IMAGE_LOADER = PageImageLoader.createDefault();
   private final Canvas canvas = new Canvas();
   private final StackPane viewport = new StackPane(canvas);
   private final ScrollBar verticalScroll = new ScrollBar();
@@ -33,6 +39,10 @@ public final class CanvasPageView extends BorderPane {
   private final LayoutEngine layoutEngine = new LayoutEngine();
   private final DisplayListBuilder displayListBuilder = new DisplayListBuilder();
   private final JavaFxCanvasRenderer renderer = new JavaFxCanvasRenderer();
+  private final Map<String, javafx.scene.image.Image> images = new HashMap<>();
+  private final Map<URI, CompletableFuture<java.awt.image.BufferedImage>> imageRequests =
+      new HashMap<>();
+  private long imageGeneration;
   private Document document;
   private StyleSnapshot lastStyles;
   private DisplayList lastDisplayList;
@@ -70,6 +80,15 @@ public final class CanvasPageView extends BorderPane {
     setCenter(viewport);
     setRight(verticalScroll);
     setBottom(new VBox(fallbackNotice, horizontalScroll));
+    sceneProperty()
+        .addListener(
+            (observable, oldScene, newScene) -> {
+              if (newScene == null) {
+                cancelImages();
+              } else {
+                loadImages();
+              }
+            });
   }
 
   /** Replaces the displayed document and resets its scroll position. */
@@ -77,6 +96,11 @@ public final class CanvasPageView extends BorderPane {
     this.document = Objects.requireNonNull(document, "document");
     verticalScroll.setValue(0);
     horizontalScroll.setValue(0);
+    if (getScene() != null) {
+      loadImages();
+    } else {
+      cancelImages();
+    }
     renderPage();
   }
 
@@ -137,7 +161,7 @@ public final class CanvasPageView extends BorderPane {
     }
     lastLayout = layout;
     lastDisplayList = displayListBuilder.build(layout);
-    renderer.render(lastDisplayList, canvas);
+    renderer.render(lastDisplayList, canvas, images);
     boolean hasFallbacks = !lastStyles.unsupportedDeclarations().isEmpty();
     fallbackNotice.setVisible(hasFallbacks);
     fallbackNotice.setManaged(hasFallbacks);
@@ -148,6 +172,41 @@ public final class CanvasPageView extends BorderPane {
             ? "Unsupported styles ignored: "
                 + String.join(", ", lastStyles.unsupportedDeclarations())
             : "");
+  }
+
+  private void cancelImages() {
+    imageGeneration++;
+    imageRequests.values().forEach(request -> request.cancel(true));
+    imageRequests.clear();
+    images.clear();
+  }
+
+  private void loadImages() {
+    cancelImages();
+    long generation = imageGeneration;
+    for (var element : document.getElementsByTagName("img")) {
+      String source = element.attribute("src").orElse("");
+      var resolved = PageImageLoader.resolve(document.documentUrl(), source);
+      if (resolved.isEmpty()) {
+        continue;
+      }
+      URI uri = resolved.orElseThrow();
+      if (!imageRequests.containsKey(uri) && imageRequests.size() >= PageImageLoader.MAX_IMAGES) {
+        continue;
+      }
+      var request = imageRequests.computeIfAbsent(uri, IMAGE_LOADER::load);
+      request.thenAccept(
+          image ->
+              Platform.runLater(
+                  () -> {
+                    if (generation == imageGeneration && getScene() != null) {
+                      images.put(source, SwingFXUtils.toFXImage(image, null));
+                      if (lastDisplayList != null) {
+                        renderer.render(lastDisplayList, canvas, images);
+                      }
+                    }
+                  }));
+    }
   }
 
   private void handleClick(MouseEvent event) {

@@ -3,6 +3,7 @@ package kr.soyuo.serox.browser.render;
 import javafx.geometry.VPos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
@@ -15,6 +16,11 @@ import kr.soyuo.serox.browser.css.CssColor;
 public final class JavaFxCanvasRenderer {
   /** Clears the canvas, clips to the viewport, and draws every command in order. */
   public void render(DisplayList displayList, Canvas canvas) {
+    render(displayList, canvas, java.util.Map.of());
+  }
+
+  /** Paints available page images and retains placeholders for missing resources. */
+  public void render(DisplayList displayList, Canvas canvas, java.util.Map<String, Image> images) {
     GraphicsContext graphics = canvas.getGraphicsContext2D();
     graphics.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
     graphics.save();
@@ -24,12 +30,13 @@ public final class JavaFxCanvasRenderer {
     graphics.clip();
     graphics.translate(-displayList.scrollX(), -displayList.scrollY());
     for (PaintCommand command : displayList.commands()) {
-      paint(command, graphics);
+      paint(command, graphics, images);
     }
     graphics.restore();
   }
 
-  private void paint(PaintCommand command, GraphicsContext graphics) {
+  private void paint(
+      PaintCommand command, GraphicsContext graphics, java.util.Map<String, Image> images) {
     if (command instanceof PaintCommand.FillRect rect) {
       graphics.setFill(color(rect.color()));
       graphics.fillRect(rect.x(), rect.y(), rect.width(), rect.height());
@@ -40,7 +47,12 @@ public final class JavaFxCanvasRenderer {
     } else if (command instanceof PaintCommand.Text text) {
       paintText(text, graphics);
     } else if (command instanceof PaintCommand.ImagePlaceholder image) {
-      paintImagePlaceholder(image, graphics);
+      Image decoded = images.get(image.source());
+      if (decoded == null) {
+        paintImagePlaceholder(image, graphics);
+      } else {
+        graphics.drawImage(decoded, image.x(), image.y(), image.width(), image.height());
+      }
     } else if (command instanceof PaintCommand.FormControl control) {
       paintFormControl(control, graphics);
     }
