@@ -57,10 +57,11 @@ import kr.soyuo.serox.search.application.SearchService;
 
 /** Displays the Figma browser frame, home view, and service status. */
 public final class BrowserShellView extends BorderPane {
-  private final UiPreviewData previewData = UiPreviewData.sample();
-  private final Label aiStatus = new Label("AI: " + previewData.ai().detail());
+  private UiPreviewData previewData = UiPreviewData.pending();
+  private final Label aiStatus = new Label("AI: 확인 중");
+  private final Label searchStatus = new Label("검색: 확인 중");
   private final Label mcpStatus =
-      new Label(previewData.mcp().statusText() + " (" + previewData.mcp().detail() + ")");
+      new Label("MCP 서버 확인 중");
   private final Region statusDot = new Region();
   private final Label navigationStatus = new Label("Ready");
   private TextField addressField;
@@ -294,7 +295,7 @@ public final class BrowserShellView extends BorderPane {
     aiStatus.setAccessibleText("AI 연결 상태: " + previewData.ai().detail());
     mcpStatus.setAccessibleText(
         previewData.mcp().name() + " 상태: " + previewData.mcp().statusText());
-    for (Label status : List.of(navigationStatus, aiStatus, mcpStatus)) {
+    for (Label status : List.of(navigationStatus, searchStatus, aiStatus, mcpStatus)) {
       status.setMaxWidth(UiTokens.STATUS_TEXT_MAX_WIDTH);
       status.setTextOverrun(javafx.scene.control.OverrunStyle.ELLIPSIS);
     }
@@ -302,7 +303,8 @@ public final class BrowserShellView extends BorderPane {
     divider.getStyleClass().add("status-divider");
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
-    HBox bar = new HBox(UiTokens.SPACE_MD, navigationStatus, divider, aiStatus, spacer, mcpStatus);
+    HBox bar = new HBox(
+            UiTokens.SPACE_MD, navigationStatus, divider, searchStatus, aiStatus, spacer, mcpStatus);
     bar.setAlignment(Pos.CENTER_LEFT);
     bar.getStyleClass().add("status-bar");
     return bar;
@@ -311,18 +313,32 @@ public final class BrowserShellView extends BorderPane {
   private void showConnectionStatus(ConnectionStatusChanged event) {
     String status =
         event.safeMessage().isBlank() ? statusName(event.status()) : event.safeMessage();
-    Label target = event.service() == ServiceId.MCP ? mcpStatus : aiStatus;
-    String prefix = event.service() == ServiceId.MCP ? "MCP 서버 " : "AI: ";
-    Runnable update =
+    FxThreadExecutor.execute(
         () -> {
-          target.setText(prefix + status);
-          target.setAccessibleText(
-              event.service() == ServiceId.MCP ? "MCP 서버 상태: " + status : "AI 연결 상태: " + status);
-          if (event.service() == ServiceId.MCP) {
-            statusDot.getStyleClass().setAll("status-dot", statusStyle(event.status()));
+          boolean on = event.status() == ServiceStatus.CONNECTED;
+          switch (event.service()) {
+            case SEARCH -> {
+              searchStatus.setText("검색: " + status);
+              searchStatus.setAccessibleText("검색 연결 상태: " + status);
+            }
+            case AI -> {
+              aiStatus.setText("AI: " + status);
+              aiStatus.setAccessibleText("AI 연결 상태: " + status);
+              previewData = previewData.withAi(new UiPreviewData.ServicePreview("AI 요약", status, on));
+            }
+            case MCP -> {
+              mcpStatus.setText("MCP 서버 " + status);
+              mcpStatus.setAccessibleText("MCP 서버 상태: " + status);
+              statusDot.getStyleClass().setAll("status-dot", statusStyle(event.status()));
+              previewData =
+                  previewData.withMcp(new UiPreviewData.ServicePreview("MCP 서버", status, on));
+            }
+            default -> {}
           }
-        };
-    FxThreadExecutor.execute(update);
+          if (getCenter() == homeView) {
+            showHomeView();
+          }
+        });
   }
 
   private void showOperationError(OperationFailed event) {
