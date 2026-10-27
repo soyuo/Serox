@@ -18,6 +18,12 @@ interface PrivacyActions {
 
   CompletionStage<Void> clearVisits();
 
+  /** The saved settings, which hold the privacy choices. */
+  kr.soyuo.serox.core.model.BrowserSettings settings();
+
+  /** Saves the given settings. */
+  CompletionStage<Void> save(kr.soyuo.serox.core.model.BrowserSettings settings);
+
   /** For a shell without storage: nothing is stored, so there is nothing to clear. */
   static PrivacyActions none() {
     return new PrivacyActions() {
@@ -43,6 +49,16 @@ interface PrivacyActions {
 
       @Override
       public CompletionStage<Void> clearVisits() {
+        return CompletableFuture.completedFuture(null);
+      }
+
+      @Override
+      public kr.soyuo.serox.core.model.BrowserSettings settings() {
+        return kr.soyuo.serox.core.model.BrowserSettings.defaults();
+      }
+
+      @Override
+      public CompletionStage<Void> save(kr.soyuo.serox.core.model.BrowserSettings settings) {
         return CompletableFuture.completedFuture(null);
       }
     };

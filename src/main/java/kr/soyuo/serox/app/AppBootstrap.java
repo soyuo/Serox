@@ -71,15 +71,19 @@ public final class AppBootstrap {
             .map(key -> (SearchProvider) new BraveSearchProvider(key.revealForRequest()));
     var searchService = new SearchService(searchProvider, eventBus);
     Optional<SqliteStorage> storage = openStorage(dataDirectory);
+    var settingsService =
+        new SettingsService(storage.map(sqlite -> sqlite.settings()), eventBus);
+    settingsService.load();
     Optional<UsageRecorder> usageRecorder =
         storage.map(
             sqlite ->
                 new UsageRecorder(
-                    eventBus, sqlite.history(), sqlite.recentSearches(), Clock.systemUTC()));
+                    eventBus,
+                    sqlite.history(),
+                    sqlite.recentSearches(),
+                    Clock.systemUTC(),
+                    settingsService::current));
     AiSearchService aiSearchService = createAiSearchService(configuration, eventBus);
-    var settingsService =
-        new SettingsService(storage.map(sqlite -> sqlite.settings()), eventBus);
-    settingsService.load();
     var libraryService =
         new LibraryService(
             storage.map(sqlite -> sqlite.history()),

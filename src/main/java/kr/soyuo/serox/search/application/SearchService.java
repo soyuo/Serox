@@ -135,7 +135,8 @@ public final class SearchService implements AutoCloseable {
         cause instanceof SearchProviderException
             ? cause.getMessage()
             : "Search failed. Check your connection and try again.";
-    eventBus.publish(new SearchFailed(Instant.now(), tabId, requestId, query, message));
+    boolean offline = cause instanceof java.io.IOException;
+    eventBus.publish(new SearchFailed(Instant.now(), tabId, requestId, query, message, offline));
   }
 
   private Throwable unwrap(Throwable failure) {
