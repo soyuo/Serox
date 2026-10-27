@@ -1,0 +1,11 @@
+viewport 240.0x160.0 document 232.0x187.0
+fill 12.0,12.0 162.0x142.0 #f0f0f0
+stroke 12.0,12.0 162.0x142.0 #000000 1.0
+text 23.0,43.0 Serox Layout link=-
+text 23.0,69.0 repeatable link=-
+text 23.0,90.0 content link=-
+text 84.6,90.0  read link=https://fixture.test/docs
+text 23.0,111.0 docs link=https://fixture.test/docs
+image 23.0,119.0 40.0x24.0 visual sample
+text 8.0,174.0 fallback text link=-
+unsupported display: flex

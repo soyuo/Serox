@@ -93,6 +93,7 @@ public final class LayoutEngine {
           }
           if (childStyle.value("display").equals("block")) {
             flow.finishLine();
+            flow.discardPendingSpace();
             double childHeight =
                 layoutBlock(childElement, contentX, contentY + flow.height(), contentWidth);
             flow.addBlockHeight(childHeight);
@@ -187,6 +188,7 @@ public final class LayoutEngine {
       private double cursorY;
       private double lineHeight;
       private double usedHeight;
+      private boolean pendingSpace;
 
       private InlineFlow(double startX, double maxWidth, double startY) {
         this.startX = startX;
@@ -199,35 +201,74 @@ public final class LayoutEngine {
       private void addText(String text, ComputedStyle style, URI link) {
         double fontSize = style.pixels("font-size", 16);
         double glyphWidth = Math.max(1, fontSize * 0.55);
-        lineHeight = Math.max(lineHeight, Math.ceil(fontSize * 1.3));
         StringBuilder run = new StringBuilder();
         double runX = cursorX;
-        for (int offset = 0; offset < text.length(); ) {
+        int offset = 0;
+        while (offset < text.length()) {
           int codePoint = text.codePointAt(offset);
-          offset += Character.charCount(codePoint);
-          if (codePoint == '\n' || codePoint == '\r') {
-            flushRun(run, runX, style, link);
-            advanceLine();
-            runX = cursorX;
+          if (Character.isWhitespace(codePoint)) {
+            while (offset < text.length()) {
+              int whitespace = text.codePointAt(offset);
+              if (!Character.isWhitespace(whitespace)) {
+                break;
+              }
+              offset += Character.charCount(whitespace);
+            }
+            pendingSpace = cursorX > startX || !run.isEmpty();
             continue;
           }
-          boolean whitespace = Character.isWhitespace(codePoint);
-          double advance = whitespace ? glyphWidth * 0.55 : glyphWidth;
-          if (cursorX + advance > startX + maxWidth && cursorX > startX) {
+          int wordStart = offset;
+          while (offset < text.length()) {
+            int wordCodePoint = text.codePointAt(offset);
+            if (Character.isWhitespace(wordCodePoint)) {
+              break;
+            }
+            offset += Character.charCount(wordCodePoint);
+          }
+          String word = text.substring(wordStart, offset);
+          lineHeight = Math.max(lineHeight, Math.ceil(fontSize * 1.3));
+          double wordWidth = word.codePoints().count() * glyphWidth;
+          double spacingWidth = pendingSpace && cursorX > startX ? glyphWidth * 0.55 : 0;
+          if (cursorX > startX && cursorX + spacingWidth + wordWidth > startX + maxWidth) {
             flushRun(run, runX, style, link);
             advanceLine();
-            runX = cursorX;
-            if (whitespace) {
-              continue;
-            }
-          }
-          if (run.isEmpty()) {
+            pendingSpace = false;
             runX = cursorX;
           }
-          run.appendCodePoint(codePoint);
-          cursorX += advance;
+          if (pendingSpace && cursorX > startX) {
+            runX = appendGlyph(' ', glyphWidth * 0.55, run, style, link, runX);
+          }
+          pendingSpace = false;
+          for (int wordOffset = 0; wordOffset < word.length(); ) {
+            int wordCodePoint = word.codePointAt(wordOffset);
+            wordOffset += Character.charCount(wordCodePoint);
+            runX = appendGlyph(wordCodePoint, glyphWidth, run, style, link, runX);
+          }
         }
         flushRun(run, runX, style, link);
+      }
+
+      private double appendGlyph(
+          int codePoint,
+          double advance,
+          StringBuilder run,
+          ComputedStyle style,
+          URI link,
+          double runX) {
+        if (cursorX + advance > startX + maxWidth && cursorX > startX) {
+          flushRun(run, runX, style, link);
+          advanceLine();
+          if (Character.isWhitespace(codePoint)) {
+            return cursorX;
+          }
+          runX = cursorX;
+        }
+        if (run.isEmpty()) {
+          runX = cursorX;
+        }
+        run.appendCodePoint(codePoint);
+        cursorX += advance;
+        return runX;
       }
 
       private void addInlineElement(Element element) {
@@ -295,6 +336,7 @@ public final class LayoutEngine {
         usedHeight = Math.max(usedHeight, cursorY - startY);
         lineHeight = 0;
         cursorX = startX;
+        pendingSpace = false;
       }
 
       private void finishLine() {
@@ -307,6 +349,11 @@ public final class LayoutEngine {
         usedHeight = Math.max(usedHeight, cursorY - startY + height);
         cursorY += height;
         cursorX = startX;
+        pendingSpace = false;
+      }
+
+      private void discardPendingSpace() {
+        pendingSpace = false;
       }
 
       private double height() {
