@@ -69,3 +69,35 @@ The design groups map to these user journeys:
 The frame grouping defines the product flows, while later requirements specify
 each control's exact state and module contract. A visual state is not evidence
 that the associated service is already implemented or connected.
+
+## 1.3 Control contracts and visible states
+
+Each screen control follows the shared task states `IDLE`, `LOADING`,
+`SUCCESS`, `FAILED`, and `CANCELLED` where the operation is asynchronous.
+Search and AI views may also show `PARTIAL` when some sources fail but usable
+results remain. A disabled control explains the missing prerequisite when the
+reason is not self-evident.
+
+<!-- markdownlint-disable MD013 -->
+| ID | Control | Input or event | State | Action and outcome | Failure or empty behavior |
+| --- | --- | --- | --- | --- | --- |
+| NAV-01 | Address/search field and submit | User-entered URL or query; Enter or search action | Focused, idle, loading, page loaded, or search pending | NavigationManager classifies input and routes it to navigation or Search. | Reject unsupported/invalid schemes with an explanation; empty input does nothing. |
+| NAV-02 | Back, forward, reload, stop | Click or documented keyboard shortcut | Enabled only when the selected tab has a history entry or active request | Navigate within the selected tab, repeat its current request, or cancel it. | No history means disabled; request failure leaves the tab open with an error state. |
+| TAB-01 | New tab, tab selector, close tab | Create, select, or close action | Active, inactive, loading, or failed per tab | TabManager changes the active TabSession and preserves other tabs' state. | Closing an active tab selects a remaining tab; an empty tab shows the home state. |
+| SEARCH-01 | Home search and query submit | Non-empty query; submit action | Idle, loading, partial, success, empty, failed, or cancelled | SearchCoordinator requests Brave results and presents the returned list. | Empty response gets a no-results state; API/timeout errors offer retry; cancel stops the current request. |
+| SEARCH-02 | Search result row/card | Select result title or URL | Available, selected/opening, or unavailable | Open the result URL in the active or a new tab according to the selected action. | Missing/invalid URL cannot navigate; retain the result list and show the reason. |
+| AI-01 | AI search or current-page analysis action | Query or user-approved current-page content | Idle, loading, streaming, success, partial, failed, or cancelled | ContextBuilder applies consent, filtering, and limits; AnswerGenerator streams an answer with validated citations. | Keep ordinary search/page content usable; show provider, timeout, limit, or cancellation status without secrets. |
+| AI-02 | AI panel toggle and placement | Open/close or choose a placement | Open/closed; current placement | Toggle the panel or update its draft placement without resetting the active search. | If no AI result exists, show an explanatory empty panel; preserve the page when closed. |
+| SRC-01 | Citation and original-content preview | Select citation/source or preview action | Available, loading, opened, or unavailable | CitationManager verifies the source ID; show its text or open its URL. | Invalid citation is not followed; unavailable source retains the answer and reports the issue. |
+| SITE-01 | Site information/security control | Open details for the active page | Unknown, checking, verified HTTPS, plain HTTP, or failed | Show active URL and only the connection/security facts the network layer verified. | Do not imply a page is safe; TLS errors remain blocked and display the validation failure. |
+| MENU-01 | Settings/menu and destination items | Open, select destination, or dismiss | Closed/open; selected destination | Navigate to settings, history, bookmarks, or service details while retaining active tab state. | Missing data shows an empty state; dismissal changes no browser or saved state. |
+| PREF-01 | Theme, accent, font size, density, panel placement | Choose a supported option | Saved value or changed draft value | Preview draft appearance without writing it to storage. | Unsupported values are omitted or disabled; invalid draft changes do not replace the saved value. |
+| PREF-02 | Apply, cancel, restore defaults | Explicit action | Clean, dirty, applying, or failed | Apply persists draft settings; cancel reverts to saved values; restore defaults resets the draft. | Storage failure preserves recoverable draft state and explains that the setting was not saved. |
+| CONN-01 | AI provider configuration/status | Provider selection or connection check | Not configured, checking, connected, or failed | Read provider availability and show configuration/connection state; do not claim support before an adapter exists. | Missing key/configuration gives setup guidance; errors redact secret values. |
+| MCP-01 | MCP connection/status | Connect, disconnect, or inspect action | Disconnected, connecting, connected, or failed | MCP lifecycle and AccessController report only the authorized connection state. | Permission/transport failures remain disconnected and explain the next action. |
+| DATA-01 | History and bookmark entries/actions | Select, save, remove, or clear an entry | Populated, empty, loading, or failed | Repository reads/writes the requested item and opens selected URLs through NavigationManager. | Empty collections explain how to create entries; storage errors do not terminate browsing. |
+<!-- markdownlint-enable MD013 -->
+
+Search and AI request IDs must be tracked so an older response cannot replace a
+newer view. These contracts describe expected UI behavior; module ownership is
+mapped separately in section 1.4.
