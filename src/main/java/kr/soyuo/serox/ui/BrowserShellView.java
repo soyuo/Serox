@@ -71,6 +71,7 @@ public final class BrowserShellView extends BorderPane {
   private TextField addressField;
   private HBox addressBox;
   private boolean aiSearchActive;
+  private final Button aiChip = new Button("Claude 요약");
   private HomeView homeView;
   private final EventSubscription connectionStatusSubscription;
   private final EventSubscription operationErrorSubscription;
@@ -373,9 +374,21 @@ public final class BrowserShellView extends BorderPane {
             SvgIconView.icon(UiTokens.ICON_ADDRESS_SEARCH, 18),
             siteInfoButton,
             addressField,
-            bookmarkButton);
+            bookmarkButton,
+            aiChip);
     addressBox.setAlignment(Pos.CENTER_LEFT);
     addressBox.getStyleClass().add("address-box");
+    aiChip.getStyleClass().add("ai-chip");
+    aiChip.setGraphic(SvgIconView.icon(UiTokens.ICON_AI_SPARKLE_SMALL, UiTokens.AI_SPARKLE_SMALL_SIZE));
+    aiChip.setAccessibleText("AI 요약 패널 열기");
+    aiChip.setVisible(false);
+    aiChip.managedProperty().bind(aiChip.visibleProperty());
+    aiChip.setOnAction(
+        event -> {
+          if (resultsView != null) {
+            resultsView.openAiPanel();
+          }
+        });
     HBox.setHgrow(addressBox, Priority.ALWAYS);
 
     Button history = toolbarButton(UiTokens.ICON_HISTORY, "방문 기록");
