@@ -19,6 +19,7 @@ public final class HttpRequestDispatcher {
   private final Duration requestTimeout;
   private final int maxResponseBytes;
 
+  /** Creates a dispatcher with the supplied JDK client and response size limit. */
   public HttpRequestDispatcher(HttpClient client, Duration requestTimeout, int maxResponseBytes) {
     this.client = Objects.requireNonNull(client, "client");
     this.requestTimeout = Objects.requireNonNull(requestTimeout, "requestTimeout");

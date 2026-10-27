@@ -6,6 +6,7 @@ import java.util.Objects;
 
 /** Bounded HTTP response metadata and bytes returned by the transport. */
 public record HttpResponseData(URI uri, int statusCode, HttpHeaders headers, byte[] body) {
+  /** Copies the response body to keep the snapshot immutable. */
   public HttpResponseData {
     Objects.requireNonNull(uri, "uri");
     Objects.requireNonNull(headers, "headers");
