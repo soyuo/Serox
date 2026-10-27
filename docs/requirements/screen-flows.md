@@ -12,6 +12,7 @@ supported until its STEP acceptance tests pass.
 
 ## 1.1 Feature scope classification
 
+<!-- markdownlint-disable MD013 -->
 | ID | Feature area | Classification | Source and boundary |
 | --- | --- | --- | --- |
 | BASE-001 | JavaFX desktop shell, application core, module interfaces, and background task/event flow | Foundation | SPEC 2–3, 5, 9; STEP 2–4. Required before feature work; not a user-facing completion claim. |
@@ -28,8 +29,43 @@ supported until its STEP acceptance tests pass.
 | LONG-001 | JavaScript execution and browser Web APIs | Long-term compatibility | SPEC 4.7, 13, 16. Requires a separate process boundary and security review before enablement. |
 | LONG-002 | Broad web-standard compatibility: Flexbox, Grid, advanced CSS, media queries, animation, and dynamic sites | Long-term compatibility | SPEC 4.4–4.7, 16–17; not part of the initial renderer support claim. |
 | LONG-003 | Multi-tab AI, private profiles, extensionable model providers, and wider agent browser control | Long-term compatibility | SPEC 1.3, 7.3, 8, 10, 16. Requires explicit privacy and permission design. |
+<!-- markdownlint-enable MD013 -->
 
 Foundation rows describe prerequisites; MVP rows define the initial usable
 browser and evaluation prototype; post-MVP rows are the requested Figma-led
 product expansion; long-term rows require separate compatibility or security
 work. The labels do not remove any feature from the project roadmap.
+
+## 1.2 Figma screen map and primary flows
+
+<!-- markdownlint-disable MD013 -->
+| Figma frame/group | User entry point | Main purpose | Primary flow |
+| --- | --- | --- | --- |
+| 1. 기본 화면 | App launch or new tab | Browser chrome, home search, recent searches, and AI/MCP connection summaries | Enter a query, choose a recent query, open a page, or open a product panel. |
+| 2. 설정 메뉴 | Settings/menu control in browser chrome | Provide navigation to browser utilities and settings | Choose a utility or settings destination; close the menu without changing page state. |
+| 3. 검색 화면 | Home or address/search input | Submit and present a search request | Enter query → submit → loading → results, empty result, cancellation, or failure. |
+| 4. 설정 화면 | Settings destination | Configure browser and service preferences | Select a setting → preview temporary value where applicable → apply, cancel, or restore default. |
+| 5-1. 검색 결과 | Search completion | Show answer summary, key points, source list, and original-content preview area | Select a source to open its page or inspect its original content. |
+| 5-2. AI 제공자별 화면 | AI provider/settings destination | Show provider-specific configuration and connection state | View or edit supported provider settings → validate connection → ready or actionable failure. |
+| 5-3–5-4. MCP | MCP settings or connection summary | Show MCP service and connection/tool status | Configure or inspect MCP → connect/disconnect → ready or actionable failure. |
+| 5-5. 디자인 설정 변형 | Appearance settings | Present alternate theme, accent, typography, panel placement, and density choices | Change a value → preview → apply, cancel, or restore defaults. |
+<!-- markdownlint-enable MD013 -->
+
+The design groups map to these user journeys:
+
+1. **Start and browse:** launch/new tab → enter URL or query → show page or
+   search state.
+2. **Search and inspect:** submit query → show results → select a result,
+   citation, or original preview.
+3. **Ask AI:** start AI search or page analysis → show progress → display an
+   answer and verified sources, or keep ordinary results available on failure.
+4. **Manage browser state:** open the settings menu → choose history,
+   bookmarks, or settings → return to the active tab without losing its state.
+5. **Configure services:** open AI or MCP settings → inspect/configure the
+   connection → report its actual state and any error.
+6. **Personalize appearance:** open appearance settings → change temporary
+   values → preview → apply, cancel, or restore defaults.
+
+The frame grouping defines the product flows, while later requirements specify
+each control's exact state and module contract. A visual state is not evidence
+that the associated service is already implemented or connected.

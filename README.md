@@ -91,6 +91,9 @@ mvn verify
 
 ## 디자인 및 작업 흐름
 
-제품 UI의 기준은 [Serox Figma 디자인](https://www.figma.com/design/IZiradnUF4Q4Ok0XGeTtPy/Serox?node-id=30-3&t=3KCOPM8O9iPz75EA-1)이다. 화면별 기능과 구현 순서는 [STEP.md](STEP.md)에 연결되어 있다.
+제품 UI의 기준은 [Serox Figma 디자인](https://www.figma.com/design/IZiradnUF4Q4Ok0XGeTtPy/Serox?node-id=30-3&t=3KCOPM8O9iPz75EA-1)이다.
+화면별 기능과 구현 순서는 [STEP.md](STEP.md)에 연결되어 있다.
 
-각 `### STEP n`마다 전용 이슈·브랜치·PR을 만들고, STEP 안의 각 번호 작업 단위는 하나의 커밋으로 남긴다. 커밋 메시지는 `type: lowercase summary` 형식을 사용한다. 각 STEP PR은 GitHub에서 **Create a merge commit**으로 합친다.
+각 `### STEP n`마다 전용 이슈·브랜치·PR을 만들고, 번호가 붙은 각 작업 단위는
+하나의 커밋으로 남긴다. 커밋 메시지는 `type: lowercase summary` 형식을 사용한다.
+각 STEP PR은 GitHub에서 **Create a merge commit**으로 합친다.
