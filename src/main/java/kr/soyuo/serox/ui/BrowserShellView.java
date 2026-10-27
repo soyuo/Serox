@@ -29,7 +29,10 @@ import kr.soyuo.serox.core.application.NavigationInputClassifier;
 import kr.soyuo.serox.core.application.NavigationTarget;
 import kr.soyuo.serox.core.application.SearchQuery;
 import kr.soyuo.serox.ai.application.AiSearchService;
+import kr.soyuo.serox.core.application.LibraryService;
+import kr.soyuo.serox.core.application.SettingsService;
 import kr.soyuo.serox.core.event.ActiveTabChanged;
+import kr.soyuo.serox.core.event.SettingsChanged;
 import kr.soyuo.serox.core.event.AiAnswerChanged;
 import kr.soyuo.serox.core.event.BrowserEventBus;
 import kr.soyuo.serox.core.event.ConnectionStatusChanged;
@@ -46,16 +49,23 @@ import kr.soyuo.serox.core.event.TabClosed;
 import kr.soyuo.serox.core.event.TabStateChanged;
 import kr.soyuo.serox.core.model.NavigationStatus;
 import kr.soyuo.serox.core.model.TabId;
+import java.net.URI;
+import java.util.Optional;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.CustomMenuItem;
 import kr.soyuo.serox.core.model.AiPanelPosition;
+import kr.soyuo.serox.core.model.BrowserSettings;
+import kr.soyuo.serox.core.model.SiteInfo;
 import kr.soyuo.serox.core.model.TabSnapshot;
 import kr.soyuo.serox.search.application.SearchService;
 
 /** Displays the Figma browser frame, home view, and service status. */
 public final class BrowserShellView extends BorderPane {
-  private final UiPreviewData previewData = UiPreviewData.sample();
-  private final Label aiStatus = new Label("AI: " + previewData.ai().detail());
+  private UiPreviewData previewData = UiPreviewData.pending();
+  private final Label aiStatus = new Label("AI: 확인 중");
+  private final Label searchStatus = new Label("검색: 확인 중");
   private final Label mcpStatus =
-      new Label(previewData.mcp().statusText() + " (" + previewData.mcp().detail() + ")");
+      new Label("MCP 서버 확인 중");
   private final Region statusDot = new Region();
   private final Label navigationStatus = new Label("Ready");
   private TextField addressField;
@@ -75,6 +85,13 @@ public final class BrowserShellView extends BorderPane {
   private boolean aiPanelOpen = true;
   private AiPanelPosition aiPanelSide = AiPanelPosition.RIGHT;
   private AiSearchService aiSearchService;
+  private SettingsService settingsService;
+  private LibraryService libraryService;
+  private final Button bookmarkButton = new Button("★");
+  private EventSubscription settingsSubscription;
+  private javafx.scene.Node viewBeforeSettings;
+  private final Button siteInfoButton = new Button();
+  private SiteInfo siteInfo = SiteInfo.of(Optional.empty());
   private final Map<TabId, TabSnapshot> tabSnapshots = new HashMap<>();
   private final Map<TabId, PageLoaded> loadedPages = new HashMap<>();
   private final Map<TabId, HBox> tabButtons = new HashMap<>();
@@ -118,6 +135,13 @@ public final class BrowserShellView extends BorderPane {
     setCenter(homeView);
     setBottom(createStatusBar());
     installKeyboardShortcuts();
+    centerProperty()
+        .addListener(
+            (observable, oldView, newView) -> {
+              if (oldView instanceof SettingsView && settingsService != null) {
+                applySettings(settingsService.current());
+              }
+            });
 
     var stylesheet = BrowserShellView.class.getResource("serox.css");
     if (stylesheet != null) {
@@ -145,6 +169,89 @@ public final class BrowserShellView extends BorderPane {
     this.aiSearchService = aiSearchService;
   }
 
+  /** Connects history and bookmark storage to the toolbar entry points. */
+  public void setLibraryService(LibraryService libraryService) {
+    this.libraryService = libraryService;
+  }
+
+  private void showLibrary(LibraryView.Section section) {
+    if (libraryService == null || activeTabId == null) {
+      return;
+    }
+    TabId tab = activeTabId;
+    if (!(getCenter() instanceof LibraryView) && !(getCenter() instanceof SettingsView)) {
+      viewBeforeSettings = getCenter();
+    }
+    setCenter(
+        new LibraryView(
+            libraryService,
+            section,
+            uri -> {
+              closeSettings();
+              browserController.navigate(tab, uri.toString());
+            },
+            this::closeSettings));
+  }
+
+  private void bookmarkCurrentPage() {
+    PageLoaded page = loadedPages.get(activeTabId);
+    if (libraryService == null || page == null) {
+      navigationStatus.setText("북마크할 페이지가 없어요.");
+      return;
+    }
+    libraryService
+        .addBookmark(page.page().uri(), page.page().title())
+        .thenAccept(
+            added ->
+                FxThreadExecutor.execute(
+                    () ->
+                        navigationStatus.setText(
+                            added ? "북마크에 추가했어요." : "이미 북마크했거나 저장할 수 없어요.")));
+  }
+
+  /** Connects the settings store, applying the current values and following later changes. */
+  public void setSettingsService(SettingsService settingsService) {
+    this.settingsService = settingsService;
+    applySettings(settingsService.current());
+    settingsSubscription =
+        browserController
+            .eventBus()
+            .subscribe(
+                SettingsChanged.class,
+                event -> FxThreadExecutor.execute(() -> applySettings(event.settings())));
+  }
+
+  private void applySettings(BrowserSettings settings) {
+    AppearanceStyler.apply(this, settings);
+    aiPanelSide = settings.aiPanelPosition();
+  }
+
+  private void showSettings() {
+    if (settingsService == null) {
+      return;
+    }
+    if (!(getCenter() instanceof SettingsView) && !(getCenter() instanceof LibraryView)) {
+      viewBeforeSettings = getCenter();
+    }
+    setCenter(
+        new SettingsView(
+            settingsService.current(),
+            preview -> AppearanceStyler.apply(this, preview),
+            settings -> settingsService.save(settings),
+            this::cancelSettings));
+  }
+
+  private void cancelSettings() {
+    AppearanceStyler.apply(this, settingsService.current());
+    closeSettings();
+  }
+
+  private void closeSettings() {
+    if (getCenter() instanceof SettingsView || getCenter() instanceof LibraryView) {
+      setCenter(viewBeforeSettings != null ? viewBeforeSettings : homeView);
+    }
+  }
+
   /** Releases event subscriptions owned by this view. */
   public void close() {
     connectionStatusSubscription.close();
@@ -158,6 +265,9 @@ public final class BrowserShellView extends BorderPane {
     searchFailedSubscription.close();
     searchCancelledSubscription.close();
     aiAnswerSubscription.close();
+    if (settingsSubscription != null) {
+      settingsSubscription.close();
+    }
   }
 
   private VBox createBrowserChrome() {
@@ -245,18 +355,28 @@ public final class BrowserShellView extends BorderPane {
           }
         });
     addressField.getStyleClass().add("address-field");
+    updateSiteInfo(Optional.empty());
+    siteInfoButton.setOnAction(event -> showSiteInfo());
+    bookmarkButton.getStyleClass().addAll("toolbar-button", "bookmark-button");
+    bookmarkButton.setAccessibleText("현재 페이지를 북마크에 추가");
+    bookmarkButton.setOnAction(event -> bookmarkCurrentPage());
     HBox.setHgrow(addressField, Priority.ALWAYS);
     HBox addressBox =
         new HBox(
-            UiTokens.SPACE_SM, SvgIconView.icon(UiTokens.ICON_ADDRESS_SEARCH, 18), addressField);
+            UiTokens.SPACE_SM,
+            SvgIconView.icon(UiTokens.ICON_ADDRESS_SEARCH, 18),
+            siteInfoButton,
+            addressField,
+            bookmarkButton);
     addressBox.setAlignment(Pos.CENTER_LEFT);
     addressBox.getStyleClass().add("address-box");
     HBox.setHgrow(addressBox, Priority.ALWAYS);
 
     Button history = toolbarButton(UiTokens.ICON_HISTORY, "방문 기록");
+    history.setOnAction(event -> showLibrary(LibraryView.Section.HISTORY));
     Button settings = toolbarButton(UiTokens.ICON_SETTINGS, "설정");
-    history.setDisable(true);
-    settings.setDisable(true);
+
+    settings.setOnAction(event -> showSettings());
     HBox row =
         new HBox(UiTokens.SPACE_XS, backButton, forwardButton, addressBox, history, settings);
     row.setAlignment(Pos.CENTER_LEFT);
@@ -282,11 +402,16 @@ public final class BrowserShellView extends BorderPane {
     aiStatus.setAccessibleText("AI 연결 상태: " + previewData.ai().detail());
     mcpStatus.setAccessibleText(
         previewData.mcp().name() + " 상태: " + previewData.mcp().statusText());
+    for (Label status : List.of(navigationStatus, searchStatus, aiStatus, mcpStatus)) {
+      status.setMaxWidth(UiTokens.STATUS_TEXT_MAX_WIDTH);
+      status.setTextOverrun(javafx.scene.control.OverrunStyle.ELLIPSIS);
+    }
     Label divider = new Label("|");
     divider.getStyleClass().add("status-divider");
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
-    HBox bar = new HBox(UiTokens.SPACE_MD, navigationStatus, divider, aiStatus, spacer, mcpStatus);
+    HBox bar = new HBox(
+            UiTokens.SPACE_MD, navigationStatus, divider, searchStatus, aiStatus, spacer, mcpStatus);
     bar.setAlignment(Pos.CENTER_LEFT);
     bar.getStyleClass().add("status-bar");
     return bar;
@@ -295,18 +420,32 @@ public final class BrowserShellView extends BorderPane {
   private void showConnectionStatus(ConnectionStatusChanged event) {
     String status =
         event.safeMessage().isBlank() ? statusName(event.status()) : event.safeMessage();
-    Label target = event.service() == ServiceId.MCP ? mcpStatus : aiStatus;
-    String prefix = event.service() == ServiceId.MCP ? "MCP 서버 " : "AI: ";
-    Runnable update =
+    FxThreadExecutor.execute(
         () -> {
-          target.setText(prefix + status);
-          target.setAccessibleText(
-              event.service() == ServiceId.MCP ? "MCP 서버 상태: " + status : "AI 연결 상태: " + status);
-          if (event.service() == ServiceId.MCP) {
-            statusDot.getStyleClass().setAll("status-dot", statusStyle(event.status()));
+          boolean on = event.status() == ServiceStatus.CONNECTED;
+          switch (event.service()) {
+            case SEARCH -> {
+              searchStatus.setText("검색: " + status);
+              searchStatus.setAccessibleText("검색 연결 상태: " + status);
+            }
+            case AI -> {
+              aiStatus.setText("AI: " + status);
+              aiStatus.setAccessibleText("AI 연결 상태: " + status);
+              previewData = previewData.withAi(new UiPreviewData.ServicePreview("AI 요약", status, on));
+            }
+            case MCP -> {
+              mcpStatus.setText("MCP 서버 " + status);
+              mcpStatus.setAccessibleText("MCP 서버 상태: " + status);
+              statusDot.getStyleClass().setAll("status-dot", statusStyle(event.status()));
+              previewData =
+                  previewData.withMcp(new UiPreviewData.ServicePreview("MCP 서버", status, on));
+            }
+            default -> {}
           }
-        };
-    FxThreadExecutor.execute(update);
+          if (getCenter() == homeView) {
+            showHomeView();
+          }
+        });
   }
 
   private void showOperationError(OperationFailed event) {
@@ -318,6 +457,7 @@ public final class BrowserShellView extends BorderPane {
         () -> {
           if (event.tabId().equals(activeTabId)) {
             addressField.setText(event.query());
+            updateSiteInfo(Optional.empty());
             navigationStatus.setText("검색 중…");
             setCenter(
                 SearchResultsView.loading(
@@ -333,6 +473,7 @@ public final class BrowserShellView extends BorderPane {
         () -> {
           if (event.tabId().equals(activeTabId)) {
             addressField.setText(event.query());
+            updateSiteInfo(Optional.empty());
             int count = event.response().results().size();
             navigationStatus.setText("검색 결과 " + count + "개");
             if (count == 0) {
@@ -373,6 +514,7 @@ public final class BrowserShellView extends BorderPane {
         () -> {
           if (event.tabId().equals(activeTabId)) {
             addressField.setText(event.query());
+            updateSiteInfo(Optional.empty());
             navigationStatus.setText(event.safeMessage());
             setCenter(
                 SearchResultsView.error(
@@ -465,7 +607,7 @@ public final class BrowserShellView extends BorderPane {
     Label title = tabTitles.get(snapshot.id());
     if (title == null) {
       title = new Label();
-      title.setMaxWidth(190);
+      title.setMaxWidth(UiTokens.TAB_TITLE_MAX_WIDTH);
       Button close = new Button();
       close.setGraphic(SvgIconView.icon(UiTokens.ICON_TAB_CLOSE, UiTokens.WINDOW_ICON_SIZE));
       close.setAccessibleText("탭 닫기");
@@ -501,6 +643,44 @@ public final class BrowserShellView extends BorderPane {
     addressField.setText(snapshot.currentUri().map(Object::toString).orElse(""));
   }
 
+  private void updateSiteInfo(Optional<URI> pageAddress) {
+    siteInfo = SiteInfo.of(pageAddress);
+    String label =
+        switch (siteInfo.level()) {
+          case SECURE -> "보안 연결";
+          case INSECURE -> "보안 주의";
+          case NONE -> "Serox";
+        };
+    siteInfoButton.setText(label);
+    siteInfoButton.setAccessibleText("사이트 연결 정보: " + label);
+    siteInfoButton
+        .getStyleClass()
+        .setAll(
+            "button",
+            "site-info-button",
+            switch (siteInfo.level()) {
+              case SECURE -> "site-info-secure";
+              case INSECURE -> "site-info-insecure";
+              case NONE -> "site-info-none";
+            });
+  }
+
+  private void showSiteInfo() {
+    Label host = new Label(siteInfo.host().isBlank() ? "Serox" : siteInfo.host());
+    host.getStyleClass().add("search-result-title");
+    Label summary = new Label(siteInfo.summary());
+    summary.setWrapText(true);
+    summary.setMaxWidth(280);
+    summary.getStyleClass().add("search-result-snippet");
+    VBox content = new VBox(UiTokens.SPACE_SM, host, summary);
+    content.getStyleClass().add("site-info-popup");
+    content.setStyle(
+        "serox-text-primary: #151a23; serox-text-secondary: #4a5468; serox-success: #0f7b5f;");
+    CustomMenuItem item = new CustomMenuItem(content, false);
+    ContextMenu popup = new ContextMenu(item);
+    popup.show(siteInfoButton, javafx.geometry.Side.BOTTOM, 0, 4);
+  }
+
   private void navigateToAddress() {
     if (activeTabId != null && !addressField.getText().isBlank()) {
       String input = addressField.getText().strip();
@@ -523,6 +703,7 @@ public final class BrowserShellView extends BorderPane {
         () -> {
           loadedPages.put(event.tabId(), event);
           if (event.tabId().equals(activeTabId)) {
+            updateSiteInfo(Optional.of(event.page().uri()));
             event.page().document().ifPresent(this::showDocument);
           }
         });
@@ -540,6 +721,7 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private void showHomeView() {
+    updateSiteInfo(Optional.empty());
     homeView = new HomeView(previewData, recentSearches.queries(), this::searchFromHome);
     setCenter(homeView);
   }

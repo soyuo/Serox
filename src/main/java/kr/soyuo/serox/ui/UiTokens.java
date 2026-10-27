@@ -28,6 +28,8 @@ public final class UiTokens {
   public static final double HOME_LOGO_SIZE = 48;
   public static final double TOOLBAR_ICON_SIZE = 20;
   public static final double WINDOW_ICON_SIZE = 12;
+  public static final double TAB_TITLE_MAX_WIDTH = 190;
+  public static final double STATUS_TEXT_MAX_WIDTH = 320;
 
   private UiTokens() {}
 }

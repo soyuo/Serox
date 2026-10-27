@@ -34,9 +34,11 @@ final class SearchResultsView extends BorderPane {
     this.query = query;
     this.onOpenResult = onOpenResult;
     getStyleClass().add("search-results-view");
+    aiPanel.prefWidthProperty().bind(widthProperty().multiply(0.3));
     results.getStyleClass().add("search-results-list");
     ScrollPane listScroll = new ScrollPane(results);
     listScroll.setFitToWidth(true);
+    listScroll.prefWidthProperty().bind(widthProperty().multiply(0.38));
     listScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
     listScroll.getStyleClass().add("search-results-scroll");
     content.setLeft(listScroll);

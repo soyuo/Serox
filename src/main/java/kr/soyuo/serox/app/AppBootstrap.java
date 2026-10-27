@@ -19,7 +19,9 @@ import kr.soyuo.serox.browser.network.HttpResponseHandler;
 import kr.soyuo.serox.core.application.AppConfigurationLoader;
 import kr.soyuo.serox.core.application.BrowserController;
 import kr.soyuo.serox.core.application.DefaultBrowserController;
+import kr.soyuo.serox.core.application.LibraryService;
 import kr.soyuo.serox.core.application.SessionKeeper;
+import kr.soyuo.serox.core.application.SettingsService;
 import kr.soyuo.serox.core.application.UsageRecorder;
 import kr.soyuo.serox.core.event.InProcessBrowserEventBus;
 import kr.soyuo.serox.search.api.SearchProvider;
@@ -73,6 +75,14 @@ public final class AppBootstrap {
                 new UsageRecorder(
                     eventBus, sqlite.history(), sqlite.recentSearches(), Clock.systemUTC()));
     AiSearchService aiSearchService = createAiSearchService(configuration, eventBus);
+    var settingsService =
+        new SettingsService(storage.map(sqlite -> sqlite.settings()), eventBus);
+    settingsService.load();
+    var libraryService =
+        new LibraryService(
+            storage.map(sqlite -> sqlite.history()),
+            storage.map(sqlite -> sqlite.bookmarks()),
+            Clock.systemUTC());
     Optional<SessionKeeper> sessionKeeper =
         storage.map(sqlite -> new SessionKeeper(eventBus, sqlite.sessions()));
     return new SeroxRuntime(
@@ -84,7 +94,9 @@ public final class AppBootstrap {
         storage,
         usageRecorder,
         sessionKeeper,
-        aiSearchService);
+        aiSearchService,
+        settingsService,
+        libraryService);
   }
 
   private static AiSearchService createAiSearchService(

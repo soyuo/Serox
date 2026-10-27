@@ -29,7 +29,9 @@ public final class SeroxApplication extends Application {
             keeper -> keeper.restoreOrStart(runtime.browserController()),
             () -> runtime.browserController().createTab());
     browserShell.setAiSearchService(runtime.aiSearchService());
-    browserShell.setStyle("-fx-font-family: \"" + UiTokens.FONT_FAMILY + "\";");
+    runtime.announceServiceStatus();
+    browserShell.setSettingsService(runtime.settingsService());
+    browserShell.setLibraryService(runtime.libraryService());
     Scene scene = new Scene(browserShell, 1100, 720);
 
     stage.initStyle(StageStyle.UNDECORATED);

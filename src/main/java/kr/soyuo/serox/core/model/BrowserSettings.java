@@ -9,6 +9,12 @@ public record BrowserSettings(
     int fontScalePercent,
     AiPanelPosition aiPanelPosition,
     DisplayDensity displayDensity) {
+  /** Factory defaults, also used when stored values are missing or invalid. */
+  public static BrowserSettings defaults() {
+    return new BrowserSettings(
+        ThemeMode.SYSTEM, "#2563EB", 100, AiPanelPosition.RIGHT, DisplayDensity.COMFORTABLE);
+  }
+
   /** Validates all non-secret appearance preferences. */
   public BrowserSettings {
     Objects.requireNonNull(theme, "theme");
