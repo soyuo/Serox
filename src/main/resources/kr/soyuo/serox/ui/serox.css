@@ -912,6 +912,66 @@
     -fx-opacity: 0.4;
 }
 
+/* MCP server page: status chip, port error, dark code block and the info box. */
+.status-chip {
+    -fx-padding: 3px 10px;
+    -fx-background-color: serox-surface-muted;
+    -fx-background-radius: 10px;
+    -fx-text-fill: serox-text-secondary;
+    -fx-font-size: 0.857em;
+    -fx-font-weight: bold;
+}
+
+.status-chip-ok {
+    -fx-background-color: #d9f2e9;
+    -fx-text-fill: serox-success;
+}
+
+.status-chip-error {
+    -fx-background-color: serox-error-surface;
+    -fx-text-fill: serox-error;
+}
+
+.text-field.field-error {
+    -fx-border-color: serox-error;
+    -fx-border-radius: 6px;
+}
+
+.field-error-text {
+    -fx-text-fill: serox-error;
+    -fx-font-size: 0.857em;
+}
+
+.tool-name {
+    -fx-font-family: "Consolas", monospace;
+    -fx-text-fill: serox-text-primary;
+    -fx-font-weight: bold;
+}
+
+.code-block {
+    -fx-background-color: #151a23;
+    -fx-background-radius: 10px;
+    -fx-padding: 14px 16px;
+    -fx-text-fill: #e6edf7;
+    -fx-font-family: "Consolas", monospace;
+    -fx-font-size: 0.857em;
+}
+
+.info-box {
+    -fx-background-color: serox-ai-surface;
+    -fx-background-radius: 10px;
+    -fx-padding: 12px 16px;
+}
+
+.info-strong {
+    -fx-text-fill: serox-text-primary;
+    -fx-font-weight: bold;
+}
+
+.info-text {
+    -fx-text-fill: serox-text-secondary;
+}
+
 .confirm-dialog {
     -fx-background-color: serox-surface;
     -fx-background-radius: 12px;

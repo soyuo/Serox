@@ -50,6 +50,7 @@ final class SettingsView extends HBox {
   private final PreviewCard preview;
   private final ServiceSummary summary;
   private final PrivacyActions privacy;
+  private final McpActions mcp;
   private final StackPane page = new StackPane();
 
   SettingsView(
@@ -67,8 +68,20 @@ final class SettingsView extends HBox {
       Runnable onCancel,
       ServiceSummary summary,
       PrivacyActions privacy) {
+    this(saved, onPreview, onApply, onCancel, summary, privacy, McpActions.none());
+  }
+
+  SettingsView(
+      BrowserSettings saved,
+      Consumer<BrowserSettings> onPreview,
+      Consumer<BrowserSettings> onApply,
+      Runnable onCancel,
+      ServiceSummary summary,
+      PrivacyActions privacy,
+      McpActions mcp) {
     this.summary = summary;
     this.privacy = privacy;
+    this.mcp = mcp;
     this.preview = new PreviewCard(saved);
     this.appearance =
         new AppearancePage(
@@ -115,6 +128,8 @@ final class SettingsView extends HBox {
       preview.visibleProperty().bind(widthProperty().greaterThan(PREVIEW_MIN_WIDTH));
       preview.managedProperty().bind(preview.visibleProperty());
       page.getChildren().setAll(design);
+    } else if (section == Section.MCP) {
+      page.getChildren().setAll(new McpPage(mcp));
     } else if (section == Section.PRIVACY) {
       page.getChildren().setAll(new PrivacyPage(privacy));
     } else {
@@ -164,13 +179,7 @@ final class SettingsView extends HBox {
               "AI로 보내기 전에 이메일, 토큰, 카드번호 같은 민감한 정보는 가려요.",
               "AI 요약에는 오류가 있을 수 있어요. 중요한 내용은 출처에서 확인하세요.");
       case PRIVACY -> List.of();
-      case MCP ->
-          List.of(
-              "상태: " + summary.mcp(),
-              "다른 AI 에이전트가 search_and_summarize 도구로 Serox를 호출할 수 있어요.",
-              "사용하려면 에이전트 설정에 SEROX_MCP_APPROVED_TOOLS=search_and_summarize를 적고"
-                  + " Serox를 --mcp 또는 --mcp-headless로 실행하세요.",
-              "허용하지 않은 도구와 브라우저 제어, 파일 접근은 지원하지 않아요.");
+      case MCP -> List.of();
       case SHORTCUTS ->
           List.of("Ctrl+L  주소창으로 이동", "Ctrl+T  새 탭", "Ctrl+W  탭 닫기", "Ctrl+K  검색창으로 이동");
       case DESIGN -> List.of();

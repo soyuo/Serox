@@ -12,6 +12,7 @@ import javafx.stage.StageStyle;
 import kr.soyuo.serox.core.model.McpSettings;
 import kr.soyuo.serox.mcp.server.StdioMcpServer;
 import kr.soyuo.serox.ui.BrowserShellView;
+import kr.soyuo.serox.ui.McpActions;
 import kr.soyuo.serox.ui.UiTokens;
 
 /** Launches the Serox desktop browser application. */
@@ -59,6 +60,7 @@ public final class SeroxApplication extends Application {
         LOGGER.log(Level.WARNING, "MCP HTTP server did not start: {0}", started.message());
       }
     }
+    browserShell.setMcpActions(mcpActions(mcpSettings));
     Scene scene = new Scene(browserShell, 1100, 720);
 
     stage.initStyle(StageStyle.UNDECORATED);
@@ -66,6 +68,51 @@ public final class SeroxApplication extends Application {
     stage.setMinHeight(UiTokens.WINDOW_MIN_HEIGHT);
     stage.setScene(scene);
     stage.show();
+  }
+
+  /** Lets the MCP page start and stop the server and keep its settings. */
+  private McpActions mcpActions(McpSettings initial) {
+    return new McpActions() {
+      private McpSettings current = initial;
+
+      @Override
+      public synchronized McpSettings settings() {
+        return current;
+      }
+
+      @Override
+      public synchronized void save(McpSettings settings) {
+        current = settings;
+        runtime
+            .storage()
+            .ifPresent(
+                storage ->
+                    storage
+                        .mcpSettings()
+                        .save(settings)
+                        .exceptionally(
+                            failure -> {
+                              LOGGER.log(Level.WARNING, "MCP settings could not be saved.");
+                              return null;
+                            }));
+      }
+
+      @Override
+      public boolean running() {
+        return mcpHttp.isRunning();
+      }
+
+      @Override
+      public Result start(McpSettings settings) {
+        var result = mcpHttp.start(settings);
+        return new Result(result.running(), result.portInUse(), result.message());
+      }
+
+      @Override
+      public void stop() {
+        mcpHttp.stop();
+      }
+    };
   }
 
   /** The saved MCP server settings; the safe defaults when nothing can be read. */
