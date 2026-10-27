@@ -11,6 +11,9 @@ import kr.soyuo.serox.core.application.AppConfigurationLoader;
 import kr.soyuo.serox.core.application.BrowserController;
 import kr.soyuo.serox.core.application.DefaultBrowserController;
 import kr.soyuo.serox.core.event.InProcessBrowserEventBus;
+import kr.soyuo.serox.search.api.SearchProvider;
+import kr.soyuo.serox.search.application.SearchService;
+import kr.soyuo.serox.search.provider.BraveSearchProvider;
 
 /** Composition root for application-scoped adapters and configuration. */
 public final class AppBootstrap {
@@ -42,6 +45,12 @@ public final class AppBootstrap {
             new HtmlDocumentParser());
     BrowserController browserController =
         new DefaultBrowserController(engine, eventBus, engineExecutor);
-    return new SeroxRuntime(configuration, eventBus, browserController, engineExecutor);
+    var searchProvider =
+        configuration
+            .braveSearchApiKey()
+            .map(key -> (SearchProvider) new BraveSearchProvider(key.revealForRequest()));
+    var searchService = new SearchService(searchProvider, eventBus);
+    return new SeroxRuntime(
+        configuration, eventBus, browserController, engineExecutor, searchService);
   }
 }
