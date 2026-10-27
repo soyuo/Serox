@@ -20,6 +20,19 @@ public record ComputedStyle(Map<String, String> values) {
     return CssColor.parse(value(property));
   }
 
+  /** Parses a percentage such as {@code 50%}, returning NaN when the value is not one. */
+  public double percentage(String property) {
+    String value = value(property).trim();
+    if (!value.endsWith("%")) {
+      return Double.NaN;
+    }
+    try {
+      return Double.parseDouble(value.substring(0, value.length() - 1).trim());
+    } catch (NumberFormatException exception) {
+      return Double.NaN;
+    }
+  }
+
   /** Parses a pixel length, returning the fallback for unsupported units. */
   public double pixels(String property, double fallback) {
     String value = value(property).trim().toLowerCase(java.util.Locale.ROOT);
