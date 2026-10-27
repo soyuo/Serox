@@ -3,9 +3,11 @@ package kr.soyuo.serox.ui;
 import java.util.Objects;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -27,11 +29,19 @@ public final class BrowserShellView extends BorderPane {
   private final EventSubscription operationErrorSubscription;
   private double dragOffsetX;
   private double dragOffsetY;
+  private Cursor resizeCursor = Cursor.DEFAULT;
+  private double resizeStartX;
+  private double resizeStartY;
+  private double resizeStartWidth;
+  private double resizeStartHeight;
+  private double resizeStartScreenX;
+  private double resizeStartScreenY;
 
   /** Creates the browser shell and subscribes to service status events. */
   public BrowserShellView(BrowserEventBus eventBus) {
     Objects.requireNonNull(eventBus, "eventBus");
     getStyleClass().add("app-root");
+    installWindowResizeHandlers();
     setTop(createBrowserChrome());
     setCenter(new HomeView(this::showNotConnectedMessage));
     setBottom(createStatusBar());
@@ -195,6 +205,124 @@ public final class BrowserShellView extends BorderPane {
   private void showNotConnectedMessage(String query) {
     if (query != null && !query.isBlank()) {
       updateLabel(aiStatus, "검색 엔진 연결 예정 · " + query.trim());
+    }
+  }
+
+  private void installWindowResizeHandlers() {
+    addEventFilter(MouseEvent.MOUSE_MOVED, this::updateResizeCursor);
+    addEventFilter(
+        MouseEvent.MOUSE_PRESSED,
+        event -> {
+          resizeCursor = cursorAt(event.getSceneX(), event.getSceneY());
+          if (resizeCursor == Cursor.DEFAULT || stage().isMaximized()) {
+            resizeCursor = Cursor.DEFAULT;
+            return;
+          }
+          Stage window = stage();
+          resizeStartX = window.getX();
+          resizeStartY = window.getY();
+          resizeStartWidth = window.getWidth();
+          resizeStartHeight = window.getHeight();
+          resizeStartScreenX = event.getScreenX();
+          resizeStartScreenY = event.getScreenY();
+          event.consume();
+        });
+    addEventFilter(
+        MouseEvent.MOUSE_DRAGGED,
+        event -> {
+          if (resizeCursor != Cursor.DEFAULT) {
+            resizeWindow(event.getScreenX(), event.getScreenY());
+            event.consume();
+          }
+        });
+    addEventFilter(MouseEvent.MOUSE_RELEASED, event -> resizeCursor = Cursor.DEFAULT);
+    addEventFilter(
+        MouseEvent.MOUSE_EXITED,
+        event -> {
+          if (resizeCursor == Cursor.DEFAULT) {
+            setCursor(Cursor.DEFAULT);
+          }
+        });
+  }
+
+  private void updateResizeCursor(MouseEvent event) {
+    if (stage().isMaximized()) {
+      setCursor(Cursor.DEFAULT);
+      return;
+    }
+    Cursor next = cursorAt(event.getSceneX(), event.getSceneY());
+    setCursor(next);
+  }
+
+  private Cursor cursorAt(double x, double y) {
+    double edge = 7;
+    boolean left = x <= edge;
+    boolean right = x >= getWidth() - edge;
+    boolean top = y <= edge;
+    boolean bottom = y >= getHeight() - edge;
+    if (top && left || bottom && right) {
+      return Cursor.NW_RESIZE;
+    }
+    if (top && right) {
+      return Cursor.NE_RESIZE;
+    }
+    if (bottom && left) {
+      return Cursor.SW_RESIZE;
+    }
+    if (bottom && right) {
+      return Cursor.SE_RESIZE;
+    }
+    if (left) {
+      return Cursor.W_RESIZE;
+    }
+    if (right) {
+      return Cursor.E_RESIZE;
+    }
+    if (top) {
+      return Cursor.N_RESIZE;
+    }
+    if (bottom) {
+      return Cursor.S_RESIZE;
+    }
+    return Cursor.DEFAULT;
+  }
+
+  private void resizeWindow(double screenX, double screenY) {
+    Stage window = stage();
+    double deltaX = screenX - resizeStartScreenX;
+    double deltaY = screenY - resizeStartScreenY;
+    double minWidth = window.getMinWidth();
+    double minHeight = window.getMinHeight();
+    boolean fromLeft =
+        resizeCursor == Cursor.NW_RESIZE
+            || resizeCursor == Cursor.SW_RESIZE
+            || resizeCursor == Cursor.W_RESIZE;
+    boolean fromRight =
+        resizeCursor == Cursor.NE_RESIZE
+            || resizeCursor == Cursor.SE_RESIZE
+            || resizeCursor == Cursor.E_RESIZE;
+    boolean fromTop =
+        resizeCursor == Cursor.NW_RESIZE
+            || resizeCursor == Cursor.NE_RESIZE
+            || resizeCursor == Cursor.N_RESIZE;
+    boolean fromBottom =
+        resizeCursor == Cursor.SW_RESIZE
+            || resizeCursor == Cursor.SE_RESIZE
+            || resizeCursor == Cursor.S_RESIZE;
+
+    if (fromLeft) {
+      double width = Math.max(minWidth, resizeStartWidth - deltaX);
+      window.setX(resizeStartX + resizeStartWidth - width);
+      window.setWidth(width);
+    } else if (fromRight) {
+      window.setWidth(Math.max(minWidth, resizeStartWidth + deltaX));
+    }
+    if (fromTop) {
+      double height = Math.max(minHeight, resizeStartHeight - deltaY);
+      window.setY(resizeStartY + resizeStartHeight - height);
+      window.setHeight(height);
+    } else if (fromBottom) {
+      window.setHeight(Math.max(minHeight, resizeStartHeight + deltaY));
     }
   }
 

@@ -54,6 +54,12 @@ final class HomeView extends VBox {
     content.setMaxWidth(680);
     content.setPadding(new Insets(106, 0, 40, 0));
     content.getStyleClass().add("home-content");
+    heightProperty()
+        .addListener(
+            (observable, oldHeight, newHeight) -> {
+              double topPadding = Math.max(24, Math.min(106, newHeight.doubleValue() - 405));
+              content.setPadding(new Insets(topPadding, 0, 32, 0));
+            });
     getChildren().add(content);
   }
 
