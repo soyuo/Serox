@@ -42,6 +42,7 @@ public final class DisplayListBuilder {
                     box.width(),
                     box.height(),
                     box.element().attribute("alt").orElse("Image"),
+                    box.element().attribute("src").orElse(""),
                     box.style())));
       } else if (tagName.equals("input") || tagName.equals("button")) {
         orderedCommands.add(

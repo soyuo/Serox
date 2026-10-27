@@ -27,7 +27,13 @@ public sealed interface PaintCommand
 
   /** Draws a visual fallback when image bytes are unavailable. */
   record ImagePlaceholder(
-      double x, double y, double width, double height, String altText, ComputedStyle style)
+      double x,
+      double y,
+      double width,
+      double height,
+      String altText,
+      String source,
+      ComputedStyle style)
       implements PaintCommand {}
 
   /** Draws a minimal input or button control. */
