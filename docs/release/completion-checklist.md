@@ -34,16 +34,17 @@ release; see the roadmap in the README.
 | 8 | Search works with a key; errors and retry | Done with stubs | `SearchService` tests; no live key run |
 | 9 | Settings and session survive a restart | Done | `SessionKeeperTest`, `EndToEndScenarioTest` |
 | 10 | AI answers show verified sources; provider errors do not block browsing | Done with stubs | `AiSearchServiceTest`, `CitationManagerTest` |
-| 11 | Each designed setting and status matches real state and persists | Partly | `SettingsServiceTest`, `SeroxRuntimeStatusTest`; see gap below |
+| 11 | Each designed setting and status matches real state and persists | Partly | `SettingsServiceTest`, `SeroxRuntimeStatusTest`; design compared for home, results and settings, see [figma-comparison.md](figma-comparison.md) |
 | 12 | Allowed MCP tools work; others are refused; browser keeps working | Done | `AccessPolicyTest`, `SecurityBoundaryTest`, `UnapprovedClientTest` |
 | 13 | Security tests pass; limits and failure handling documented | Done | `GuardedTransportTest`, `UntrustedEvidenceTest`, `LogHygieneTest`, `docs/security` |
 | 14 | Reproducible build, MSI and test results; limits stated | Done except install/uninstall on a clean machine | `scripts/package-windows.ps1`, `docs/release` |
 
 ## Known gaps to close before a public release
 
-- **Figma comparison (STEP 3, 10, 11):** the Figma file could not be read in this environment
-  because its authorization was never completed. The UI follows the existing design tokens and the
-  screen-flow notes, but a side-by-side review against the design has not happened.
+- **Figma comparison (STEP 3, 10, 11):** the home, search-result and design-settings screens were
+  compared and the mismatches that fit the current layout were fixed. The result layout, the
+  settings sidebar and preview, and most other frames still differ or were not compared; see
+  [figma-comparison.md](figma-comparison.md).
 - **Live providers:** neither the Brave Search nor the Claude API has been called with a real key.
 - **Installer:** install, upgrade and uninstall were not exercised on a clean Windows machine, and
   the MSI is unsigned.

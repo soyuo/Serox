@@ -69,6 +69,8 @@ public final class BrowserShellView extends BorderPane {
   private final Region statusDot = new Region();
   private final Label navigationStatus = new Label("Ready");
   private TextField addressField;
+  private HBox addressBox;
+  private boolean aiSearchActive;
   private HomeView homeView;
   private final EventSubscription connectionStatusSubscription;
   private final EventSubscription operationErrorSubscription;
@@ -133,6 +135,7 @@ public final class BrowserShellView extends BorderPane {
     setTop(createBrowserChrome());
     homeView = new HomeView(previewData, recentSearches.queries(), this::searchFromHome);
     setCenter(homeView);
+    centerProperty().addListener((observable, before, after) -> refreshAiRing());
     setBottom(createStatusBar());
     installKeyboardShortcuts();
     centerProperty()
@@ -361,7 +364,7 @@ public final class BrowserShellView extends BorderPane {
     bookmarkButton.setAccessibleText("현재 페이지를 북마크에 추가");
     bookmarkButton.setOnAction(event -> bookmarkCurrentPage());
     HBox.setHgrow(addressField, Priority.ALWAYS);
-    HBox addressBox =
+    addressBox =
         new HBox(
             UiTokens.SPACE_SM,
             SvgIconView.icon(UiTokens.ICON_ADDRESS_SEARCH, 18),
@@ -533,10 +536,16 @@ public final class BrowserShellView extends BorderPane {
               && resultsView != null
               && getCenter() == resultsView) {
             resultsView.showAi(event);
+            aiSearchActive =
+                event.phase() == AiAnswerChanged.Phase.PREPARING
+                    || event.phase() == AiAnswerChanged.Phase.STREAMING
+                    || event.phase() == AiAnswerChanged.Phase.COMPLETED;
+            refreshAiRing();
           }
         });
   }
 
+/** The cyan ring from the design marks an address bar whose results carry an AI summary. */  private void refreshAiRing() {    if (addressBox == null) {      return;    }    boolean on = aiSearchActive && resultsView != null && getCenter() == resultsView;    addressBox.getStyleClass().remove("address-ai");    if (on) {      addressBox.getStyleClass().add("address-ai");    }  }
   private void showSearchCancelled(SearchCancelled event) {
     FxThreadExecutor.execute(
         () -> {
