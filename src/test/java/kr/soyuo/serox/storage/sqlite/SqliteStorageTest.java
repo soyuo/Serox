@@ -155,4 +155,18 @@ class SqliteStorageTest {
       assertTrue(storage.history().recent(10).toCompletableFuture().join().isEmpty());
     }
   }
+
+  @Test
+  void privacyChoicesSurviveReopening() {
+    var chosen =
+        BrowserSettings.defaults()
+            .withRetention(kr.soyuo.serox.core.model.HistoryRetention.FOREVER)
+            .withSaveSearchHistory(false);
+    try (var storage = new SqliteStorage(tempDir.resolve("privacy.db"))) {
+      storage.settings().save(chosen).toCompletableFuture().join();
+    }
+    try (var reopened = new SqliteStorage(tempDir.resolve("privacy.db"))) {
+      assertEquals(chosen, reopened.settings().load().toCompletableFuture().join());
+    }
+  }
 }
