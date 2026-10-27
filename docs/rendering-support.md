@@ -20,11 +20,12 @@ three- and six-digit hexadecimal notation.
 `display: flex` is supported on block containers with these properties:
 `flex-direction` (`row`, `column`), `justify-content` (`flex-start`, `center`, `flex-end`,
 `space-between`, `space-around`), `align-items` (`stretch`, `flex-start`, `center`,
-`flex-end`), `gap`, and `flex-grow` (or the first number of `flex`). Items without a width
+`flex-end`), `flex-wrap` (`nowrap`, `wrap`; rows only), `gap`, and `flex-grow` (or the
+first number of `flex`). Items without a width
 take the width of their content; items that do not fit shrink in proportion to their width.
 Nested flex containers work.
 
-Not supported in flex layout: `flex-wrap` (items stay on one line), `flex-basis`,
+Not supported in flex layout: wrapping a column, `flex-wrap: wrap-reverse`, `flex-basis`,
 `flex-shrink`, `order`, `align-self`, `align-content`, `inline-flex`, `justify-content` along
 a column (it needs a container height), and text placed directly inside a flex container
 (only element children become items).
