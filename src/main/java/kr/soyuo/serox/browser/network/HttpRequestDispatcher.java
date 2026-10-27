@@ -75,13 +75,14 @@ public final class HttpRequestDispatcher implements HttpTransport {
     return result;
   }
 
-  static final class LimitedBodySubscriber implements HttpResponse.BodySubscriber<byte[]> {
+  /** Response subscriber that cancels a transfer after the configured byte limit. */
+  public static final class LimitedBodySubscriber implements HttpResponse.BodySubscriber<byte[]> {
     private final int maxBytes;
     private final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
     private final CompletableFuture<byte[]> body = new CompletableFuture<>();
     private Flow.Subscription subscription;
 
-    LimitedBodySubscriber(int maxBytes) {
+    public LimitedBodySubscriber(int maxBytes) {
       this.maxBytes = maxBytes;
     }
 
