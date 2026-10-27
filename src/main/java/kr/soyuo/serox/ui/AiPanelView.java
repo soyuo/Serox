@@ -113,6 +113,9 @@ final class AiPanelView extends VBox {
         summary.add(trimmed);
       }
     }
+    if (summary.isEmpty() && !showKeyPoints) {
+      summary.addAll(points);
+    }
     if (!summary.isEmpty()) {
       body.getChildren().add(summaryCard(citedParagraph(String.join(" ", summary))));
     } else {

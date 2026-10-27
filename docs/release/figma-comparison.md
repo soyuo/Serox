@@ -10,7 +10,7 @@ became readable. The canvas holds about 100 frames; only the screens below were 
 | --- | --- |
 | Home (`30:5`) | Same structure and tokens as the implementation (logo, tagline, search pill, recent searches and connection cards, colors `#eef0f4`, `#dde1e8`, `#2563eb`, `#0f7b5f`). Read from the design code, not checked pixel by pixel. |
 | Search result with AI summary (`30:106`) | Fixed in this change, see below. Layout differs, see "Still different". |
-| Settings, design section (`31:1161`, `31:1193`) | Fixed in this change, see below. Sidebar and preview are still missing. |
+| Settings, design section (`31:1161`, `31:1193`) | Sidebar and live draft preview implemented; theme, accent, font size, panel side and density are connected. |
 
 ## Fixed
 
@@ -37,11 +37,7 @@ became readable. The canvas holds about 100 frames; only the screens below were 
   the design only shows the finished state. Key points are bullet rows, not the design's
   "label + text" table, since the model's answer has no labels.
 - **Inactive tab styling** in the result frame.
-- **Settings pages other than the design page.** The sidebar and live preview now exist (checked in a
-  rendered image against the design). Only appearance is editable. The other seven pages show real
-  status and explanations; the design's provider, summary, history and shortcut pages contain controls
-  (sign-in, clear history, remap keys) that Serox does not have, because keys come from environment
-  variables. The preview follows the accent color but not the theme.
+- **Settings:** general, privacy, shortcuts and MCP controls are connected. Search (`31:774`), AI (`31:836`) and summary (`31:1098`) now use the design rows/cards and actual services. Provider cards wrap at small widths. ChatGPT browser authorization is implemented; other providers use API keys with explicit browser-login limitations. Unsupported robots.txt, multi-pass summaries and compatible providers are disabled with explanations. Appearance preview follows all five choices and apply/cancel/defaults remain separate.
 - **Font size** has three steps (90 / 100 / 115 %) instead of a free slider, as in the design; an
   older saved value outside these steps shows no selected option until the user picks one.
 - **Default accent.** The design's first swatch is `#3e81f4`, while the buttons use `#2563eb`. Serox
@@ -51,3 +47,13 @@ became readable. The canvas holds about 100 frames; only the screens below were 
 - Numbered result rows with an open-row marker and a result count heading.
 - Source pane header and read count above the summary; address-error pages for connection failures.
 - Privacy settings include search history and visit retention choices.
+
+## STEP 11 follow-up verification (2026-10-27)
+
+`AppearanceDraftTest` checks preservation of non-appearance settings and separate
+preview/apply/cancel/default actions. `AiProviderPageTest` renders the Claude and
+ChatGPT cards and checks the 500-pixel content width. `ContentSettingsPageTest`
+checks search count/safe-search controls, explicit summary-instruction saving,
+length bounds and narrow layouts. Screenshots are generated under `target/review`.
+General, shortcuts and MCP were compared in the preceding merged PRs. This is a
+functional/layout comparison, not a claim of pixel parity across every Figma frame.
