@@ -944,3 +944,18 @@
     -fx-font-size: 1.071em;
     -fx-font-weight: bold;
 }
+
+.search-result-open { -fx-background-color: serox-ai-surface; -fx-border-color: serox-logo; -fx-border-radius: 10px; -fx-background-radius: 10px; }
+.open-tag { -fx-text-fill: serox-ai-accent; -fx-font-size: 0.857em; -fx-font-weight: bold; }
+.source-pane-header { -fx-min-height: 36px; }
+.source-pane-number { -fx-text-fill: serox-text-secondary; -fx-font-weight: bold; }
+.source-pane-address { -fx-min-width: 0; -fx-padding: 6px 12px; -fx-background-color: serox-surface; -fx-background-radius: 8px; -fx-border-color: serox-border; -fx-border-radius: 8px; -fx-text-fill: serox-text-muted; -fx-font-size: 0.857em; }
+.source-pane-card { -fx-padding: 24px; -fx-background-color: serox-surface; -fx-background-radius: 12px; -fx-border-color: serox-border; -fx-border-radius: 12px; }
+.error-page { -fx-background-color: serox-surface; }
+.error-page-icon { -fx-min-width: 56px; -fx-min-height: 56px; -fx-alignment: center; -fx-background-color: serox-error-surface; -fx-background-radius: 28px; -fx-text-fill: serox-error; -fx-font-size: 1.714em; -fx-font-weight: bold; }
+.error-page-title { -fx-text-fill: serox-text-primary; -fx-font-size: 1.714em; -fx-font-weight: bold; }
+.error-page-tips { -fx-padding: 14px 18px; -fx-background-color: serox-hover-surface; -fx-background-radius: 10px; -fx-border-color: serox-border; -fx-border-radius: 10px; }
+.error-page-tips-title { -fx-text-fill: serox-text-primary; -fx-font-weight: bold; }
+.address-box.address-error .address-field { -fx-text-fill: serox-error; }
+.switch { -fx-min-height: 32px; -fx-padding: 0 14px; -fx-background-color: serox-border; -fx-background-radius: 16px; -fx-text-fill: serox-text-secondary; -fx-font-weight: bold; -fx-cursor: hand; }
+.switch:selected { -fx-background-color: serox-primary; -fx-text-fill: white; }

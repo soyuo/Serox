@@ -9,6 +9,9 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import kr.soyuo.serox.ai.api.EvidenceDocument;
 import kr.soyuo.serox.core.event.AiAnswerChanged;
@@ -98,26 +101,54 @@ final class SearchResultsView extends BorderPane {
     return view;
   }
 
+  /** The no-internet screen from the design: one message, one retry, and a matching source pane. */
+  static SearchResultsView offline(String query, Runnable onRetry, Consumer<SearchResult> onOpen) {
+    SearchResultsView view = new SearchResultsView(query, onOpen);
+    view.results
+        .getChildren()
+        .setAll(
+            view.heading("오프라인"),
+            view.state(
+                "인터넷에 연결되어 있지 않아요", "연결을 확인한 뒤 다시 시도해 주세요.", view.action("다시 시도", onRetry)));
+    view.preview.setCenter(view.sourcePlaceholder("인터넷에 연결되지 않았어요", "연결을 확인한 뒤 다시 시도해 주세요."));
+    return view;
+  }
+
   static SearchResultsView results(
       String query, List<SearchResult> found, Consumer<SearchResult> onOpen) {
     SearchResultsView view = new SearchResultsView(query, onOpen);
-    view.results.getChildren().add(view.heading(found.size() + "개 결과"));
+    view.results.getChildren().add(view.heading("검색 결과 " + found.size() + "곳"));
     view.installPanelControls();
+    int number = 0;
     for (SearchResult result : found) {
-      Button item = new Button();
+      number++;
+      Label badge = new Label(Integer.toString(number));
+      badge.getStyleClass().add("source-badge");
       Label title = new Label(result.title());
       title.getStyleClass().add("search-result-title");
       Label url = new Label(result.uri().toString());
       url.getStyleClass().add("search-result-url");
+      Label openTag = new Label("열람 중");
+      openTag.getStyleClass().add("open-tag");
+      openTag.setVisible(false);
+      Region gap = new Region();
+      HBox.setHgrow(gap, Priority.ALWAYS);
+      title.setMinWidth(0);
+      HBox.setHgrow(title, Priority.SOMETIMES);
+      HBox head = new HBox(UiTokens.SPACE_SM + 2, badge, title, gap, openTag);
+      head.setAlignment(Pos.CENTER_LEFT);
       Label snippet = new Label(result.snippet());
       snippet.setWrapText(true);
       snippet.getStyleClass().add("search-result-snippet");
-      VBox content = new VBox(6, title, url, snippet);
+      VBox content = new VBox(6, head, url, snippet);
       content.getStyleClass().add("search-result-content");
+      Button item = new Button();
       item.setGraphic(content);
       item.setMaxWidth(Double.MAX_VALUE);
-      item.setAccessibleText(result.title() + ", " + result.uri());
+      item.setAccessibleText(number + "번, " + result.title() + ", " + result.uri());
       item.getStyleClass().add("search-result-item");
+      item.getProperties().put("result", result);
+      item.getProperties().put("tag", openTag);
       item.setOnAction(event -> view.select(result));
       view.results.getChildren().add(item);
     }
@@ -125,6 +156,22 @@ final class SearchResultsView extends BorderPane {
       view.select(found.getFirst());
     }
     return view;
+  }
+
+  /** Marks the row of the result whose details are open, as the design does. */
+  private void markOpenRow(SearchResult open) {
+    for (javafx.scene.Node row : results.getChildren()) {
+      if (row instanceof Button item && item.getProperties().get("result") != null) {
+        boolean isOpen = item.getProperties().get("result").equals(open);
+        item.getStyleClass().remove("search-result-open");
+        if (isOpen) {
+          item.getStyleClass().add("search-result-open");
+        }
+        if (item.getProperties().get("tag") instanceof Label tag) {
+          tag.setVisible(isOpen);
+        }
+      }
+    }
   }
 
   private void setQueryHeading() {
@@ -312,14 +359,18 @@ final class SearchResultsView extends BorderPane {
 
   /** The dashed card shown until the user picks a source, as in the design. */
   private VBox sourcePlaceholder() {
-    Label title = new Label("출처를 누르면 원문이 열려요");
+    return sourcePlaceholder("출처를 누르면 원문이 열려요", "고른 출처의 페이지가 여기에 보여요.");
+  }
+
+  private VBox sourcePlaceholder(String heading, String detail) {
+    Label title = new Label(heading);
     title.getStyleClass().add("search-state-title");
     VBox card =
         new VBox(
             UiTokens.SPACE_MD,
             SvgIconView.icon(UiTokens.ICON_PREVIEW_PLACEHOLDER, UiTokens.PLACEHOLDER_ICON_SIZE),
             title,
-            message("고른 출처의 페이지가 여기에 보여요."));
+            message(detail));
     card.setAlignment(Pos.CENTER);
     card.getStyleClass().add("source-placeholder");
     VBox.setVgrow(card, javafx.scene.layout.Priority.ALWAYS);
@@ -329,34 +380,49 @@ final class SearchResultsView extends BorderPane {
     return holder;
   }
 
+  /** The source pane from the design: a header with the source, its address and an open button. */
   private void showEvidence(EvidenceDocument document) {
+    Label number = new Label("원문 " + document.sourceId().replaceFirst("^S", ""));
+    number.getStyleClass().add("source-pane-number");
+    Label address = new Label(document.uri().toString());
+    address.getStyleClass().add("source-pane-address");
+    address.setMaxWidth(Double.MAX_VALUE);
+    address.setTextOverrun(javafx.scene.control.OverrunStyle.ELLIPSIS);
+    javafx.scene.layout.HBox.setHgrow(address, javafx.scene.layout.Priority.ALWAYS);
+    Button open =
+        new Button("새 탭에서 열기");
+    open.getStyleClass().add("secondary-button");
+    open.setAccessibleText("새 탭에서 원문 열기");
+    open.setOnAction(
+        event ->
+            onOpenResult.accept(
+                new SearchResult(document.sourceId(), document.uri(), document.title(), "", 1)));
+    javafx.scene.layout.HBox header = new javafx.scene.layout.HBox(UiTokens.SPACE_SM, number, address, open);
+    header.setAlignment(Pos.CENTER_LEFT);
+    header.getStyleClass().add("source-pane-header");
+
     Label title = new Label(document.title());
     title.setWrapText(true);
     title.getStyleClass().add("search-preview-title");
-    Label url = new Label(document.uri().toString());
-    url.setWrapText(true);
-    url.getStyleClass().add("search-result-url");
     Label excerpt = new Label(document.text());
     excerpt.setWrapText(true);
     excerpt.getStyleClass().add("search-result-snippet");
     ScrollPane excerptScroll = new ScrollPane(excerpt);
     excerptScroll.setFitToWidth(true);
     excerptScroll.getStyleClass().add("search-results-scroll");
-    Button open =
-        action(
-            "원문 페이지 열기",
-            () ->
-                onOpenResult.accept(
-                    new SearchResult(
-                        document.sourceId(), document.uri(), document.title(), "", 1)));
-    VBox details = new VBox(14, title, url, excerptScroll, open);
-    details.setPadding(new Insets(40));
-    details.getStyleClass().add("search-preview-content");
+    VBox.setVgrow(excerptScroll, javafx.scene.layout.Priority.ALWAYS);
+    VBox card = new VBox(UiTokens.SPACE_MD, title, excerptScroll);
+    card.getStyleClass().add("source-pane-card");
+    VBox.setVgrow(card, javafx.scene.layout.Priority.ALWAYS);
+    VBox details = new VBox(UiTokens.SPACE_SM, header, card);
+    details.setPadding(new Insets(UiTokens.SPACE_LG));
+    details.getStyleClass().add("source-holder");
     preview.setCenter(details);
   }
 
   private void select(SearchResult result) {
     selected = result;
+    markOpenRow(result);
     Label title = new Label(result.title());
     title.setWrapText(true);
     title.getStyleClass().add("search-preview-title");

@@ -48,3 +48,6 @@ became readable. The canvas holds about 100 frames; only the screens below were 
   keeps `#2563EB` as the default and uses it as the first swatch.
 - **Not compared at all:** search states other than the two above, error and loading frames, site information and
   permission frames, the other settings sections, and the keyboard shortcuts page.
+- Numbered result rows with an open-row marker and a result count heading.
+- Source pane header and read count above the summary; address-error pages for connection failures.
+- Privacy settings include search history and visit retention choices.

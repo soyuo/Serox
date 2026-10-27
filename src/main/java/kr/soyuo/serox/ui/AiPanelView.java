@@ -260,3 +260,13 @@ final class AiPanelView extends VBox {
     return label;
   }
 }
+  /** The green-dot line above the summary: how many result pages the answer is based on. */
+  private HBox readCount(int pages) {
+    Region dot = new Region();
+    dot.getStyleClass().addAll("status-dot", "status-dot-connected");
+    Label text = new Label("검색 결과 " + pages + "곳을 읽고 정리했어요");
+    text.getStyleClass().add("search-state-message");
+    HBox line = new HBox(UiTokens.SPACE_SM, dot, text);
+    line.setAlignment(Pos.CENTER_LEFT);
+    return line;
+  }
