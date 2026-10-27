@@ -60,3 +60,29 @@ API 키와 로그 처리 규칙은 [보안 안내](docs/SECURITY.md)를 따른�
 
 도구 참고: [OpenJFX Maven 안내](https://openjfx.io/openjfx-docs/#maven),
 [JDK 25 jpackage 안내](https://docs.oracle.com/en/java/javase/25/jpackage/index.html).
+
+## 코드 품질 명령
+
+JDK 25와 Maven 3.9 이상을 설치한 뒤 프로젝트 루트에서 실행한다.
+
+```powershell
+# Google Java Format 적용
+mvn spotless:apply
+
+# 포맷 검사 및 Checkstyle 정적 분석
+mvn spotless:check
+mvn checkstyle:check
+
+# 테스트와 전체 검증
+mvn test
+mvn verify
+```
+
+`mvn verify`는 Checkstyle을 실행하고 컴파일 및 테스트까지 검증한다. 아직 테스트 코드가
+없는 단계에서는 테스트 수가 0일 수 있으며, 기능을 추가할 때 단위 테스트를 함께 추가한다.
+
+## 디자인 및 작업 흐름
+
+제품 UI의 기준은 [Serox Figma 디자인](https://www.figma.com/design/IZiradnUF4Q4Ok0XGeTtPy/Serox?node-id=30-3&t=3KCOPM8O9iPz75EA-1)이다. 화면별 기능과 구현 순서는 [STEP.md](STEP.md)에 연결되어 있다.
+
+각 `### STEP n`마다 전용 이슈·브랜치·PR을 만들고, STEP 안의 각 번호 작업 단위는 하나의 커밋으로 남긴다. 커밋 메시지는 `type: lowercase summary` 형식을 사용한다. 각 STEP PR은 GitHub에서 **Create a merge commit**으로 합친다.
