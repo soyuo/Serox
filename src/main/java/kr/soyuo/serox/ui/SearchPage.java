@@ -21,6 +21,7 @@ final class SearchPage extends ScrollPane {
     VBox card = SettingsControls.card();
     card.setMaxWidth(862);
     Button provider = new Button("Brave Search API");
+    provider.getStyleClass().add("secondary-button");
     provider.setGraphic(SvgIconView.icon(UiTokens.ICON_SETTINGS_DROPDOWN, 14));
     provider.setContentDisplay(javafx.scene.control.ContentDisplay.RIGHT);
     provider.setPrefWidth(220);
@@ -37,6 +38,7 @@ final class SearchPage extends ScrollPane {
     key.setAccessibleText("Brave Search API 키");
     key.setPromptText("API 키 입력");
     Button save = new Button("키 저장");
+    save.getStyleClass().add("secondary-button");
     save.setOnAction(
         event -> {
           String secret = key.getText();
@@ -61,7 +63,9 @@ final class SearchPage extends ScrollPane {
                 "API 키", "키는 Windows 사용자 계정으로 암호화해 저장해요.", new HBox(8, key, save)));
     Label count = new Label(settings.settings().search().evidencePages() + "개");
     Button minus = new Button("−");
+    minus.getStyleClass().add("secondary-button");
     Button plus = new Button("+");
+    plus.getStyleClass().add("secondary-button");
     Runnable refresh =
         () -> {
           int value = settings.settings().search().evidencePages();

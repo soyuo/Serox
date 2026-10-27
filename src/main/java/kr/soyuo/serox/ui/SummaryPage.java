@@ -99,6 +99,7 @@ final class SummaryPage extends ScrollPane {
         new TextFormatter<String>(
             change -> change.getControlNewText().length() <= 2000 ? change : null));
     Button reset = new Button("기본값으로 되돌리기");
+    reset.getStyleClass().add("secondary-button");
     reset.setOnAction(event -> instructions.setText(SummaryPreferences.DEFAULT_INSTRUCTIONS));
     Label message = SettingsControls.label("지침은 저장 버튼을 누르면 다음 검색부터 사용해요.", "search-state-message");
     Button save = new Button("지침 저장");

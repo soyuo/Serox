@@ -139,6 +139,7 @@ final class AiProviderPage extends ScrollPane {
             keyRow,
             SettingsControls.row("모델", "제공자의 모델 ID를 입력하세요.", model));
     Button useKey = new Button("저장된 API 키 사용");
+    useKey.getStyleClass().add("secondary-button");
     useKey.setDisable(!service.snapshot().configured().contains(selected));
     useKey.setOnAction(event -> run(service.selectKey(selected, model.getText().strip())));
     fields
@@ -150,6 +151,7 @@ final class AiProviderPage extends ScrollPane {
     connection.getChildren().add(fields);
     if (busy && browserLogin) {
       Button cancel = new Button("로그인 취소");
+      cancel.getStyleClass().add("secondary-button");
       cancel.setOnAction(event -> service.cancelSignIn());
       connection.getChildren().add(cancel);
     }
@@ -191,6 +193,7 @@ final class AiProviderPage extends ScrollPane {
             login);
     for (ChatGptAccounts.Account account : service.snapshot().accounts()) {
       Button use = new Button(account.planEnabled() ? "사용" : "다시 로그인");
+      use.getStyleClass().add("secondary-button");
       use.setOnAction(
           event -> {
             if (account.planEnabled()) {
@@ -200,8 +203,10 @@ final class AiProviderPage extends ScrollPane {
             }
           });
       Button reconnect = new Button("다시 로그인");
+      reconnect.getStyleClass().add("secondary-button");
       reconnect.setOnAction(event -> login(account.id()));
       Button logout = new Button("로그아웃");
+      logout.getStyleClass().add("secondary-button");
       logout.setOnAction(event -> run(service.signOut(account.id())));
       browser
           .getChildren()
@@ -243,6 +248,7 @@ final class AiProviderPage extends ScrollPane {
             }
           });
       Button refresh = new Button("모델 새로고침");
+      refresh.getStyleClass().add("secondary-button");
       refresh.setOnAction(event -> run(service.useAccount(service.snapshot().accountId())));
       browser.getChildren().add(new FlowPane(12, 8, models, refresh));
     }
