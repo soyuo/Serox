@@ -14,9 +14,7 @@ import kr.soyuo.serox.core.port.storage.SettingsRepository;
 
 /** SQLite-backed non-secret browser preferences repository. */
 public final class SqliteSettingsRepository implements SettingsRepository {
-  private static final BrowserSettings DEFAULTS =
-      new BrowserSettings(
-          ThemeMode.SYSTEM, "#2563EB", 100, AiPanelPosition.RIGHT, DisplayDensity.COMFORTABLE);
+  private static final BrowserSettings DEFAULTS = BrowserSettings.defaults();
 
   private final SqliteDatabase database;
 

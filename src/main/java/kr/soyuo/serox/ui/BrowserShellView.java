@@ -29,7 +29,9 @@ import kr.soyuo.serox.core.application.NavigationInputClassifier;
 import kr.soyuo.serox.core.application.NavigationTarget;
 import kr.soyuo.serox.core.application.SearchQuery;
 import kr.soyuo.serox.ai.application.AiSearchService;
+import kr.soyuo.serox.core.application.SettingsService;
 import kr.soyuo.serox.core.event.ActiveTabChanged;
+import kr.soyuo.serox.core.event.SettingsChanged;
 import kr.soyuo.serox.core.event.AiAnswerChanged;
 import kr.soyuo.serox.core.event.BrowserEventBus;
 import kr.soyuo.serox.core.event.ConnectionStatusChanged;
@@ -51,6 +53,7 @@ import java.util.Optional;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.CustomMenuItem;
 import kr.soyuo.serox.core.model.AiPanelPosition;
+import kr.soyuo.serox.core.model.BrowserSettings;
 import kr.soyuo.serox.core.model.SiteInfo;
 import kr.soyuo.serox.core.model.TabSnapshot;
 import kr.soyuo.serox.search.application.SearchService;
@@ -81,6 +84,9 @@ public final class BrowserShellView extends BorderPane {
   private boolean aiPanelOpen = true;
   private AiPanelPosition aiPanelSide = AiPanelPosition.RIGHT;
   private AiSearchService aiSearchService;
+  private SettingsService settingsService;
+  private EventSubscription settingsSubscription;
+  private javafx.scene.Node viewBeforeSettings;
   private final Button siteInfoButton = new Button();
   private SiteInfo siteInfo = SiteInfo.of(Optional.empty());
   private final Map<TabId, TabSnapshot> tabSnapshots = new HashMap<>();
@@ -153,6 +159,43 @@ public final class BrowserShellView extends BorderPane {
     this.aiSearchService = aiSearchService;
   }
 
+  /** Connects the settings store, applying the current values and following later changes. */
+  public void setSettingsService(SettingsService settingsService) {
+    this.settingsService = settingsService;
+    applySettings(settingsService.current());
+    settingsSubscription =
+        browserController
+            .eventBus()
+            .subscribe(
+                SettingsChanged.class,
+                event -> FxThreadExecutor.execute(() -> applySettings(event.settings())));
+  }
+
+  private void applySettings(BrowserSettings settings) {
+    AppearanceStyler.apply(this, settings);
+    aiPanelSide = settings.aiPanelPosition();
+  }
+
+  private void showSettings() {
+    if (settingsService == null) {
+      return;
+    }
+    if (!(getCenter() instanceof SettingsView)) {
+      viewBeforeSettings = getCenter();
+    }
+    setCenter(
+        new SettingsView(
+            settingsService.current(),
+            settings -> settingsService.save(settings),
+            this::closeSettings));
+  }
+
+  private void closeSettings() {
+    if (getCenter() instanceof SettingsView) {
+      setCenter(viewBeforeSettings != null ? viewBeforeSettings : homeView);
+    }
+  }
+
   /** Releases event subscriptions owned by this view. */
   public void close() {
     connectionStatusSubscription.close();
@@ -166,6 +209,9 @@ public final class BrowserShellView extends BorderPane {
     searchFailedSubscription.close();
     searchCancelledSubscription.close();
     aiAnswerSubscription.close();
+    if (settingsSubscription != null) {
+      settingsSubscription.close();
+    }
   }
 
   private VBox createBrowserChrome() {
@@ -269,7 +315,7 @@ public final class BrowserShellView extends BorderPane {
     Button history = toolbarButton(UiTokens.ICON_HISTORY, "방문 기록");
     Button settings = toolbarButton(UiTokens.ICON_SETTINGS, "설정");
     history.setDisable(true);
-    settings.setDisable(true);
+    settings.setOnAction(event -> showSettings());
     HBox row =
         new HBox(UiTokens.SPACE_XS, backButton, forwardButton, addressBox, history, settings);
     row.setAlignment(Pos.CENTER_LEFT);
