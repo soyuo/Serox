@@ -63,7 +63,8 @@ public final class HttpBrowserEngine implements BrowserEngine {
             .map(node -> node.textContent().strip())
             .orElse("");
     String visibleText = document.body().map(node -> node.textContent().strip()).orElse("");
-    return new PageSnapshot(response.uri(), title, visibleText, Instant.now());
+    return new PageSnapshot(
+        response.uri(), title, visibleText, Instant.now(), java.util.Optional.of(document));
   }
 
   private RuntimeException mapFailure(Throwable failure) {

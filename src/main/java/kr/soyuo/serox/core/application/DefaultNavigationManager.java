@@ -15,6 +15,7 @@ import kr.soyuo.serox.core.error.ApplicationError;
 import kr.soyuo.serox.core.error.ErrorCode;
 import kr.soyuo.serox.core.event.BrowserEventBus;
 import kr.soyuo.serox.core.event.OperationFailed;
+import kr.soyuo.serox.core.event.PageLoaded;
 import kr.soyuo.serox.core.event.TabStateChanged;
 import kr.soyuo.serox.core.model.TabId;
 import kr.soyuo.serox.core.model.TabSnapshot;
@@ -158,6 +159,7 @@ public final class DefaultNavigationManager implements NavigationManager {
             throw new CompletionException(failure);
           }
           if (state.complete(page, version)) {
+            eventBus.publish(new PageLoaded(Instant.now(), tabId, page));
             publishState(state);
           }
           return state.snapshot();

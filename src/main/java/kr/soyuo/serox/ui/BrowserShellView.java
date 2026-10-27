@@ -7,6 +7,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
@@ -18,15 +19,20 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import kr.soyuo.serox.browser.dom.Document;
+import kr.soyuo.serox.browser.render.CanvasPageView;
+import kr.soyuo.serox.core.application.BrowserController;
 import kr.soyuo.serox.core.event.ActiveTabChanged;
 import kr.soyuo.serox.core.event.BrowserEventBus;
 import kr.soyuo.serox.core.event.ConnectionStatusChanged;
 import kr.soyuo.serox.core.event.EventSubscription;
 import kr.soyuo.serox.core.event.OperationFailed;
+import kr.soyuo.serox.core.event.PageLoaded;
 import kr.soyuo.serox.core.event.ServiceId;
 import kr.soyuo.serox.core.event.ServiceStatus;
 import kr.soyuo.serox.core.event.TabClosed;
 import kr.soyuo.serox.core.event.TabStateChanged;
+import kr.soyuo.serox.core.model.NavigationStatus;
 import kr.soyuo.serox.core.model.TabId;
 import kr.soyuo.serox.core.model.TabSnapshot;
 
@@ -37,6 +43,7 @@ public final class BrowserShellView extends BorderPane {
   private final Label mcpStatus =
       new Label(previewData.mcp().statusText() + " (" + previewData.mcp().detail() + ")");
   private final Region statusDot = new Region();
+  private final Label navigationStatus = new Label("Ready");
   private TextField addressField;
   private HomeView homeView;
   private final EventSubscription connectionStatusSubscription;
@@ -44,8 +51,16 @@ public final class BrowserShellView extends BorderPane {
   private final EventSubscription tabStateSubscription;
   private final EventSubscription activeTabSubscription;
   private final EventSubscription tabClosedSubscription;
+  private final EventSubscription pageLoadedSubscription;
   private final Map<TabId, TabSnapshot> tabSnapshots = new HashMap<>();
+  private final Map<TabId, PageLoaded> loadedPages = new HashMap<>();
+  private final Map<TabId, HBox> tabButtons = new HashMap<>();
+  private final Map<TabId, Label> tabTitles = new HashMap<>();
+  private final HBox tabStrip = new HBox(UiTokens.SPACE_XS);
+  private final BrowserController browserController;
   private TabId activeTabId;
+  private Button backButton;
+  private Button forwardButton;
   private double dragOffsetX;
   private double dragOffsetY;
   private Cursor resizeCursor = Cursor.DEFAULT;
@@ -57,7 +72,9 @@ public final class BrowserShellView extends BorderPane {
   private double resizeStartScreenY;
 
   /** Creates the browser shell and subscribes to service status events. */
-  public BrowserShellView(BrowserEventBus eventBus) {
+  public BrowserShellView(BrowserController browserController) {
+    this.browserController = Objects.requireNonNull(browserController, "browserController");
+    BrowserEventBus eventBus = browserController.eventBus();
     Objects.requireNonNull(eventBus, "eventBus");
     getStyleClass().add("app-root");
     installWindowResizeHandlers();
@@ -78,6 +95,7 @@ public final class BrowserShellView extends BorderPane {
     tabStateSubscription = eventBus.subscribe(TabStateChanged.class, this::showTabState);
     activeTabSubscription = eventBus.subscribe(ActiveTabChanged.class, this::showActiveTab);
     tabClosedSubscription = eventBus.subscribe(TabClosed.class, this::removeTab);
+    pageLoadedSubscription = eventBus.subscribe(PageLoaded.class, this::showPage);
   }
 
   /** Releases event subscriptions owned by this view. */
@@ -87,6 +105,7 @@ public final class BrowserShellView extends BorderPane {
     tabStateSubscription.close();
     activeTabSubscription.close();
     tabClosedSubscription.close();
+    pageLoadedSubscription.close();
   }
 
   private VBox createBrowserChrome() {
@@ -96,20 +115,21 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private HBox createTitleBar() {
-    HBox activeTab = new HBox(UiTokens.SPACE_SM, new Label("새 탭"));
-    activeTab.setAlignment(Pos.CENTER_LEFT);
-    activeTab.getStyleClass().add("active-tab");
-    Button closeTab = new Button();
-    closeTab.setGraphic(SvgIconView.icon(UiTokens.ICON_TAB_CLOSE, UiTokens.WINDOW_ICON_SIZE));
-    closeTab.setAccessibleText("현재 탭 닫기");
-    closeTab.setDisable(true);
-    closeTab.getStyleClass().add("tab-close");
-    activeTab.getChildren().add(closeTab);
-
-    HBox left = new HBox(UiTokens.SPACE_MD, SvgIconView.logo(16), activeTab);
+    tabStrip.setAlignment(Pos.CENTER_LEFT);
+    ScrollPane tabs = new ScrollPane(tabStrip);
+    tabs.setFitToHeight(true);
+    tabs.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+    tabs.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+    tabs.getStyleClass().add("tab-strip-scroll");
+    Button newTab = new Button("+");
+    newTab.setAccessibleText("새 탭 열기");
+    newTab.getStyleClass().add("new-tab-button");
+    newTab.setOnAction(event -> browserController.createTab());
+    HBox left = new HBox(UiTokens.SPACE_MD, SvgIconView.logo(16), tabs, newTab);
     left.setAlignment(Pos.CENTER_LEFT);
     left.getStyleClass().add("titlebar-left");
     HBox.setHgrow(left, Priority.ALWAYS);
+    HBox.setHgrow(tabs, Priority.ALWAYS);
 
     Button minimize = windowButton(UiTokens.ICON_WINDOW_MINIMIZE, "창 최소화");
     minimize.setOnAction(event -> stage().setIconified(true));
@@ -152,14 +172,17 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private HBox createToolbar() {
-    Button back = toolbarButton(UiTokens.ICON_BACK, "뒤로");
-    Button forward = toolbarButton(UiTokens.ICON_FORWARD, "앞으로");
-    back.setDisable(true);
-    forward.setDisable(true);
+    backButton = toolbarButton(UiTokens.ICON_BACK, "뒤로");
+    forwardButton = toolbarButton(UiTokens.ICON_FORWARD, "앞으로");
+    backButton.setDisable(true);
+    forwardButton.setDisable(true);
+    backButton.setOnAction(event -> runForActiveTab(browserController::goBack));
+    forwardButton.setOnAction(event -> runForActiveTab(browserController::goForward));
 
     addressField = new TextField();
     addressField.setPromptText("검색어 또는 주소를 입력하세요…");
     addressField.setAccessibleText("검색어 또는 웹 주소, Ctrl+L로 이동");
+    addressField.setOnAction(event -> navigateToAddress());
     addressField.getStyleClass().add("address-field");
     HBox.setHgrow(addressField, Priority.ALWAYS);
     HBox addressBox =
@@ -173,7 +196,8 @@ public final class BrowserShellView extends BorderPane {
     Button settings = toolbarButton(UiTokens.ICON_SETTINGS, "설정");
     history.setDisable(true);
     settings.setDisable(true);
-    HBox row = new HBox(UiTokens.SPACE_XS, back, forward, addressBox, history, settings);
+    HBox row =
+        new HBox(UiTokens.SPACE_XS, backButton, forwardButton, addressBox, history, settings);
     row.setAlignment(Pos.CENTER_LEFT);
     row.getStyleClass().add("toolbar");
     return row;
@@ -201,7 +225,7 @@ public final class BrowserShellView extends BorderPane {
     divider.getStyleClass().add("status-divider");
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
-    HBox bar = new HBox(UiTokens.SPACE_MD, aiStatus, divider, spacer, mcpStatus);
+    HBox bar = new HBox(UiTokens.SPACE_MD, navigationStatus, divider, aiStatus, spacer, mcpStatus);
     bar.setAlignment(Pos.CENTER_LEFT);
     bar.getStyleClass().add("status-bar");
     return bar;
@@ -225,7 +249,7 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private void showOperationError(OperationFailed event) {
-    updateLabel(aiStatus, event.error().safeMessage());
+    updateLabel(navigationStatus, event.error().safeMessage());
   }
 
   private void showTabState(TabStateChanged event) {
@@ -233,7 +257,10 @@ public final class BrowserShellView extends BorderPane {
         () -> {
           TabSnapshot snapshot = event.snapshot();
           tabSnapshots.put(snapshot.id(), snapshot);
+          updateTab(snapshot);
           if (snapshot.id().equals(activeTabId)) {
+            navigationStatus.setText(statusText(snapshot.navigationStatus()));
+            updateHistoryButtons(snapshot);
             updateAddress(snapshot);
           }
         });
@@ -243,26 +270,137 @@ public final class BrowserShellView extends BorderPane {
     FxThreadExecutor.execute(
         () -> {
           activeTabId = event.tabId().orElse(null);
+          updateActiveTabStyle();
           TabSnapshot snapshot = tabSnapshots.get(activeTabId);
           if (snapshot == null) {
             addressField.clear();
+            navigationStatus.setText("Ready");
+            updateHistoryButtons(null);
           } else {
             updateAddress(snapshot);
+            navigationStatus.setText(statusText(snapshot.navigationStatus()));
+            updateHistoryButtons(snapshot);
+          }
+          PageLoaded page = loadedPages.get(activeTabId);
+          if (page == null) {
+            showHomeView();
+          } else {
+            showPage(page);
           }
         });
   }
 
   private void removeTab(TabClosed event) {
-    FxThreadExecutor.execute(() -> tabSnapshots.remove(event.tabId()));
+    FxThreadExecutor.execute(
+        () -> {
+          tabSnapshots.remove(event.tabId());
+          loadedPages.remove(event.tabId());
+          HBox button = tabButtons.remove(event.tabId());
+          tabTitles.remove(event.tabId());
+          if (button != null) {
+            tabStrip.getChildren().remove(button);
+          }
+        });
+  }
+
+  private void updateTab(TabSnapshot snapshot) {
+    Label title = tabTitles.get(snapshot.id());
+    if (title == null) {
+      title = new Label();
+      title.setMaxWidth(190);
+      Button close = new Button();
+      close.setGraphic(SvgIconView.icon(UiTokens.ICON_TAB_CLOSE, UiTokens.WINDOW_ICON_SIZE));
+      close.setAccessibleText("탭 닫기");
+      close.getStyleClass().add("tab-close");
+      close.addEventFilter(MouseEvent.MOUSE_CLICKED, MouseEvent::consume);
+      close.setOnAction(
+          event -> {
+            event.consume();
+            browserController.closeTab(snapshot.id());
+          });
+      HBox tab = new HBox(UiTokens.SPACE_SM, title, close);
+      tab.setAlignment(Pos.CENTER_LEFT);
+      tab.setOnMouseClicked(event -> browserController.activateTab(snapshot.id()));
+      tabButtons.put(snapshot.id(), tab);
+      tabTitles.put(snapshot.id(), title);
+      tabStrip.getChildren().add(tab);
+    }
+    title.setText(snapshot.title().isBlank() ? "새 탭" : snapshot.title());
+    HBox tab = tabButtons.get(snapshot.id());
+    tab.setAccessibleText(title.getText());
+    updateActiveTabStyle();
+  }
+
+  private void updateActiveTabStyle() {
+    tabButtons.forEach(
+        (tabId, button) ->
+            button
+                .getStyleClass()
+                .setAll(tabId.equals(activeTabId) ? "active-tab" : "inactive-tab"));
   }
 
   private void updateAddress(TabSnapshot snapshot) {
     addressField.setText(snapshot.currentUri().map(Object::toString).orElse(""));
   }
 
+  private void navigateToAddress() {
+    if (activeTabId != null && !addressField.getText().isBlank()) {
+      browserController.navigate(activeTabId, addressField.getText().strip());
+    }
+  }
+
+  private void showPage(PageLoaded event) {
+    FxThreadExecutor.execute(
+        () -> {
+          loadedPages.put(event.tabId(), event);
+          if (event.tabId().equals(activeTabId)) {
+            event.page().document().ifPresent(this::showDocument);
+          }
+        });
+  }
+
+  private void showDocument(Document document) {
+    PageLoaded page = loadedPages.get(activeTabId);
+    if (page != null) {
+      setCenter(
+          new CanvasPageView(
+              document,
+              page.page().uri(),
+              uri -> browserController.navigate(page.tabId(), uri.toString())));
+    }
+  }
+
+  private void showHomeView() {
+    homeView = new HomeView(previewData, this::showNotConnectedMessage);
+    setCenter(homeView);
+  }
+
+  private void updateHistoryButtons(TabSnapshot snapshot) {
+    backButton.setDisable(snapshot == null || !snapshot.canGoBack());
+    forwardButton.setDisable(snapshot == null || !snapshot.canGoForward());
+  }
+
+  private void runForActiveTab(
+      java.util.function.Function<TabId, java.util.concurrent.CompletionStage<TabSnapshot>>
+          action) {
+    if (activeTabId != null) {
+      action.apply(activeTabId);
+    }
+  }
+
   private void updateLabel(Label label, String text) {
     Runnable update = () -> label.setText(text);
     FxThreadExecutor.execute(update);
+  }
+
+  private String statusText(NavigationStatus status) {
+    return switch (status) {
+      case IDLE -> "Ready";
+      case LOADING -> "Loading…";
+      case SUCCEEDED -> "Done";
+      case FAILED -> "Page failed to load";
+      case CANCELLED -> "Navigation cancelled";
+    };
   }
 
   private String statusName(ServiceStatus status) {
@@ -295,6 +433,20 @@ public final class BrowserShellView extends BorderPane {
                         () -> {
                           addressField.requestFocus();
                           addressField.selectAll();
+                        });
+                newScene
+                    .getAccelerators()
+                    .put(
+                        new KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN),
+                        () -> browserController.createTab());
+                newScene
+                    .getAccelerators()
+                    .put(
+                        new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN),
+                        () -> {
+                          if (activeTabId != null) {
+                            browserController.closeTab(activeTabId);
+                          }
                         });
                 newScene
                     .getAccelerators()
