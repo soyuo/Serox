@@ -178,6 +178,8 @@ final class McpPage extends ScrollPane {
           showGuide();
         });
     where.getStyleClass().add("search-state-message");
+    where.setWrapText(true);
+    where.setMinHeight(Region.USE_PREF_SIZE);
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
     copy.getStyleClass().add("secondary-button");
@@ -186,6 +188,9 @@ final class McpPage extends ScrollPane {
     whereRow.setAlignment(Pos.CENTER_LEFT);
     code.getStyleClass().add("code-block");
     code.setMaxWidth(Double.MAX_VALUE);
+    code.setWrapText(true);
+    code.setMinHeight(Region.USE_PREF_SIZE);
+    code.setTextOverrun(javafx.scene.control.OverrunStyle.CLIP);
     code.setAccessibleText("연결 설정");
     Label bold = new Label("연결 설정은 한 번 직접 넣어야 해요. ");
     bold.getStyleClass().add("info-strong");
