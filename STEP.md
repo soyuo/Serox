@@ -303,7 +303,8 @@ This status does not claim live account authorization or a newly verified instal
 | Dark mode, OS-default controls | PR #98 | Merged; text fields keep square corners |
 | Connection info | PR #100 | Merged; AI badge names the model |
 | https to http confirm | PR #104 | Merged |
-| AI browser cookie login | none | Not done on purpose: reading cookies from other browsers takes over logged-in sessions |
-| Per-site permissions | none | Not done on purpose: Serox has none of these features |
+| JavaScript | PR #111 | Merged; Rhino engine, no Java access, no network from scripts, 3 s budget; not run against live sites |
+| Per-site permissions | PR #113 | Merged; JavaScript can be blocked per site; location, camera, microphone, notifications, pop-ups and downloads are always blocked because Serox has no such feature |
+| AI browser login | PR #115 | Provider key pages open in the default browser; ChatGPT keeps its OAuth browser sign-in; reading cookies from other browsers is not done on purpose |
 
 The MSI build and an elevated install check (STEP 14) are left to the user.
