@@ -115,6 +115,8 @@ final class SettingsView extends HBox {
       preview.visibleProperty().bind(widthProperty().greaterThan(PREVIEW_MIN_WIDTH));
       preview.managedProperty().bind(preview.visibleProperty());
       page.getChildren().setAll(design);
+    } else if (section == Section.GENERAL) {
+      page.getChildren().setAll(new GeneralPage(privacy));
     } else if (section == Section.PRIVACY) {
       page.getChildren().setAll(new PrivacyPage(privacy));
     } else {
@@ -144,10 +146,7 @@ final class SettingsView extends HBox {
 
   private List<String> lines(Section section) {
     return switch (section) {
-      case GENERAL ->
-          List.of(
-              "Serox는 별도의 일반 설정이 없어요.",
-              "모양은 ‘디자인’에서, 키와 연결은 아래 각 항목에서 확인할 수 있어요.");
+      case GENERAL -> List.of();
       case SEARCH ->
           List.of(
               "상태: " + summary.search(),
