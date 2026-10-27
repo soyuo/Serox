@@ -162,6 +162,8 @@ class McpPageTest {
               "claude mcp add --transport http serox http://localhost:3845/mcp",
               labelWithClass(page, "code-block").getText());
           assertTrue(find(page, ToggleButton.class, "이 컴퓨터만").isSelected());
+          // Long commands must wrap, not end in an ellipsis.
+          assertTrue(labelWithClass(page, "code-block").isWrapText());
           return null;
         });
   }
