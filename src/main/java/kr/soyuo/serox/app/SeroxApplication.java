@@ -7,9 +7,13 @@ import kr.soyuo.serox.ui.BrowserShellView;
 
 /** Launches the Serox desktop browser application. */
 public final class SeroxApplication extends Application {
+  private SeroxRuntime runtime;
+  private BrowserShellView browserShell;
+
   @Override
   public void start(Stage stage) {
-    BrowserShellView browserShell = new BrowserShellView();
+    runtime = AppBootstrap.createRuntime();
+    browserShell = new BrowserShellView(runtime.eventBus());
     Scene scene = new Scene(browserShell, 1100, 720);
 
     stage.setTitle("Serox");
@@ -17,6 +21,16 @@ public final class SeroxApplication extends Application {
     stage.setMinHeight(560);
     stage.setScene(scene);
     stage.show();
+  }
+
+  @Override
+  public void stop() {
+    if (browserShell != null) {
+      browserShell.close();
+    }
+    if (runtime != null) {
+      runtime.close();
+    }
   }
 
   public static void main(String[] args) {
