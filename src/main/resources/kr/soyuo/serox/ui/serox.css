@@ -1149,3 +1149,38 @@
     -fx-text-fill: serox-text-secondary;
     -fx-font-size: 0.857em;
 }
+
+/* Stock fields on the settings pages: rounded, token colors, token focus ring. */
+.settings-info .text-field,
+.settings-info .password-field,
+.connection-content .text-field,
+.connection-content .password-field {
+    -fx-background-color: serox-surface;
+    -fx-background-radius: 8px;
+    -fx-border-color: serox-border;
+    -fx-border-radius: 8px;
+    -fx-padding: 8px 12px;
+}
+
+.settings-info .text-field:focused,
+.settings-info .password-field:focused,
+.connection-content .text-field:focused,
+.connection-content .password-field:focused {
+    -fx-border-color: serox-primary;
+}
+
+.settings-info .text-area,
+.settings-info .text-area .content {
+    -fx-background-color: serox-surface;
+    -fx-background-radius: 8px;
+}
+
+.settings-info .text-area {
+    -fx-border-color: serox-border;
+    -fx-border-radius: 8px;
+}
+
+.settings-info .text-field.field-error,
+.settings-info .password-field.field-error {
+    -fx-border-color: serox-error;
+}
