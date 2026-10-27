@@ -31,6 +31,7 @@ public final class SeroxApplication extends Application {
     browserShell.setAiSearchService(runtime.aiSearchService());
     runtime.announceServiceStatus();
     browserShell.setSettingsService(runtime.settingsService());
+    browserShell.setLibraryService(runtime.libraryService());
     Scene scene = new Scene(browserShell, 1100, 720);
 
     stage.initStyle(StageStyle.UNDECORATED);

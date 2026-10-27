@@ -5,6 +5,7 @@ import java.util.Optional;
 import kr.soyuo.serox.ai.application.AiSearchService;
 import kr.soyuo.serox.core.application.AppConfiguration;
 import kr.soyuo.serox.core.application.BrowserController;
+import kr.soyuo.serox.core.application.LibraryService;
 import kr.soyuo.serox.core.application.SettingsService;
 import kr.soyuo.serox.core.application.SessionKeeper;
 import kr.soyuo.serox.core.application.UsageRecorder;
@@ -26,7 +27,8 @@ public record SeroxRuntime(
     Optional<UsageRecorder> usageRecorder,
     Optional<SessionKeeper> sessionKeeper,
     AiSearchService aiSearchService,
-    SettingsService settingsService)
+    SettingsService settingsService,
+    LibraryService libraryService)
     implements AutoCloseable {
   public SeroxRuntime {
     Objects.requireNonNull(configuration, "configuration");
@@ -39,6 +41,7 @@ public record SeroxRuntime(
     Objects.requireNonNull(sessionKeeper, "sessionKeeper");
     Objects.requireNonNull(aiSearchService, "aiSearchService");
     Objects.requireNonNull(settingsService, "settingsService");
+    Objects.requireNonNull(libraryService, "libraryService");
   }
 
   /** Reports the real readiness of each service so the UI badges match the configuration. */

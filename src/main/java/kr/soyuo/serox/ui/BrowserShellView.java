@@ -29,6 +29,7 @@ import kr.soyuo.serox.core.application.NavigationInputClassifier;
 import kr.soyuo.serox.core.application.NavigationTarget;
 import kr.soyuo.serox.core.application.SearchQuery;
 import kr.soyuo.serox.ai.application.AiSearchService;
+import kr.soyuo.serox.core.application.LibraryService;
 import kr.soyuo.serox.core.application.SettingsService;
 import kr.soyuo.serox.core.event.ActiveTabChanged;
 import kr.soyuo.serox.core.event.SettingsChanged;
@@ -85,6 +86,8 @@ public final class BrowserShellView extends BorderPane {
   private AiPanelPosition aiPanelSide = AiPanelPosition.RIGHT;
   private AiSearchService aiSearchService;
   private SettingsService settingsService;
+  private LibraryService libraryService;
+  private final Button bookmarkButton = new Button("★");
   private EventSubscription settingsSubscription;
   private javafx.scene.Node viewBeforeSettings;
   private final Button siteInfoButton = new Button();
@@ -166,6 +169,46 @@ public final class BrowserShellView extends BorderPane {
     this.aiSearchService = aiSearchService;
   }
 
+  /** Connects history and bookmark storage to the toolbar entry points. */
+  public void setLibraryService(LibraryService libraryService) {
+    this.libraryService = libraryService;
+  }
+
+  private void showLibrary(LibraryView.Section section) {
+    if (libraryService == null || activeTabId == null) {
+      return;
+    }
+    TabId tab = activeTabId;
+    if (!(getCenter() instanceof LibraryView) && !(getCenter() instanceof SettingsView)) {
+      viewBeforeSettings = getCenter();
+    }
+    setCenter(
+        new LibraryView(
+            libraryService,
+            section,
+            uri -> {
+              closeSettings();
+              browserController.navigate(tab, uri.toString());
+            },
+            this::closeSettings));
+  }
+
+  private void bookmarkCurrentPage() {
+    PageLoaded page = loadedPages.get(activeTabId);
+    if (libraryService == null || page == null) {
+      navigationStatus.setText("북마크할 페이지가 없어요.");
+      return;
+    }
+    libraryService
+        .addBookmark(page.page().uri(), page.page().title())
+        .thenAccept(
+            added ->
+                FxThreadExecutor.execute(
+                    () ->
+                        navigationStatus.setText(
+                            added ? "북마크에 추가했어요." : "이미 북마크했거나 저장할 수 없어요.")));
+  }
+
   /** Connects the settings store, applying the current values and following later changes. */
   public void setSettingsService(SettingsService settingsService) {
     this.settingsService = settingsService;
@@ -187,7 +230,7 @@ public final class BrowserShellView extends BorderPane {
     if (settingsService == null) {
       return;
     }
-    if (!(getCenter() instanceof SettingsView)) {
+    if (!(getCenter() instanceof SettingsView) && !(getCenter() instanceof LibraryView)) {
       viewBeforeSettings = getCenter();
     }
     setCenter(
@@ -204,7 +247,7 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private void closeSettings() {
-    if (getCenter() instanceof SettingsView) {
+    if (getCenter() instanceof SettingsView || getCenter() instanceof LibraryView) {
       setCenter(viewBeforeSettings != null ? viewBeforeSettings : homeView);
     }
   }
@@ -314,20 +357,25 @@ public final class BrowserShellView extends BorderPane {
     addressField.getStyleClass().add("address-field");
     updateSiteInfo(Optional.empty());
     siteInfoButton.setOnAction(event -> showSiteInfo());
+    bookmarkButton.getStyleClass().addAll("toolbar-button", "bookmark-button");
+    bookmarkButton.setAccessibleText("현재 페이지를 북마크에 추가");
+    bookmarkButton.setOnAction(event -> bookmarkCurrentPage());
     HBox.setHgrow(addressField, Priority.ALWAYS);
     HBox addressBox =
         new HBox(
             UiTokens.SPACE_SM,
             SvgIconView.icon(UiTokens.ICON_ADDRESS_SEARCH, 18),
             siteInfoButton,
-            addressField);
+            addressField,
+            bookmarkButton);
     addressBox.setAlignment(Pos.CENTER_LEFT);
     addressBox.getStyleClass().add("address-box");
     HBox.setHgrow(addressBox, Priority.ALWAYS);
 
     Button history = toolbarButton(UiTokens.ICON_HISTORY, "방문 기록");
+    history.setOnAction(event -> showLibrary(LibraryView.Section.HISTORY));
     Button settings = toolbarButton(UiTokens.ICON_SETTINGS, "설정");
-    history.setDisable(true);
+
     settings.setOnAction(event -> showSettings());
     HBox row =
         new HBox(UiTokens.SPACE_XS, backButton, forwardButton, addressBox, history, settings);

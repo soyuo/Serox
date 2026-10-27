@@ -575,3 +575,16 @@
 .app-root.density-compact .info-card {
     -fx-padding: 12px;
 }
+
+.bookmark-button {
+    -fx-text-fill: serox-text-muted;
+    -fx-font-size: 1.1em;
+}
+
+.bookmark-button:hover {
+    -fx-text-fill: serox-primary;
+}
+
+.library-view {
+    -fx-background-color: serox-surface;
+}
