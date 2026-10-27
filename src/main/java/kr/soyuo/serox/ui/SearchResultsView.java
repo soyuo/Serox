@@ -35,6 +35,7 @@ final class SearchResultsView extends BorderPane {
   private final ScrollPane listScroll;
   private boolean summaryFocus;
   private boolean hasResults;
+  private List<SearchResult> found = List.of();
   private VBox banner;
 
   private SearchResultsView(String query, Consumer<SearchResult> onOpenResult) {
@@ -117,6 +118,7 @@ final class SearchResultsView extends BorderPane {
   static SearchResultsView results(
       String query, List<SearchResult> found, Consumer<SearchResult> onOpen) {
     SearchResultsView view = new SearchResultsView(query, onOpen);
+    view.found = List.copyOf(found);
     view.results.getChildren().add(view.heading("검색 결과 " + found.size() + "곳"));
     view.installPanelControls();
     int number = 0;
@@ -306,6 +308,23 @@ final class SearchResultsView extends BorderPane {
       results.getChildren().add(Math.min(1, results.getChildren().size()), banner);
     }
     applyPanel();
+  }
+
+  /** Opens or closes the AI panel, as its button does; results without a panel ignore it. */
+  void togglePanel() {
+    if (hasResults) {
+      panelToggle.fire();
+    }
+  }
+
+  /** Opens the source a step after ({@code 1}) or before ({@code -1}) the open one, to the ends. */
+  void selectRelative(int step) {
+    if (found.isEmpty()) {
+      return;
+    }
+    int index = selected == null ? -1 : found.indexOf(selected);
+    int next = index < 0 ? (step > 0 ? 0 : found.size() - 1) : index + step;
+    select(found.get(Math.max(0, Math.min(found.size() - 1, next))));
   }
 
   /** Opens the AI panel if it was closed; used by the address bar's summary chip. */
