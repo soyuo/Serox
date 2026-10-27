@@ -96,7 +96,12 @@ public final class CssStyleEngine {
               parent -> {
                 if (parent != null) {
                   for (String property : INHERITED) {
-                    values.put(property, parent.value(property));
+                    boolean heading = element.tagName().matches("h[1-6]");
+                    if (!(property.equals("color") && element.tagName().equals("a"))
+                        && !(property.equals("font-size") && heading)
+                        && !(property.equals("font-weight") && heading)) {
+                      values.put(property, parent.value(property));
+                    }
                   }
                 }
               });
@@ -151,6 +156,10 @@ public final class CssStyleEngine {
     }
     if (element.tagName().equals("p")) {
       defaults.put("margin", "16px 0px");
+    }
+    if (element.tagName().equals("a")) {
+      defaults.put("color", "#0b57d0");
+      defaults.put("text-decoration", "underline");
     }
     return defaults;
   }

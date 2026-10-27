@@ -229,8 +229,28 @@ public final class LayoutEngine {
           return;
         }
         if (element.tagName().equals("img")) {
-          String alt = element.attribute("alt").orElse("Image");
-          addText("[" + alt + "]", style, link);
+          addInlineBox(element, style, 96, 64);
+          return;
+        }
+        if (element.tagName().equals("input") || element.tagName().equals("button")) {
+          double controlX = cursorX;
+          double controlY = cursorY;
+          double controlHeight = style.pixels("height", attributePixels(element, "height", 28));
+          addInlineBox(element, style, 120, 28);
+          String label =
+              element.tagName().equals("input")
+                  ? element.attribute("value").orElse(element.attribute("placeholder").orElse(""))
+                  : element.textContent();
+          if (!label.isBlank()) {
+            double fontSize = style.pixels("font-size", 16);
+            textRuns.add(
+                new TextRun(
+                    controlX + 8,
+                    controlY + (controlHeight + fontSize) / 2,
+                    label,
+                    style,
+                    Optional.ofNullable(link)));
+          }
           return;
         }
         for (Node child : element.children()) {
@@ -276,6 +296,28 @@ public final class LayoutEngine {
 
       private double height() {
         return Math.max(usedHeight, cursorY - startY);
+      }
+
+      private double attributePixels(Element element, String name, double fallback) {
+        try {
+          return Double.parseDouble(element.attribute(name).orElse(""));
+        } catch (NumberFormatException exception) {
+          return fallback;
+        }
+      }
+
+      private void addInlineBox(
+          Element element, ComputedStyle style, double defaultWidth, double defaultHeight) {
+        double width = style.pixels("width", attributePixels(element, "width", defaultWidth));
+        double height = style.pixels("height", attributePixels(element, "height", defaultHeight));
+        if (cursorX + width > startX + maxWidth && cursorX > startX) {
+          advanceLine();
+        }
+        boxes.add(
+            new LayoutBox(
+                element, cursorX, cursorY, width, height, cursorX, cursorY, width, height, style));
+        cursorX += width;
+        lineHeight = Math.max(lineHeight, height);
       }
     }
   }
