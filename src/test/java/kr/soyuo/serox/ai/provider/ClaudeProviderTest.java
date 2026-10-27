@@ -143,4 +143,36 @@ class ClaudeProviderTest {
 
     assertEquals("incomplete", assertInstanceOf(AiFailed.class, events.getLast()).code());
   }
+
+  @Test
+  void failuresNeverWriteTheKeyOrTheResponseBodyToLogs() throws Exception {
+    status = 401;
+    response = "{\"error\":{\"message\":\"invalid x-api-key secret-key cookie=session123\"}}";
+    List<String> logged = new ArrayList<>();
+    java.util.logging.Handler handler =
+        new java.util.logging.Handler() {
+          @Override
+          public void publish(java.util.logging.LogRecord record) {
+            logged.add(new java.util.logging.SimpleFormatter().format(record));
+          }
+
+          @Override
+          public void flush() {}
+
+          @Override
+          public void close() {}
+        };
+    java.util.logging.Logger logger = java.util.logging.Logger.getLogger("kr.soyuo.serox");
+    logger.addHandler(handler);
+    try {
+      run();
+    } finally {
+      logger.removeHandler(handler);
+    }
+
+    for (String line : logged) {
+      assertFalse(line.contains("secret-key"), line);
+      assertFalse(line.contains("session123"), line);
+    }
+  }
 }

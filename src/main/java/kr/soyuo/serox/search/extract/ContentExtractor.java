@@ -6,6 +6,7 @@ import kr.soyuo.serox.browser.dom.Document;
 import kr.soyuo.serox.browser.dom.Element;
 import kr.soyuo.serox.browser.dom.Node;
 import kr.soyuo.serox.browser.dom.TextNode;
+import kr.soyuo.serox.core.model.UntrustedText;
 
 /** Turns a parsed DOM into bounded plain text, skipping scripts, styles and other non-content. */
 public final class ContentExtractor {
@@ -31,11 +32,11 @@ public final class ContentExtractor {
     String title =
         document.getElementsByTagName("title").stream()
             .findFirst()
-            .map(element -> collapse(element.textContent()))
+            .map(element -> UntrustedText.plain(element.textContent(), 200))
             .orElse("");
     StringBuilder text = new StringBuilder();
     document.body().ifPresent(body -> collect(body, text));
-    String collapsed = collapse(text.toString());
+    String collapsed = UntrustedText.plain(text.toString(), Integer.MAX_VALUE - 2);
     if (collapsed.length() > maxTextChars) {
       collapsed = collapsed.substring(0, maxTextChars);
     }
@@ -70,9 +71,5 @@ public final class ContentExtractor {
     for (Node child : node.children()) {
       collect(child, out);
     }
-  }
-
-  private static String collapse(String value) {
-    return value.replaceAll("\\s+", " ").strip();
   }
 }

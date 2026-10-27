@@ -12,6 +12,7 @@ import kr.soyuo.serox.browser.dom.Document;
 import kr.soyuo.serox.browser.html.HtmlDocumentParser;
 import kr.soyuo.serox.core.error.ApplicationError;
 import kr.soyuo.serox.core.error.ErrorCode;
+import kr.soyuo.serox.core.model.UntrustedText;
 
 /** Connects HTTP transport, response decoding, and HTML parsing as a browser engine. */
 public final class HttpBrowserEngine implements BrowserEngine {
@@ -60,7 +61,7 @@ public final class HttpBrowserEngine implements BrowserEngine {
     String title =
         document.getElementsByTagName("title").stream()
             .findFirst()
-            .map(node -> node.textContent().strip())
+            .map(node -> UntrustedText.plain(node.textContent(), 200))
             .orElse("");
     String visibleText = document.body().map(node -> node.textContent().strip()).orElse("");
     return new PageSnapshot(

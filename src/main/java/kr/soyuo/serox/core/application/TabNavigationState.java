@@ -12,6 +12,8 @@ import kr.soyuo.serox.core.model.TabSnapshot;
 
 /** Mutable application-owned navigation state for a single tab. */
 final class TabNavigationState {
+  static final int MAX_HISTORY = 100;
+
   private final TabId id;
   private final List<URI> history = new ArrayList<>();
   private int historyIndex = -1;
@@ -49,6 +51,9 @@ final class TabNavigationState {
         history.remove(history.size() - 1);
       }
       history.add(uri);
+      if (history.size() > MAX_HISTORY) {
+        history.remove(0);
+      }
       historyIndex = history.size() - 1;
     }
     status = NavigationStatus.LOADING;

@@ -40,7 +40,7 @@ public final class PromptBuilder {
           .append("\" title=\"")
           .append(escape(document.title()))
           .append("\">\n")
-          .append(document.text().replace("</document", "<\\/document"))
+          .append(document.text().replaceAll("(?i)</(document)", "<\\\\/$1"))
           .append("\n</document>\n");
     }
     return message.toString();

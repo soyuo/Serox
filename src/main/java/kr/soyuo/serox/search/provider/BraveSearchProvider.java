@@ -16,6 +16,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.CompletionStage;
 import kr.soyuo.serox.browser.network.HttpRequestDispatcher;
+import kr.soyuo.serox.core.model.UntrustedText;
 import kr.soyuo.serox.search.api.SearchProvider;
 import kr.soyuo.serox.search.api.SearchRequest;
 import kr.soyuo.serox.search.api.SearchResponse;
@@ -127,7 +128,7 @@ public final class BraveSearchProvider implements SearchProvider {
       return;
     }
     JsonObject result = resultElement.getAsJsonObject();
-    String title = stringValue(result, "title");
+    String title = UntrustedText.fromMarkup(stringValue(result, "title"), 200);
     String url = stringValue(result, "url");
     if (title.isBlank() || url.isBlank()) {
       return;
@@ -141,7 +142,11 @@ public final class BraveSearchProvider implements SearchProvider {
       unique.putIfAbsent(
           canonical,
           new SearchResult(
-              canonical, uri, title, stringValue(result, "description"), unique.size() + 1));
+              canonical,
+              uri,
+              title,
+              UntrustedText.fromMarkup(stringValue(result, "description"), 500),
+              unique.size() + 1));
     } catch (IllegalArgumentException ignored) {
       // A malformed individual result is ignored while valid results remain usable.
     }
@@ -158,7 +163,8 @@ public final class BraveSearchProvider implements SearchProvider {
         && ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme))
         && uri.getHost() != null
         && !uri.getHost().isBlank()
-        && uri.getUserInfo() == null;
+        && uri.getUserInfo() == null
+        && !UntrustedText.hasHiddenCharacters(uri.toString());
   }
 
   private String canonicalUrl(URI uri) {

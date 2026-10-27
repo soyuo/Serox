@@ -13,9 +13,11 @@ import kr.soyuo.serox.ai.application.AiSearchService;
 import kr.soyuo.serox.ai.context.ContextBuilder;
 import kr.soyuo.serox.ai.provider.ClaudeProvider;
 import kr.soyuo.serox.browser.html.HtmlDocumentParser;
+import kr.soyuo.serox.browser.network.GuardedTransport;
 import kr.soyuo.serox.browser.network.HttpBrowserEngine;
 import kr.soyuo.serox.browser.network.HttpRequestDispatcher;
 import kr.soyuo.serox.browser.network.HttpResponseHandler;
+import kr.soyuo.serox.browser.network.PublicAddressPolicy;
 import kr.soyuo.serox.core.application.AppConfigurationLoader;
 import kr.soyuo.serox.core.application.BrowserController;
 import kr.soyuo.serox.core.application.DefaultBrowserController;
@@ -112,12 +114,17 @@ public final class AppBootstrap {
 
   /** Page reader shared by the AI features: small responses, short timeouts, few pages. */
   static PageFetcher createPageFetcher() {
+    var client =
+        java.net.http.HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .followRedirects(java.net.http.HttpClient.Redirect.NEVER)
+            .build();
+    var transport =
+        new GuardedTransport(
+            new HttpRequestDispatcher(client, Duration.ofSeconds(8), 1024 * 1024),
+            new PublicAddressPolicy());
     return new PageFetcher(
-        HttpRequestDispatcher.createDefault(
-            Duration.ofSeconds(5), Duration.ofSeconds(8), 1024 * 1024),
-        new HttpResponseHandler(),
-        new HtmlDocumentParser(),
-        FetchLimits.defaults());
+        transport, new HttpResponseHandler(), new HtmlDocumentParser(), FetchLimits.defaults());
   }
 
   /** Resolves the per-user profile directory that holds the local database. */
