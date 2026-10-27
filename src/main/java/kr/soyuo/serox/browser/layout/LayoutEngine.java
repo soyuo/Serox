@@ -76,7 +76,7 @@ public final class LayoutEngine {
       }
       double outerX = originX + marginLeft;
       double outerY = originY + marginTop;
-      double contentWidth = fillWidth ? Double.NaN : style.pixels("width", Double.NaN);
+      double contentWidth = fillWidth ? Double.NaN : widthOf(style, availableWidth);
       if (!Double.isFinite(contentWidth)) {
         contentWidth =
             Math.max(
@@ -254,7 +254,7 @@ public final class LayoutEngine {
       String align = style.value("align-items");
       double cursorY = startY;
       for (Element item : items) {
-        double explicit = styles.styleOf(item).pixels("width", Double.NaN);
+        double explicit = widthOf(styles.styleOf(item), width);
         double itemWidth;
         if (Double.isFinite(explicit) || !align.equals("stretch")) {
           itemWidth = Math.min(width, outerWidthOf(item, width));
@@ -304,6 +304,14 @@ public final class LayoutEngine {
      * The width a flex item wants, margins included: its explicit width, or else the width of its
      * widest line of content, found by laying it out once and discarding that layout.
      */
+    private double widthOf(ComputedStyle style, double containingWidth) {
+      double percent = style.percentage("width");
+      if (Double.isFinite(percent)) {
+        return Math.max(0, containingWidth * percent / 100);
+      }
+      return style.pixels("width", Double.NaN);
+    }
+
     private double outerWidthOf(Element item, double available) {
       ComputedStyle style = styles.styleOf(item);
       double chrome =
@@ -312,7 +320,7 @@ public final class LayoutEngine {
               + side(style, "padding", 3, 0)
               + side(style, "padding", 1, 0)
               + 2 * borderWidthOf(style);
-      double explicit = style.pixels("width", Double.NaN);
+      double explicit = widthOf(style, available);
       if (Double.isFinite(explicit)) {
         return explicit + chrome;
       }

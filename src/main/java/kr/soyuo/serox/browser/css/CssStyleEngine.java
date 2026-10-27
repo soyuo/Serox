@@ -160,7 +160,8 @@ public final class CssStyleEngine {
       case "font-size" -> isLength(normalized);
       case "font-weight" -> Set.of("normal", "bold", "400", "700").contains(normalized);
       case "text-decoration" -> Set.of("none", "underline").contains(normalized);
-      case "width", "height" -> normalized.equals("auto") || isLength(normalized);
+      case "width" -> normalized.equals("auto") || isLength(normalized) || isPercentage(normalized);
+      case "height" -> normalized.equals("auto") || isLength(normalized);
       case "margin",
           "margin-top",
           "margin-right",
@@ -181,6 +182,17 @@ public final class CssStyleEngine {
   private boolean isNonNegativeNumber(String value) {
     try {
       return Double.parseDouble(value) >= 0;
+    } catch (NumberFormatException exception) {
+      return false;
+    }
+  }
+
+  private boolean isPercentage(String value) {
+    if (!value.endsWith("%")) {
+      return false;
+    }
+    try {
+      return Double.parseDouble(value.substring(0, value.length() - 1)) >= 0;
     } catch (NumberFormatException exception) {
       return false;
     }
