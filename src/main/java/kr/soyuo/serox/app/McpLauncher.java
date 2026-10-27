@@ -21,6 +21,7 @@ import kr.soyuo.serox.mcp.tool.SearchAndSummarizeTool;
 import kr.soyuo.serox.mcp.tool.ToolRegistry;
 import kr.soyuo.serox.search.api.SearchProvider;
 import kr.soyuo.serox.search.provider.BraveSearchProvider;
+import kr.soyuo.serox.search.provider.DuckDuckGoSearchProvider;
 
 /** Builds the MCP server for an agent that launches Serox with {@code --mcp}. */
 public final class McpLauncher {
@@ -67,7 +68,8 @@ public final class McpLauncher {
     Optional<SearchProvider> search =
         configuration
             .braveSearchApiKey()
-            .map(key -> (SearchProvider) new BraveSearchProvider(key.revealForRequest()));
+            .map(key -> (SearchProvider) new BraveSearchProvider(key.revealForRequest()))
+            .or(() -> Optional.of(new DuckDuckGoSearchProvider()));
     Optional<AiProvider> ai = AiProviders.fromConfiguration(configuration);
     var summary =
         new SearchSummaryService(
