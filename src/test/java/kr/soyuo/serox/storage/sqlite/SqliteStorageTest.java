@@ -169,4 +169,19 @@ class SqliteStorageTest {
       assertEquals(chosen, reopened.settings().load().toCompletableFuture().join());
     }
   }
+
+  @Test
+  void generalChoicesSurviveReopening() {
+    var chosen =
+        BrowserSettings.defaults()
+            .withStartupMode(kr.soyuo.serox.core.model.StartupMode.SPECIFIC_PAGE)
+            .withStartPageUrl("https://example.test/start")
+            .withLanguage(kr.soyuo.serox.core.model.AppLanguage.JAPANESE);
+    try (var storage = new SqliteStorage(tempDir.resolve("general.db"))) {
+      storage.settings().save(chosen).toCompletableFuture().join();
+    }
+    try (var reopened = new SqliteStorage(tempDir.resolve("general.db"))) {
+      assertEquals(chosen, reopened.settings().load().toCompletableFuture().join());
+    }
+  }
 }
