@@ -53,12 +53,16 @@ public final class SqliteHistoryRepository implements HistoryRepository {
             statement.setInt(1, Math.min(limit, 10_000));
             try (ResultSet result = statement.executeQuery()) {
               while (result.next()) {
-                entries.add(
-                    new HistoryEntry(
-                        UUID.fromString(result.getString("id")),
-                        URI.create(result.getString("url")),
-                        result.getString("title"),
-                        Instant.ofEpochMilli(result.getLong("visited_at"))));
+                try {
+                  entries.add(
+                      new HistoryEntry(
+                          UUID.fromString(result.getString("id")),
+                          URI.create(result.getString("url")),
+                          result.getString("title"),
+                          Instant.ofEpochMilli(result.getLong("visited_at"))));
+                } catch (IllegalArgumentException malformedRow) {
+                  // A damaged row must not hide the rest of the history.
+                }
               }
             }
           }

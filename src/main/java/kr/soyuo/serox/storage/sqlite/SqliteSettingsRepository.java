@@ -37,13 +37,15 @@ public final class SqliteSettingsRepository implements SettingsRepository {
               }
             }
           }
-          return new BrowserSettings(
+          return validOrDefault(
+              () ->
+                  new BrowserSettings(
               enumValue(values, "theme", DEFAULTS.theme(), ThemeMode.class),
               values.getOrDefault("accentColor", DEFAULTS.accentColor()),
               integerValue(values, "fontScalePercent", DEFAULTS.fontScalePercent()),
               enumValue(
                   values, "aiPanelPosition", DEFAULTS.aiPanelPosition(), AiPanelPosition.class),
-              enumValue(values, "displayDensity", DEFAULTS.displayDensity(), DisplayDensity.class));
+              enumValue(values, "displayDensity", DEFAULTS.displayDensity(), DisplayDensity.class)));
         });
   }
 
@@ -76,14 +78,30 @@ public final class SqliteSettingsRepository implements SettingsRepository {
         });
   }
 
+  private static BrowserSettings validOrDefault(java.util.function.Supplier<BrowserSettings> loader) {
+    try {
+      return loader.get();
+    } catch (IllegalArgumentException exception) {
+      return DEFAULTS;
+    }
+  }
+
   private static int integerValue(Map<String, String> values, String key, int fallback) {
     String value = values.get(key);
-    return value == null ? fallback : Integer.parseInt(value);
+    try {
+      return value == null ? fallback : Integer.parseInt(value);
+    } catch (NumberFormatException exception) {
+      return fallback;
+    }
   }
 
   private static <T extends Enum<T>> T enumValue(
       Map<String, String> values, String key, T fallback, Class<T> type) {
     String value = values.get(key);
-    return value == null ? fallback : Enum.valueOf(type, value);
+    try {
+      return value == null ? fallback : Enum.valueOf(type, value);
+    } catch (IllegalArgumentException exception) {
+      return fallback;
+    }
   }
 }
