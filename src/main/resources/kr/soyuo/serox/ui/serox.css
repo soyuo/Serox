@@ -510,3 +510,7 @@
 .ai-panel-error {
     -fx-text-fill: serox-error;
 }
+
+.ai-panel-left {
+    -fx-border-width: 0 1px 0 0;
+}

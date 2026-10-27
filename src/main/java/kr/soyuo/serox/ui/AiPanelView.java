@@ -17,6 +17,8 @@ import kr.soyuo.serox.core.event.AiAnswerChanged;
 final class AiPanelView extends VBox {
   private final Consumer<EvidenceDocument> onSource;
   private final VBox body = new VBox(UiTokens.SPACE_MD);
+  private Runnable onCancel = () -> {};
+  private Runnable onRetry = () -> {};
 
   AiPanelView(Consumer<EvidenceDocument> onSource) {
     this.onSource = onSource;
@@ -33,19 +35,39 @@ final class AiPanelView extends VBox {
     getChildren().addAll(title, scroll);
   }
 
+  void setActions(Runnable onCancel, Runnable onRetry) {
+    this.onCancel = onCancel;
+    this.onRetry = onRetry;
+  }
+
+  private Button actionButton(String text, Runnable action) {
+    Button button = new Button(text);
+    button.getStyleClass().add("secondary-button");
+    button.setAccessibleText(text);
+    button.setOnAction(event -> action.run());
+    return button;
+  }
+
   /** Renders the latest state of the AI answer. */
   void show(AiAnswerChanged event) {
     body.getChildren().clear();
     switch (event.phase()) {
-      case PREPARING -> body.getChildren().add(note("검색 결과 페이지를 읽고 있어요…"));
+      case PREPARING ->
+          body.getChildren()
+              .addAll(note("검색 결과 페이지를 읽고 있어요…"), actionButton("취소", () -> onCancel.run()));
       case STREAMING -> {
         body.getChildren().add(note("답변을 작성하고 있어요…"));
         body.getChildren().add(paragraph(event.text()));
+        body.getChildren().add(actionButton("취소", () -> onCancel.run()));
       }
       case COMPLETED -> showAnswer(event.answer().orElseThrow(), event.evidence());
       case UNAVAILABLE -> body.getChildren().add(note(event.message()));
-      case FAILED -> body.getChildren().add(errorNote(event.message()));
-      case CANCELLED -> body.getChildren().add(note("AI 요약을 취소했어요."));
+      case FAILED ->
+          body.getChildren()
+              .addAll(errorNote(event.message()), actionButton("다시 시도", () -> onRetry.run()));
+      case CANCELLED ->
+          body.getChildren()
+              .addAll(note("AI 요약을 취소했어요."), actionButton("다시 시도", () -> onRetry.run()));
     }
   }
 

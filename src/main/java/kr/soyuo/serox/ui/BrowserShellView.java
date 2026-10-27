@@ -28,6 +28,7 @@ import kr.soyuo.serox.core.application.DirectAddress;
 import kr.soyuo.serox.core.application.NavigationInputClassifier;
 import kr.soyuo.serox.core.application.NavigationTarget;
 import kr.soyuo.serox.core.application.SearchQuery;
+import kr.soyuo.serox.ai.application.AiSearchService;
 import kr.soyuo.serox.core.event.ActiveTabChanged;
 import kr.soyuo.serox.core.event.AiAnswerChanged;
 import kr.soyuo.serox.core.event.BrowserEventBus;
@@ -45,6 +46,7 @@ import kr.soyuo.serox.core.event.TabClosed;
 import kr.soyuo.serox.core.event.TabStateChanged;
 import kr.soyuo.serox.core.model.NavigationStatus;
 import kr.soyuo.serox.core.model.TabId;
+import kr.soyuo.serox.core.model.AiPanelPosition;
 import kr.soyuo.serox.core.model.TabSnapshot;
 import kr.soyuo.serox.search.application.SearchService;
 
@@ -70,6 +72,9 @@ public final class BrowserShellView extends BorderPane {
   private final EventSubscription searchCancelledSubscription;
   private final EventSubscription aiAnswerSubscription;
   private SearchResultsView resultsView;
+  private boolean aiPanelOpen = true;
+  private AiPanelPosition aiPanelSide = AiPanelPosition.RIGHT;
+  private AiSearchService aiSearchService;
   private final Map<TabId, TabSnapshot> tabSnapshots = new HashMap<>();
   private final Map<TabId, PageLoaded> loadedPages = new HashMap<>();
   private final Map<TabId, HBox> tabButtons = new HashMap<>();
@@ -133,6 +138,11 @@ public final class BrowserShellView extends BorderPane {
     searchCancelledSubscription =
         eventBus.subscribe(SearchCancelled.class, this::showSearchCancelled);
     aiAnswerSubscription = eventBus.subscribe(AiAnswerChanged.class, this::showAiAnswer);
+  }
+
+  /** Supplies the AI service used to cancel an in-progress answer. */
+  public void setAiSearchService(AiSearchService aiSearchService) {
+    this.aiSearchService = aiSearchService;
   }
 
   /** Releases event subscriptions owned by this view. */
@@ -339,6 +349,19 @@ public final class BrowserShellView extends BorderPane {
                       event.response().results(),
                       result ->
                           browserController.navigate(event.tabId(), result.uri().toString()));
+              resultsView.configureAiPanel(
+                  aiPanelOpen,
+                  aiPanelSide,
+                  (open, side) -> {
+                    aiPanelOpen = open;
+                    aiPanelSide = side;
+                  },
+                  () -> {
+                    if (aiSearchService != null) {
+                      aiSearchService.cancel(event.tabId());
+                    }
+                  },
+                  () -> searchService.search(event.tabId(), event.query()));
               setCenter(resultsView);
             }
           }

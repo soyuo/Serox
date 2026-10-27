@@ -1,6 +1,7 @@
 package kr.soyuo.serox.ui;
 
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -11,6 +12,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import kr.soyuo.serox.ai.api.EvidenceDocument;
 import kr.soyuo.serox.core.event.AiAnswerChanged;
+import kr.soyuo.serox.core.model.AiPanelPosition;
 import kr.soyuo.serox.search.api.SearchResult;
 
 /** Displays search results and their selected result details. */
@@ -19,6 +21,12 @@ final class SearchResultsView extends BorderPane {
   private final Consumer<SearchResult> onOpenResult;
   private final VBox results = new VBox();
   private final BorderPane preview = new BorderPane();
+  private final BorderPane content = new BorderPane();
+  private final Button panelToggle = new Button();
+  private final Button panelPosition = new Button();
+  private boolean panelOpen = true;
+  private AiPanelPosition panelSide = AiPanelPosition.RIGHT;
+  private BiConsumer<Boolean, AiPanelPosition> onPanelChanged = (open, side) -> {};
   private final AiPanelView aiPanel = new AiPanelView(this::showEvidence);
   private SearchResult selected;
 
@@ -31,9 +39,10 @@ final class SearchResultsView extends BorderPane {
     listScroll.setFitToWidth(true);
     listScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
     listScroll.getStyleClass().add("search-results-scroll");
-    setLeft(listScroll);
+    content.setLeft(listScroll);
     preview.getStyleClass().add("search-preview");
-    setCenter(preview);
+    content.setCenter(preview);
+    setCenter(content);
     setQueryHeading();
   }
 
@@ -86,7 +95,7 @@ final class SearchResultsView extends BorderPane {
       String query, List<SearchResult> found, Consumer<SearchResult> onOpen) {
     SearchResultsView view = new SearchResultsView(query, onOpen);
     view.results.getChildren().add(view.heading(found.size() + "개 결과"));
-    view.setRight(view.aiPanel);
+    view.installPanelControls();
     for (SearchResult result : found) {
       Button item = new Button();
       Label title = new Label(result.title());
@@ -146,6 +155,66 @@ final class SearchResultsView extends BorderPane {
     button.getStyleClass().add("primary-button");
     button.setOnAction(event -> action.run());
     return button;
+  }
+
+  /** Sets the remembered panel state and the callbacks for cancelling and retrying the AI answer. */
+  void configureAiPanel(
+      boolean open,
+      AiPanelPosition side,
+      BiConsumer<Boolean, AiPanelPosition> onChanged,
+      Runnable onCancelAi,
+      Runnable onRetryAi) {
+    panelOpen = open;
+    panelSide = side;
+    onPanelChanged = onChanged;
+    aiPanel.setActions(onCancelAi, onRetryAi);
+    applyPanel();
+  }
+
+  private void installPanelControls() {
+    panelToggle.getStyleClass().add("secondary-button");
+    panelToggle.setOnAction(
+        event -> {
+          panelOpen = !panelOpen;
+          applyPanel();
+          onPanelChanged.accept(panelOpen, panelSide);
+        });
+    panelPosition.getStyleClass().add("secondary-button");
+    panelPosition.setOnAction(
+        event -> {
+          panelSide =
+              panelSide == AiPanelPosition.RIGHT ? AiPanelPosition.LEFT : AiPanelPosition.RIGHT;
+          applyPanel();
+          onPanelChanged.accept(panelOpen, panelSide);
+        });
+    javafx.scene.layout.Region spacer = new javafx.scene.layout.Region();
+    javafx.scene.layout.HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
+    javafx.scene.layout.HBox bar =
+        new javafx.scene.layout.HBox(
+            UiTokens.SPACE_SM, getTop(), spacer, panelPosition, panelToggle);
+    bar.setAlignment(Pos.CENTER_LEFT);
+    bar.setPadding(new Insets(0, 24, 0, 0));
+    setTop(bar);
+    applyPanel();
+  }
+
+  private void applyPanel() {
+    setLeft(null);
+    setRight(null);
+    aiPanel.getStyleClass().removeAll("ai-panel-left");
+    if (panelOpen) {
+      if (panelSide == AiPanelPosition.LEFT) {
+        aiPanel.getStyleClass().add("ai-panel-left");
+        setLeft(aiPanel);
+      } else {
+        setRight(aiPanel);
+      }
+    }
+    panelToggle.setText(panelOpen ? "AI 패널 닫기" : "AI 패널 열기");
+    panelToggle.setAccessibleText(panelToggle.getText());
+    panelPosition.setText(panelSide == AiPanelPosition.RIGHT ? "왼쪽으로 이동" : "오른쪽으로 이동");
+    panelPosition.setAccessibleText(panelPosition.getText());
+    panelPosition.setDisable(!panelOpen);
   }
 
   /** Forwards the latest AI answer state to the panel; search results are unaffected. */
