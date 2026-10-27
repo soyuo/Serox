@@ -14,6 +14,7 @@ import kr.soyuo.serox.browser.api.PageSnapshot;
 import kr.soyuo.serox.core.error.ApplicationError;
 import kr.soyuo.serox.core.error.ErrorCode;
 import kr.soyuo.serox.core.event.BrowserEventBus;
+import kr.soyuo.serox.core.event.NavigationFailed;
 import kr.soyuo.serox.core.event.OperationFailed;
 import kr.soyuo.serox.core.event.PageLoaded;
 import kr.soyuo.serox.core.event.TabStateChanged;
@@ -53,8 +54,7 @@ public final class DefaultNavigationManager implements NavigationManager {
                     ErrorCode.SEARCH_NOT_CONFIGURED, "Search is not configured yet.", false)));
       }
       return load(tabId, ((DirectAddress) target).uri(), true);
-    } catch (RuntimeException exception) {
-      return fail(exception);
+} catch (NavigationInputException exception) {      if (exception.error().code() == ErrorCode.INVALID_ADDRESS          || exception.error().code() == ErrorCode.UNSUPPORTED_SCHEME) {        eventBus.publish(            new NavigationFailed(                Instant.now(), tabId, addressOrQuery, NavigationFailed.Reason.INVALID_ADDRESS));      }      return fail(exception);    } catch (RuntimeException exception) {      return fail(exception);
     }
   }
 
@@ -155,6 +155,8 @@ public final class DefaultNavigationManager implements NavigationManager {
             if (state.fail(version)) {
               publishState(state);
               publishFailure(failure);
+              eventBus.publish(
+                  new NavigationFailed(Instant.now(), tabId, uri.toString(), reasonOf(failure)));
             }
             throw new CompletionException(failure);
           }
@@ -171,6 +173,23 @@ public final class DefaultNavigationManager implements NavigationManager {
       eventBus.publish(new OperationFailed(Instant.now(), inputException.error()));
     }
     return CompletableFuture.failedFuture(exception);
+  }
+
+  /** Finds out from the cause chain whether the host is unknown, slow or simply unreachable. */
+  static NavigationFailed.Reason reasonOf(Throwable failure) {
+    for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+      if (cause instanceof java.net.UnknownHostException) {
+        return NavigationFailed.Reason.NOT_FOUND;
+      }
+      if (cause instanceof java.net.http.HttpTimeoutException
+          || cause instanceof java.util.concurrent.TimeoutException) {
+        return NavigationFailed.Reason.TIMEOUT;
+      }
+      if (cause.getCause() == cause) {
+        break;
+      }
+    }
+    return NavigationFailed.Reason.UNREACHABLE;
   }
 
   private void publishFailure(Throwable failure) {
