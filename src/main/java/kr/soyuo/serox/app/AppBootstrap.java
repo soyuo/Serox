@@ -106,14 +106,18 @@ public final class AppBootstrap {
         configuration
             .anthropicApiKey()
             .map(key -> (AiProvider) ClaudeProvider.create(key.revealForRequest()));
-    var fetcher =
-        new PageFetcher(
-            HttpRequestDispatcher.createDefault(
-                Duration.ofSeconds(5), Duration.ofSeconds(8), 1024 * 1024),
-            new HttpResponseHandler(),
-            new HtmlDocumentParser(),
-            FetchLimits.defaults());
+    var fetcher = createPageFetcher();
     return new AiSearchService(provider, fetcher, new ContextBuilder(), eventBus, Clock.systemUTC());
+  }
+
+  /** Page reader shared by the AI features: small responses, short timeouts, few pages. */
+  static PageFetcher createPageFetcher() {
+    return new PageFetcher(
+        HttpRequestDispatcher.createDefault(
+            Duration.ofSeconds(5), Duration.ofSeconds(8), 1024 * 1024),
+        new HttpResponseHandler(),
+        new HtmlDocumentParser(),
+        FetchLimits.defaults());
   }
 
   /** Resolves the per-user profile directory that holds the local database. */

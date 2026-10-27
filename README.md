@@ -97,3 +97,17 @@ mvn verify
 각 `### STEP n`마다 전용 이슈·브랜치·PR을 만들고, 번호가 붙은 각 작업 단위는
 하나의 커밋으로 남긴다. 커밋 메시지는 `type: lowercase summary` 형식을 사용한다.
 각 STEP PR은 GitHub에서 **Create a merge commit**으로 합친다.
+
+## MCP 서버 (외부 AI 에이전트 연동)
+
+Serox는 stdio 기반 MCP 서버를 제공한다. 에이전트가 Serox를 직접 실행하며, 도구는
+`search_and_summarize` 하나만 노출한다. 설계 근거는
+[0004-mcp-transport.md](docs/decisions/0004-mcp-transport.md)를 참고한다.
+
+- 창 없이 실행: `Serox --mcp-headless`
+- 창과 함께 실행(하단 상태 표시줄에 MCP 연결 상태 표시): `Serox --mcp`
+- 사용자 승인: 에이전트 설정의 환경 변수에 허용할 도구를 적어야 한다.
+  `SEROX_MCP_APPROVED_TOOLS=search_and_summarize` — 값이 없으면 세션이 거부된다.
+- 검색·요약에는 `SEROX_BRAVE_SEARCH_API_KEY`와 `SEROX_ANTHROPIC_API_KEY`가 필요하다.
+- 호출은 동시 2건, 분당 20건으로 제한되고, 브라우저 제어·로컬 파일·방문 기록에 접근하는
+  도구는 존재하지 않는다.
