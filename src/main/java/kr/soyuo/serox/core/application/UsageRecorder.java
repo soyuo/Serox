@@ -72,6 +72,16 @@ public final class UsageRecorder implements AutoCloseable {
         "Recent search could not be saved.");
   }
 
+  /** Removes one stored query; failures are logged and the query simply stays. */
+  public CompletionStage<Void> deleteQuery(String query) {
+    return guarded(() -> recentSearchRepository.delete(query), "Recent search could not be removed.");
+  }
+
+  /** Removes every stored query. */
+  public CompletionStage<Void> clearQueries() {
+    return guarded(recentSearchRepository::clear, "Recent searches could not be cleared.");
+  }
+
   private void recordSearch(SearchStarted event) {
     recordQuery(event.query());
   }

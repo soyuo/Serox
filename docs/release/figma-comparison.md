@@ -21,6 +21,7 @@ became readable. The canvas holds about 100 frames; only the screens below were 
 - "Claude 요약" chip in the address bar (opens the AI panel).
 - AI not connected, failed or cancelled: a banner above the result list with a retry button instead of a side panel (checked in a rendered image against frames 31:2809 and 31:2639).
 - Result screen with a finished summary: wide summary, fixed source pane with the dashed placeholder.
+- Privacy page: recent searches with delete buttons, "clear all searches" and "clear visits" behind a confirm dialog, and the empty state (frames 31:5204, 31:5346).
 - Settings: the sidebar with eight sections and a live preview card; segmented options (selected `#e6effe` with a `#3e81f4` border) instead of radio buttons,
   44 px accent swatches with a check mark, and the design's labels (밝게 / 어둡게 / 시스템,
   작게 / 보통 / 크게, 여유롭게 / 촘촘하게) and accent palette.

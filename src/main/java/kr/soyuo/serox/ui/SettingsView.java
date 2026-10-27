@@ -49,6 +49,7 @@ final class SettingsView extends HBox {
   private final AppearancePage appearance;
   private final PreviewCard preview;
   private final ServiceSummary summary;
+  private final PrivacyActions privacy;
   private final StackPane page = new StackPane();
 
   SettingsView(
@@ -56,7 +57,7 @@ final class SettingsView extends HBox {
       Consumer<BrowserSettings> onPreview,
       Consumer<BrowserSettings> onApply,
       Runnable onCancel) {
-    this(saved, onPreview, onApply, onCancel, ServiceSummary.unknown());
+    this(saved, onPreview, onApply, onCancel, ServiceSummary.unknown(), PrivacyActions.none());
   }
 
   SettingsView(
@@ -64,8 +65,10 @@ final class SettingsView extends HBox {
       Consumer<BrowserSettings> onPreview,
       Consumer<BrowserSettings> onApply,
       Runnable onCancel,
-      ServiceSummary summary) {
+      ServiceSummary summary,
+      PrivacyActions privacy) {
     this.summary = summary;
+    this.privacy = privacy;
     this.preview = new PreviewCard(saved);
     this.appearance =
         new AppearancePage(
@@ -112,6 +115,8 @@ final class SettingsView extends HBox {
       preview.visibleProperty().bind(widthProperty().greaterThan(PREVIEW_MIN_WIDTH));
       preview.managedProperty().bind(preview.visibleProperty());
       page.getChildren().setAll(design);
+    } else if (section == Section.PRIVACY) {
+      page.getChildren().setAll(new PrivacyPage(privacy));
     } else {
       page.getChildren().setAll(infoPage(section));
     }
@@ -158,11 +163,7 @@ final class SettingsView extends HBox {
               "검색 결과 페이지의 본문을 읽고 출처와 함께 요약해요.",
               "AI로 보내기 전에 이메일, 토큰, 카드번호 같은 민감한 정보는 가려요.",
               "AI 요약에는 오류가 있을 수 있어요. 중요한 내용은 출처에서 확인하세요.");
-      case PRIVACY ->
-          List.of(
-              "방문 기록은 90일 동안, 최대 5,000개까지 이 컴퓨터에만 저장해요.",
-              "북마크, 최근 검색, 열려 있던 탭도 이 컴퓨터의 데이터 폴더에만 저장해요.",
-              "데이터 폴더: %LOCALAPPDATA%\\Serox (지우려면 앱을 종료한 뒤 폴더를 삭제하세요)");
+      case PRIVACY -> List.of();
       case MCP ->
           List.of(
               "상태: " + summary.mcp(),

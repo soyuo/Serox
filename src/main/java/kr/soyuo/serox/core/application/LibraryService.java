@@ -41,6 +41,21 @@ public final class LibraryService {
     return guarded(history.map(repository -> repository.recent(HISTORY_LIMIT)), List.of());
   }
 
+  /** Removes every stored visit; completes without error when storage is unavailable. */
+  public CompletionStage<Void> clearHistory() {
+    return history
+        .map(
+            repository ->
+                repository
+                    .clear()
+                    .exceptionally(
+                        failure -> {
+                          LOGGER.log(Level.WARNING, "History could not be cleared.");
+                          return null;
+                        }))
+        .orElseGet(() -> java.util.concurrent.CompletableFuture.completedFuture(null));
+  }
+
   /** Saved bookmarks, newest first. */
   public CompletionStage<List<Bookmark>> bookmarks() {
     return guarded(
