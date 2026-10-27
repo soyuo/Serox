@@ -143,3 +143,42 @@ replaceable behind their public interfaces.
 Every UI-visible state must be derived from its owner module's state or event.
 Placeholder sample data is permitted only before a service is wired and must
 not be presented as a live connection or successful result.
+
+## 1.5 Unsupported, disabled, and recovery behavior
+
+<!-- markdownlint-disable MD013 -->
+| Condition | Visibility and action | User-facing Korean copy | Recovery |
+| --- | --- | --- | --- |
+| Feature belongs to a later roadmap phase | Keep it out of the active MVP flow. If shown to preserve the Figma layout, disable it and state the prerequisite. | `아직 지원하지 않는 기능입니다.` | Continue using available browser/search features. |
+| Control requires a missing provider or connection | Keep the control visible only in its relevant view and disable the dependent action. | `서비스 연결을 완료하면 사용할 수 있습니다.` | Open the corresponding provider or MCP settings. |
+| Search API is not configured | Search action reports configuration state; never show a false connected badge. | `검색 서비스를 설정한 뒤 다시 시도해 주세요.` | Configure credentials using the supported secret handling path. |
+| Navigation or search is in progress | Show progress in the affected tab or search view; provide Cancel when the operation supports cancellation. | `페이지를 불러오는 중…` / `검색 중…` | Keep other tabs responsive; allow cancel and accept only the latest request result. |
+| Search returned no results | Show a dedicated empty state, not an error card. | `검색 결과가 없습니다. 다른 검색어로 다시 시도해 주세요.` | Edit the query and submit again. |
+| No history or bookmarks exist | Keep the list view and explain how items appear. | `방문 기록이 없습니다.` / `저장한 북마크가 없습니다.` | Browse a page or save a bookmark. |
+| AI panel has no response yet | Show a neutral explanatory empty state; do not show fabricated summary text. | `검색 결과를 AI로 요약하면 여기에 표시됩니다.` | Start an AI search when an AI provider is configured. |
+| Some search-result pages could not be fetched | Retain available results and mark the answer as partial. | `일부 출처의 내용을 가져오지 못했습니다. 검색 결과는 계속 확인할 수 있습니다.` | Open available results or retry the affected request. |
+| Search API, network, or service request failed | Keep the current page and available results. Add Retry only when the request can safely be repeated. | `요청을 완료하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.` | Retry or continue browsing; do not clear user input. |
+| AI provider is unavailable or request fails | Keep ordinary browsing and results active; do not replace them with an AI error page. | `AI 응답을 가져오지 못했습니다. 일반 검색 결과는 계속 사용할 수 있습니다.` | Retry after checking provider status or continue without AI. |
+| User cancels a request | Stop the active request and return the affected view to an actionable state. | `요청을 취소했습니다.` | Submit again when ready. |
+| URL scheme is invalid or unsupported | Do not navigate; keep the entered value available for correction. | `HTTP 또는 HTTPS 주소를 입력해 주세요.` | Correct the address or enter a search query. |
+| TLS certificate validation fails | Block navigation and display the specific failure state; do not provide a bypass button in the MVP. | `보안 인증서를 확인할 수 없어 페이지를 열지 않았습니다.` | Return to the previous page or enter another address. |
+| Citation ID is missing or does not match a retrieved source | Do not link the claim to an unverified source. Keep other valid citations. | `출처를 확인할 수 없어 이 인용은 표시하지 않았습니다.` | Review remaining verified sources. |
+| Settings persistence fails | Keep the saved value unchanged and preserve the draft if possible. | `설정을 저장하지 못했습니다. 다시 시도해 주세요.` | Retry, cancel the draft, or continue with the saved setting. |
+| MCP connection or permission check fails | Show disconnected/failed state and reject the unauthorized operation. | `MCP 연결을 완료하지 못했습니다. 연결 설정과 권한을 확인해 주세요.` | Correct settings or permissions and reconnect. |
+<!-- markdownlint-enable MD013 -->
+
+### State presentation rules
+
+- Hide only functionality that is explicitly outside the active roadmap phase or
+  would create an unsafe interaction. Keep relevant Figma-led expansion discoverable
+  when its implementation phase begins.
+- A visible but unavailable action uses a disabled control plus a concise reason;
+  a tooltip is supplementary and must not be the only explanation.
+- Loading, empty, partial, failed, and cancelled states use distinct visual
+  treatments and accessible labels. Do not communicate state by color alone.
+- Retry keeps the current query/page context. Stale asynchronous responses must
+  not replace the state of a newer request.
+- Never put API keys, cookies, authorization values, or sensitive page text in
+  user-facing errors or status copy.
+- Do not claim a site, AI provider, or MCP server is connected, secure, or ready
+  without a successful state from its owning module.
