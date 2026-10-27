@@ -15,6 +15,9 @@ mvn clean javafx:run
 `pom.xml`이 JavaFX 의존성과 현재 플랫폼의 네이티브 라이브러리를 함께 내려받는다.
 별도의 JavaFX SDK 설치는 필요하지 않다.
 
+초기 프로젝트는 단일 Maven 모듈로 시작한다. 모듈 분리 기준은
+[ADR 0001](docs/decisions/0001-maven-module-strategy.md)에 기록한다.
+
 ## Windows 배포 산출물
 
 최종 배포는 자체 실행 런타임을 포함한 MSI 설치 파일을 기본으로 한다.
