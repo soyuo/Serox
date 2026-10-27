@@ -478,3 +478,39 @@
     -fx-background-color: transparent;
     -fx-padding: 0;
 }
+
+.ai-panel {
+    -fx-pref-width: 320px;
+    -fx-min-width: 280px;
+    -fx-max-width: 360px;
+    -fx-padding: 20px 20px 0 20px;
+    -fx-spacing: 12px;
+    -fx-background-color: serox-surface-muted;
+    -fx-border-color: serox-border;
+    -fx-border-width: 0 0 0 1px;
+}
+
+.ai-panel-title {
+    -fx-text-fill: serox-text-primary;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+.ai-panel-scroll,
+.ai-panel-scroll > .viewport,
+.ai-panel-body {
+    -fx-background-color: transparent;
+}
+
+.ai-panel-text {
+    -fx-text-fill: serox-text-primary;
+    -fx-font-size: 13px;
+}
+
+.ai-panel-error {
+    -fx-text-fill: serox-error;
+}
+
+.ai-panel-left {
+    -fx-border-width: 0 1px 0 0;
+}
