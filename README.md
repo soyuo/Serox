@@ -162,3 +162,17 @@ Serox는 stdio 기반 MCP 서버를 제공한다. 에이전트가 Serox를 직�
 - 검색·요약에는 `SEROX_BRAVE_SEARCH_API_KEY`와 `SEROX_ANTHROPIC_API_KEY`가 필요하다.
 - 호출은 동시 2건, 분당 20건으로 제한되고, 브라우저 제어·로컬 파일·방문 기록에 접근하는
   도구는 존재하지 않는다.
+
+### HTTP 주소로 연결
+
+Serox가 켜져 있는 동안 `http://localhost:<포트>/mcp` 주소로도 연결할 수 있다. 기본 포트는
+3845이고, 저장된 MCP 설정에서 자동 실행이 켜져 있을 때 Serox와 함께 시작한다.
+한 번의 POST가 JSON-RPC 메시지 하나이며, `initialize` 응답의 `Mcp-Session-Id` 헤더를 이후
+요청에 붙여야 한다. 사용자 승인(`SEROX_MCP_APPROVED_TOOLS`)과 호출 제한은 stdio와 같다.
+
+- **이 컴퓨터만(기본):** 127.0.0.1에만 열고, `Host`가 localhost가 아니거나 `Origin` 헤더가
+  있는 요청(웹 페이지에서 온 요청)은 거부한다.
+- **같은 네트워크:** 다른 컴퓨터에서도 닿으므로 모든 요청에 `Authorization: Bearer <토큰>`이
+  필요하다. 토큰은 환경 변수 `SEROX_MCP_TOKEN`으로만 받고 저장하거나 기록하지 않으며,
+  없으면 서버가 시작하지 않는다.
+- 요청 본문은 1MB까지, 동시 세션은 16개까지다.
