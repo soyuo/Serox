@@ -43,6 +43,11 @@ final class AiPanelView extends VBox {
     getChildren().add(scroll);
   }
 
+  /** Runs the retry action, for the banner that replaces the panel in failure states. */
+  void retry() {
+    onRetry.run();
+  }
+
   void setActions(Runnable onCancel, Runnable onRetry) {
     this.onCancel = onCancel;
     this.onRetry = onRetry;

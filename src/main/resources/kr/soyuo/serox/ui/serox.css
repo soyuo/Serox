@@ -15,6 +15,7 @@
     serox-ai-surface: #e6effe;
     serox-ai-accent: #1d4ed8;
     serox-ai-ring: #22d3ee;
+    serox-error-surface: #fde8e8;
     serox-window-close-hover: #e81123;
     -fx-background-color: serox-surface;
     -fx-text-fill: serox-text-primary;
@@ -549,6 +550,7 @@
     serox-error: #f87171;
     serox-ai-surface: #1b2a4a;
     serox-ai-accent: #93b4f8;
+    serox-error-surface: #3a1d1d;
 }
 
 /* Compact density tightens list rows and toolbars. */
@@ -858,4 +860,25 @@
     -fx-text-fill: serox-ai-accent;
     -fx-font-weight: bold;
     -fx-cursor: hand;
+}
+
+/* Banner above the result list when there is no AI summary. */
+.ai-banner {
+    -fx-padding: 20px;
+    -fx-background-color: serox-ai-surface;
+    -fx-background-radius: 14px;
+}
+
+.ai-banner-error {
+    -fx-background-color: serox-error-surface;
+}
+
+.ai-banner-title {
+    -fx-text-fill: serox-ai-accent;
+    -fx-font-size: 1.000em;
+    -fx-font-weight: bold;
+}
+
+.ai-banner-error .ai-banner-title {
+    -fx-text-fill: serox-error;
 }
