@@ -1,6 +1,7 @@
 package kr.soyuo.serox.browser.dom;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -21,6 +22,13 @@ public final class Element extends Node {
 
   public Map<String, String> attributes() {
     return Map.copyOf(attributes);
+  }
+
+  /** Returns attributes as immutable name/value records. */
+  public List<Attribute> attributeEntries() {
+    return attributes.entrySet().stream()
+        .map(entry -> new Attribute(entry.getKey(), entry.getValue()))
+        .toList();
   }
 
   public Optional<String> attribute(String name) {

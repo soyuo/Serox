@@ -40,6 +40,35 @@ public abstract class Node {
     return true;
   }
 
+  /** Replaces an existing child and returns the detached node. */
+  public final Node replaceChild(Node existing, Node replacement) {
+    Objects.requireNonNull(existing, "existing");
+    Objects.requireNonNull(replacement, "replacement");
+    int index = children.indexOf(existing);
+    if (index < 0) {
+      throw new IllegalArgumentException("existing is not a child of this node");
+    }
+    if (existing == replacement) {
+      return existing;
+    }
+    if (replacement == this || isAncestorOf(replacement)) {
+      throw new IllegalArgumentException("A DOM node cannot contain itself or its ancestor");
+    }
+    replacement.parent().ifPresent(parent -> parent.removeChild(replacement));
+    index = children.indexOf(existing);
+    children.set(index, replacement);
+    existing.parent = null;
+    replacement.parent = this;
+    return existing;
+  }
+
+  /** Returns all descendant nodes in document order. */
+  public final List<Node> descendants() {
+    List<Node> result = new ArrayList<>();
+    collectDescendants(this, result);
+    return List.copyOf(result);
+  }
+
   /** Returns the concatenated text descendants, excluding comments. */
   public String textContent() {
     StringBuilder text = new StringBuilder();
@@ -60,5 +89,12 @@ public abstract class Node {
       }
     }
     return false;
+  }
+
+  private void collectDescendants(Node node, List<Node> result) {
+    for (Node child : node.children) {
+      result.add(child);
+      collectDescendants(child, result);
+    }
   }
 }
