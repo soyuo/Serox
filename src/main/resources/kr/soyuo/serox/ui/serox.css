@@ -1,0 +1,189 @@
+.app-root {
+    -fx-font-family: "Segoe UI", "Noto Sans KR", sans-serif;
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #171b24;
+}
+
+.browser-chrome {
+    -fx-background-color: #ffffff;
+    -fx-border-color: transparent transparent #e6e9ef transparent;
+}
+
+.tab-bar {
+    -fx-min-height: 42px;
+    -fx-background-color: #f7f8fa;
+}
+
+.brand-mark-small,
+.brand-mark-large {
+    -fx-alignment: center;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-color: #3478f6;
+    -fx-background-radius: 9px;
+}
+
+.brand-mark-small {
+    -fx-min-width: 26px;
+    -fx-min-height: 26px;
+    -fx-font-size: 14px;
+}
+
+.brand-mark-large {
+    -fx-min-width: 48px;
+    -fx-min-height: 48px;
+    -fx-font-size: 25px;
+    -fx-background-radius: 12px;
+}
+
+.tab-chip {
+    -fx-padding: 0 10px;
+    -fx-min-width: 220px;
+    -fx-min-height: 34px;
+    -fx-background-color: white;
+    -fx-background-radius: 9px 9px 0 0;
+    -fx-border-color: #e6e9ef #e6e9ef white #e6e9ef;
+    -fx-border-radius: 9px 9px 0 0;
+}
+
+.active-tab {
+    -fx-text-fill: #202633;
+    -fx-font-size: 12px;
+}
+
+.tab-close,
+.quiet-button,
+.icon-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #586276;
+    -fx-cursor: hand;
+}
+
+.tab-close {
+    -fx-font-size: 16px;
+    -fx-padding: 0 4px;
+}
+
+.quiet-button {
+    -fx-font-size: 20px;
+}
+
+.toolbar {
+    -fx-background-color: white;
+}
+
+.icon-button {
+    -fx-min-width: 36px;
+    -fx-min-height: 36px;
+    -fx-background-radius: 18px;
+    -fx-font-size: 17px;
+}
+
+.address-bar,
+.home-search-field {
+    -fx-background-color: #eff1f5;
+    -fx-background-radius: 22px;
+    -fx-border-color: transparent;
+    -fx-text-fill: #202633;
+    -fx-prompt-text-fill: #6b7485;
+}
+
+.address-bar {
+    -fx-padding: 0 16px;
+    -fx-min-height: 40px;
+    -fx-font-size: 13px;
+}
+
+.home-view {
+    -fx-background-color: white;
+}
+
+.home-content {
+    -fx-padding: 0 0 48px 0;
+}
+
+.brand-title {
+    -fx-font-size: 38px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #171b24;
+}
+
+.tagline {
+    -fx-padding: 0 0 14px 0;
+    -fx-text-fill: #606b80;
+    -fx-font-size: 14px;
+}
+
+.home-search {
+    -fx-padding: 8px;
+    -fx-background-color: #eff1f5;
+    -fx-background-radius: 30px;
+}
+
+.home-search-field {
+    -fx-background-color: transparent;
+    -fx-padding: 0 12px;
+    -fx-min-height: 40px;
+    -fx-font-size: 14px;
+}
+
+.primary-button {
+    -fx-background-color: #2869ed;
+    -fx-background-radius: 22px;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 10px 18px;
+    -fx-cursor: hand;
+}
+
+.primary-button:hover {
+    -fx-background-color: #1e5bd5;
+}
+
+.home-cards {
+    -fx-padding: 12px 0 0 0;
+}
+
+.info-card {
+    -fx-spacing: 10px;
+    -fx-padding: 18px 20px;
+    -fx-min-height: 168px;
+    -fx-background-color: white;
+    -fx-background-radius: 14px;
+    -fx-border-color: #dce1ea;
+    -fx-border-radius: 14px;
+    -fx-border-width: 1px;
+}
+
+.card-heading {
+    -fx-text-fill: #647087;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.recent-searches {
+    -fx-spacing: 4px;
+}
+
+.recent-search-item {
+    -fx-padding: 7px 0;
+    -fx-text-fill: #252b37;
+    -fx-font-size: 13px;
+}
+
+.connection-status {
+    -fx-text-fill: #596579;
+    -fx-font-size: 13px;
+}
+
+.card-note,
+.status-muted {
+    -fx-text-fill: #7b8494;
+    -fx-font-size: 11px;
+}
+
+.status-bar {
+    -fx-min-height: 34px;
+    -fx-background-color: #fafbfc;
+    -fx-border-color: #e6e9ef transparent transparent transparent;
+}
