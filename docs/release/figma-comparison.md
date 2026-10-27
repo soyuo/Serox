@@ -20,6 +20,7 @@ became readable. The canvas holds about 100 frames; only the screens below were 
 - Sources are cards with a numbered badge, title and URL, and the "AI summaries may contain errors" note.
 - "Claude 요약" chip in the address bar (opens the AI panel).
 - AI not connected, failed or cancelled: a banner above the result list with a retry button instead of a side panel (checked in a rendered image against frames 31:2809 and 31:2639).
+- No-internet search state (frame 31#3415): "인터넷에 연결되어 있지 않아요" with a retry button, an "오프라인" status and a matching source pane. Only connection failures show it; API errors keep their own message.
 - Result screen with a finished summary: wide summary, fixed source pane with the dashed placeholder.
 - Settings: the sidebar with eight sections and a live preview card; segmented options (selected `#e6effe` with a `#3e81f4` border) instead of radio buttons,
   44 px accent swatches with a check mark, and the design's labels (밝게 / 어둡게 / 시스템,

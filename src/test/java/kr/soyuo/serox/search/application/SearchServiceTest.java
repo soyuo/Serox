@@ -160,4 +160,28 @@ class SearchServiceTest {
     service.close();
     eventBus.close();
   }
+
+  @Test
+  void onlyConnectivityFailuresAreMarkedOffline() {
+    var eventBus = new InProcessBrowserEventBus();
+    var failed = new AtomicReference<SearchFailed>();
+    eventBus.subscribe(SearchFailed.class, failed::set);
+    var failure = new AtomicReference<Throwable>(new java.net.ConnectException("no route"));
+    var service =
+        new SearchService(
+            Optional.of(request -> CompletableFuture.failedFuture(failure.get())), eventBus);
+    TabId tabId = TabId.create();
+
+    assertThrows(
+        CompletionException.class, () -> service.search(tabId, "q").toCompletableFuture().join());
+    assertTrue(failed.get().offline());
+
+    failure.set(
+        new kr.soyuo.serox.search.provider.SearchProviderException("Brave Search rejected the key."));
+    assertThrows(
+        CompletionException.class, () -> service.search(tabId, "q").toCompletableFuture().join());
+    assertFalse(failed.get().offline());
+    service.close();
+    eventBus.close();
+  }
 }

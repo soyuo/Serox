@@ -98,6 +98,19 @@ final class SearchResultsView extends BorderPane {
     return view;
   }
 
+  /** The no-internet screen from the design: one message, one retry, and a matching source pane. */
+  static SearchResultsView offline(String query, Runnable onRetry, Consumer<SearchResult> onOpen) {
+    SearchResultsView view = new SearchResultsView(query, onOpen);
+    view.results
+        .getChildren()
+        .setAll(
+            view.heading("오프라인"),
+            view.state(
+                "인터넷에 연결되어 있지 않아요", "연결을 확인한 뒤 다시 시도해 주세요.", view.action("다시 시도", onRetry)));
+    view.preview.setCenter(view.sourcePlaceholder("인터넷에 연결되지 않았어요", "연결을 확인한 뒤 다시 시도해 주세요."));
+    return view;
+  }
+
   static SearchResultsView results(
       String query, List<SearchResult> found, Consumer<SearchResult> onOpen) {
     SearchResultsView view = new SearchResultsView(query, onOpen);
@@ -312,14 +325,18 @@ final class SearchResultsView extends BorderPane {
 
   /** The dashed card shown until the user picks a source, as in the design. */
   private VBox sourcePlaceholder() {
-    Label title = new Label("출처를 누르면 원문이 열려요");
+    return sourcePlaceholder("출처를 누르면 원문이 열려요", "고른 출처의 페이지가 여기에 보여요.");
+  }
+
+  private VBox sourcePlaceholder(String heading, String detail) {
+    Label title = new Label(heading);
     title.getStyleClass().add("search-state-title");
     VBox card =
         new VBox(
             UiTokens.SPACE_MD,
             SvgIconView.icon(UiTokens.ICON_PREVIEW_PLACEHOLDER, UiTokens.PLACEHOLDER_ICON_SIZE),
             title,
-            message("고른 출처의 페이지가 여기에 보여요."));
+            message(detail));
     card.setAlignment(Pos.CENTER);
     card.getStyleClass().add("source-placeholder");
     VBox.setVgrow(card, javafx.scene.layout.Priority.ALWAYS);
