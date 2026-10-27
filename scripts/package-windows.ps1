@@ -29,7 +29,7 @@ function Resolve-Jpackage {
         }
     }
 
-    throw 'jpackage.exe was not found. Install JDK 21 or newer and add its bin directory to PATH.'
+    throw 'jpackage.exe was not found. Install JDK 25 or newer and add its bin directory to PATH.'
 }
 
 if ($Type -in @('msi', 'exe')) {
