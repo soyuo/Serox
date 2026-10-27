@@ -43,6 +43,11 @@ commands define overlap order. The Canvas viewport supports horizontal and verti
 scrolling and recalculates layout after resize.
 
 Text, backgrounds, borders, links, and basic input/button outlines are painted.
-Images use a labeled placeholder until resource loading is integrated. Font metrics
-are approximate; this renderer is an initial independent engine, not a full browser
-layout implementation.
+Images load asynchronously from public HTTP(S) addresses. PNG, JPEG and GIF are decoded;
+GIF displays its first frame. Requests are limited to 16 distinct images per page,
+2 MiB per response and 4 million decoded pixels per image. Local and private addresses,
+unsupported types, failed requests and images over those limits show an alt-text
+placeholder. Image dimensions follow the existing CSS or HTML width and height, or
+the 96 × 64 default; intrinsic sizing, `data:` URLs and animated images are not supported.
+Font metrics are approximate; this renderer is an initial independent engine, not a
+full browser layout implementation.

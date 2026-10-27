@@ -9,7 +9,7 @@ Cross-check of SPEC section 17.5 and the completion criteria of each STEP, done 
 | --- | --- | --- | --- |
 | JavaFX application runs | Done | App image started on the bundled runtime; `UiLayoutSmokeTest` | |
 | Open HTML pages by URL | Done | `BrowserNavigationIntegrationTest`, `EndToEndScenarioTest` | |
-| Show text, links and images | Done | Rendering golden files; images are placeholders with alt text | Real image decoding is not implemented |
+| Show text, links and images | Done | Rendering golden files, `PageImageLoaderTest`, `ImagePaintingTest` | Images have format, size and address limits; see `docs/rendering-support.md` |
 | Search API search works | Done with stubs | `BraveSearchProviderTest` against a local server | Never run against the live Brave API; needs a key |
 | Claude summarizes results | Done with stubs | `ClaudeProviderTest`, `AiSearchServiceTest` against a local server | Never run against the live Claude API; needs a key |
 | Source links | Done | `CitationManager` validation tests, AI panel source list | |
@@ -48,5 +48,5 @@ release; see the roadmap in the README.
 - **Live providers:** neither the Brave Search nor the Claude API has been called with a real key.
 - **Installer:** a per-user variant was installed, run and uninstalled; the shipped per-machine MSI needs an administrator and was not installed, upgrades were not tried, and
   the MSI is unsigned.
-- **Unsupported web features:** JavaScript, flexbox, grid and image decoding (see
+- **Unsupported web features:** JavaScript, grid and parts of flexbox and image loading (see
   `docs/rendering-support.md`).
