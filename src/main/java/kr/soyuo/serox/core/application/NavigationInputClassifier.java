@@ -14,6 +14,7 @@ public final class NavigationInputClassifier {
   private static final Pattern HOST_LIKE =
       Pattern.compile("^(localhost|(?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,})(?::\\d+)?(?:[/#?].*)?$");
 
+  /** Classifies user input as a web address or search query. */
   public NavigationTarget classify(String input) {
     if (input == null || input.isBlank()) {
       throw invalidAddress();
