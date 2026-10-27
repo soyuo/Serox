@@ -938,6 +938,45 @@
     -fx-background-radius: 8px;
 }
 
+/* Error pages for addresses that cannot be opened. */
+.error-page {
+    -fx-background-color: serox-surface;
+}
+
+.error-page-icon {
+    -fx-min-width: 56px;
+    -fx-min-height: 56px;
+    -fx-alignment: center;
+    -fx-background-color: serox-error-surface;
+    -fx-background-radius: 28px;
+    -fx-text-fill: serox-error;
+    -fx-font-size: 1.714em;
+    -fx-font-weight: bold;
+}
+
+.error-page-title {
+    -fx-text-fill: serox-text-primary;
+    -fx-font-size: 1.714em;
+    -fx-font-weight: bold;
+}
+
+.error-page-tips {
+    -fx-padding: 14px 18px;
+    -fx-background-color: serox-hover-surface;
+    -fx-background-radius: 10px;
+    -fx-border-color: serox-border;
+    -fx-border-radius: 10px;
+}
+
+.error-page-tips-title {
+    -fx-text-fill: serox-text-primary;
+    -fx-font-weight: bold;
+}
+
+.address-box.address-error .address-field {
+    -fx-text-fill: serox-error;
+}
+
 /* On/off switch on the privacy page. */
 .switch {
     -fx-min-height: 32px;
