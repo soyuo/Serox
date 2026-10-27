@@ -282,6 +282,10 @@ public final class BrowserShellView extends BorderPane {
     aiStatus.setAccessibleText("AI 연결 상태: " + previewData.ai().detail());
     mcpStatus.setAccessibleText(
         previewData.mcp().name() + " 상태: " + previewData.mcp().statusText());
+    for (Label status : List.of(navigationStatus, aiStatus, mcpStatus)) {
+      status.setMaxWidth(UiTokens.STATUS_TEXT_MAX_WIDTH);
+      status.setTextOverrun(javafx.scene.control.OverrunStyle.ELLIPSIS);
+    }
     Label divider = new Label("|");
     divider.getStyleClass().add("status-divider");
     Region spacer = new Region();
@@ -465,7 +469,7 @@ public final class BrowserShellView extends BorderPane {
     Label title = tabTitles.get(snapshot.id());
     if (title == null) {
       title = new Label();
-      title.setMaxWidth(190);
+      title.setMaxWidth(UiTokens.TAB_TITLE_MAX_WIDTH);
       Button close = new Button();
       close.setGraphic(SvgIconView.icon(UiTokens.ICON_TAB_CLOSE, UiTokens.WINDOW_ICON_SIZE));
       close.setAccessibleText("탭 닫기");

@@ -514,3 +514,11 @@
 .ai-panel-left {
     -fx-border-width: 0 1px 0 0;
 }
+
+.search-state-message {
+    -fx-wrap-text: true;
+}
+
+.status-bar > .label {
+    -fx-text-overrun: ellipsis;
+}
