@@ -93,7 +93,7 @@ $env:SEROX_ANTHROPIC_API_KEY = "<Anthropic API key>"
 - 지원 운영체제는 Windows뿐이다. 사용자 단위 설치판의 설치·실행·제거는 확인했지만, 배포용 MSI(관리자 권한 필요)는 설치해 보지 못했다.
 - 페이지 읽기에서 DNS 재바인딩은 완전히 차단하지 못한다(응답 크기·형식 제한과 민감정보
   가림으로 완화).
-- Figma 대조는 홈, 검색 결과, 디자인 설정 화면만 했다. 결과 화면 배치(오른쪽 원문 미리보기)와 설정의 나머지 페이지 조작 항목은 디자인과 다르다. [Figma 대조](docs/release/figma-comparison.md).
+- Figma 대조는 홈, 검색 결과, 디자인 설정 화면만 했다. 오른쪽 원문 미리보기(저장된 발췌만 보여 줌)와 설정의 나머지 페이지 조작 항목은 디자인과 다르다. [Figma 대조](docs/release/figma-comparison.md).
 
 ## 로드맵
 
