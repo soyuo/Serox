@@ -1,7 +1,8 @@
 package kr.soyuo.serox.ui;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
-import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.control.Button;
@@ -17,12 +18,17 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import kr.soyuo.serox.core.event.ActiveTabChanged;
 import kr.soyuo.serox.core.event.BrowserEventBus;
 import kr.soyuo.serox.core.event.ConnectionStatusChanged;
 import kr.soyuo.serox.core.event.EventSubscription;
 import kr.soyuo.serox.core.event.OperationFailed;
 import kr.soyuo.serox.core.event.ServiceId;
 import kr.soyuo.serox.core.event.ServiceStatus;
+import kr.soyuo.serox.core.event.TabClosed;
+import kr.soyuo.serox.core.event.TabStateChanged;
+import kr.soyuo.serox.core.model.TabId;
+import kr.soyuo.serox.core.model.TabSnapshot;
 
 /** Displays the Figma browser frame, home view, and service status. */
 public final class BrowserShellView extends BorderPane {
@@ -35,6 +41,11 @@ public final class BrowserShellView extends BorderPane {
   private HomeView homeView;
   private final EventSubscription connectionStatusSubscription;
   private final EventSubscription operationErrorSubscription;
+  private final EventSubscription tabStateSubscription;
+  private final EventSubscription activeTabSubscription;
+  private final EventSubscription tabClosedSubscription;
+  private final Map<TabId, TabSnapshot> tabSnapshots = new HashMap<>();
+  private TabId activeTabId;
   private double dragOffsetX;
   private double dragOffsetY;
   private Cursor resizeCursor = Cursor.DEFAULT;
@@ -64,12 +75,18 @@ public final class BrowserShellView extends BorderPane {
         eventBus.subscribe(ConnectionStatusChanged.class, this::showConnectionStatus);
     operationErrorSubscription =
         eventBus.subscribe(OperationFailed.class, this::showOperationError);
+    tabStateSubscription = eventBus.subscribe(TabStateChanged.class, this::showTabState);
+    activeTabSubscription = eventBus.subscribe(ActiveTabChanged.class, this::showActiveTab);
+    tabClosedSubscription = eventBus.subscribe(TabClosed.class, this::removeTab);
   }
 
   /** Releases event subscriptions owned by this view. */
   public void close() {
     connectionStatusSubscription.close();
     operationErrorSubscription.close();
+    tabStateSubscription.close();
+    activeTabSubscription.close();
+    tabClosedSubscription.close();
   }
 
   private VBox createBrowserChrome() {
@@ -204,24 +221,48 @@ public final class BrowserShellView extends BorderPane {
             statusDot.getStyleClass().setAll("status-dot", statusStyle(event.status()));
           }
         };
-    if (Platform.isFxApplicationThread()) {
-      update.run();
-    } else {
-      Platform.runLater(update);
-    }
+    FxThreadExecutor.execute(update);
   }
 
   private void showOperationError(OperationFailed event) {
     updateLabel(aiStatus, event.error().safeMessage());
   }
 
+  private void showTabState(TabStateChanged event) {
+    FxThreadExecutor.execute(
+        () -> {
+          TabSnapshot snapshot = event.snapshot();
+          tabSnapshots.put(snapshot.id(), snapshot);
+          if (snapshot.id().equals(activeTabId)) {
+            updateAddress(snapshot);
+          }
+        });
+  }
+
+  private void showActiveTab(ActiveTabChanged event) {
+    FxThreadExecutor.execute(
+        () -> {
+          activeTabId = event.tabId().orElse(null);
+          TabSnapshot snapshot = tabSnapshots.get(activeTabId);
+          if (snapshot == null) {
+            addressField.clear();
+          } else {
+            updateAddress(snapshot);
+          }
+        });
+  }
+
+  private void removeTab(TabClosed event) {
+    FxThreadExecutor.execute(() -> tabSnapshots.remove(event.tabId()));
+  }
+
+  private void updateAddress(TabSnapshot snapshot) {
+    addressField.setText(snapshot.currentUri().map(Object::toString).orElse(""));
+  }
+
   private void updateLabel(Label label, String text) {
     Runnable update = () -> label.setText(text);
-    if (Platform.isFxApplicationThread()) {
-      update.run();
-    } else {
-      Platform.runLater(update);
-    }
+    FxThreadExecutor.execute(update);
   }
 
   private String statusName(ServiceStatus status) {
