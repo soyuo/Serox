@@ -75,7 +75,7 @@ public final class BrowserShellView extends BorderPane {
   private HBox addressBox;
   private boolean aiSearchActive;
   private boolean errorShown;
-  private final Button aiChip = new Button("Claude 요약");
+  private final Button aiChip = new Button("AI 요약");
   private HomeView homeView;
   private final EventSubscription connectionStatusSubscription;
   private final EventSubscription operationErrorSubscription;

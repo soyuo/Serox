@@ -33,7 +33,7 @@ import kr.soyuo.serox.search.fetch.PageFetcher;
 /** Turns completed searches into streamed, cited AI answers without touching search state. */
 public final class AiSearchService implements AutoCloseable {
   static final String UNAVAILABLE_MESSAGE =
-      "AI 요약을 사용하려면 SEROX_ANTHROPIC_API_KEY를 설정하고 Serox를 다시 시작하세요.";
+      "AI 요약을 사용하려면 선택한 제공자의 API 키를 설정하세요. AI 제공자 설정에서 확인할 수 있어요.";
   static final String NO_EVIDENCE_MESSAGE = "근거로 사용할 페이지를 읽지 못해 AI 요약을 만들 수 없어요.";
   private static final Logger LOGGER = Logger.getLogger(AiSearchService.class.getName());
 

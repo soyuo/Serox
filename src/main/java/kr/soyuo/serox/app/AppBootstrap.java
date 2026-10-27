@@ -11,7 +11,7 @@ import java.util.logging.Logger;
 import kr.soyuo.serox.ai.api.AiProvider;
 import kr.soyuo.serox.ai.application.AiSearchService;
 import kr.soyuo.serox.ai.context.ContextBuilder;
-import kr.soyuo.serox.ai.provider.ClaudeProvider;
+import kr.soyuo.serox.ai.provider.AiProviders;
 import kr.soyuo.serox.browser.html.HtmlDocumentParser;
 import kr.soyuo.serox.browser.network.GuardedTransport;
 import kr.soyuo.serox.browser.network.HttpBrowserEngine;
@@ -108,10 +108,7 @@ public final class AppBootstrap {
   private static AiSearchService createAiSearchService(
       kr.soyuo.serox.core.application.AppConfiguration configuration,
       kr.soyuo.serox.core.event.BrowserEventBus eventBus) {
-    Optional<AiProvider> provider =
-        configuration
-            .anthropicApiKey()
-            .map(key -> (AiProvider) ClaudeProvider.create(key.revealForRequest()));
+    Optional<AiProvider> provider = AiProviders.fromConfiguration(configuration);
     var fetcher = createPageFetcher();
     return new AiSearchService(provider, fetcher, new ContextBuilder(), eventBus, Clock.systemUTC());
   }
