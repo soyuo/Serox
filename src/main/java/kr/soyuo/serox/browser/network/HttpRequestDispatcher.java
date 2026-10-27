@@ -14,7 +14,7 @@ import java.util.concurrent.Flow;
 import kr.soyuo.serox.browser.api.PageLoadRequest;
 
 /** Sends bounded asynchronous HTTP requests using the JDK transport. */
-public final class HttpRequestDispatcher {
+public final class HttpRequestDispatcher implements HttpTransport {
   private final HttpClient client;
   private final Duration requestTimeout;
   private final int maxResponseBytes;
@@ -44,6 +44,7 @@ public final class HttpRequestDispatcher {
   }
 
   /** Dispatches one GET request; cancelling the returned future cancels the HTTP exchange. */
+  @Override
   public CompletionStage<HttpResponseData> dispatch(PageLoadRequest pageRequest) {
     Objects.requireNonNull(pageRequest, "pageRequest");
     HttpRequest request =
@@ -74,13 +75,13 @@ public final class HttpRequestDispatcher {
     return result;
   }
 
-  private static final class LimitedBodySubscriber implements HttpResponse.BodySubscriber<byte[]> {
+  static final class LimitedBodySubscriber implements HttpResponse.BodySubscriber<byte[]> {
     private final int maxBytes;
     private final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
     private final CompletableFuture<byte[]> body = new CompletableFuture<>();
     private Flow.Subscription subscription;
 
-    private LimitedBodySubscriber(int maxBytes) {
+    LimitedBodySubscriber(int maxBytes) {
       this.maxBytes = maxBytes;
     }
 
