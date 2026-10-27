@@ -101,3 +101,45 @@ reason is not self-evident.
 Search and AI request IDs must be tracked so an older response cannot replace a
 newer view. These contracts describe expected UI behavior; module ownership is
 mapped separately in section 1.4.
+
+## 1.4 Requirement ownership and scenario links
+
+<!-- markdownlint-disable MD013 -->
+| Requirement ID | Primary owner | Collaborating modules | User scenario |
+| --- | --- | --- | --- |
+| BASE-001 | Presentation | Application Core | All scenarios; UI sends commands and renders events. |
+| BASE-002 | Browser Engine | Application Core, Presentation | Start and browse; Search and inspect original pages. |
+| BASE-003 | Application Core | Browser Engine, Storage, Presentation | Start and browse; manage browser state. |
+| MVP-001 | Search Engine | Application Core, Storage, Presentation | Search and inspect. |
+| MVP-002 | AI Engine | Search Engine, Browser Engine, Storage, Presentation | Ask AI; search and inspect citations. |
+| MVP-003 | AI Engine | Browser Engine, Application Core, Storage, Presentation | Ask AI about the current page. |
+| MVP-004 | Storage | Application Core, Presentation | Manage browser state and restore a session. |
+| MVP-005 | MCP Server | AI Engine, Search Engine, Application Core | Configure services; external authorized search request. |
+| EXP-001 | Presentation | Application Core, Browser Engine, Search Engine, AI Engine, MCP Server | Start and browse; configure services; inspect site information. |
+| EXP-002 | Presentation | Application Core, Search Engine, AI Engine, Storage | Search and inspect; ask AI; personalize the AI panel. |
+| EXP-003 | Presentation | Application Core, Storage | Manage browser state; personalize appearance. |
+| LONG-001 | Browser Engine | Application Core, security boundary | Start and browse dynamic documents after separate process isolation is approved. |
+| LONG-002 | Browser Engine | Presentation | Start and browse documents using later compatibility features. |
+| LONG-003 | Application Core | AI Engine, MCP Server, Storage | Ask AI across selected tabs; use future profiles or authorized agent control. |
+<!-- markdownlint-enable MD013 -->
+
+Module boundaries follow SPEC 3 and 5–10: Presentation invokes public
+Application Core commands, then consumes state events; it does not call engine
+internals directly. Search, AI, MCP, and Storage remain independently
+replaceable behind their public interfaces.
+
+<!-- markdownlint-disable MD013 -->
+| Scenario | Command path | State/data path | Required containment |
+| --- | --- | --- | --- |
+| Start and browse | Presentation → NavigationManager → Browser Engine | TabSession and NavigationHistory → page state → UI event | Invalid schemes, TLS failures, and a failed page remain scoped to the selected tab. |
+| Search and inspect | Search field → NavigationManager → SearchCoordinator → SearchProvider | SearchResponse → deduplicated results → UI; cache through Storage | API failure or no results must not disable direct URL navigation. |
+| Ask AI from search | Search result → PageFetcher/ContentExtractor → ContextBuilder → AiProvider | EvidenceStore and CitationManager → answer/citations → UI | Fetch or AI failure preserves available search results; reject unknown citation IDs. |
+| Analyze current page | Explicit user action → consent check → bounded document context → AiProvider | Answer and cited current-page references → AI panel | Do not send unapproved page data; cancel and provider errors do not alter browser navigation. |
+| Manage tabs and saved state | Tab command → TabManager/SessionManager | Session and tab repositories → restored TabSessions | A storage error cannot close the active page or terminate the app. |
+| Personalize appearance | Settings view → draft setting command → settings repository on apply | Draft preview → saved setting event → updated UI | Cancel discards only draft values; persistence failure keeps the last saved value. |
+| Configure services/MCP | Settings view → provider or MCP lifecycle interface → AccessController for tools | Connection event → status view | No connected/ready badge without a successful state event; unauthorized tools are rejected. |
+<!-- markdownlint-enable MD013 -->
+
+Every UI-visible state must be derived from its owner module's state or event.
+Placeholder sample data is permitted only before a service is wired and must
+not be presented as a live connection or successful result.
