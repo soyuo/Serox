@@ -37,6 +37,7 @@ import kr.soyuo.serox.core.event.AiAnswerChanged;
 import kr.soyuo.serox.core.event.BrowserEventBus;
 import kr.soyuo.serox.core.event.ConnectionStatusChanged;
 import kr.soyuo.serox.core.event.EventSubscription;
+import kr.soyuo.serox.core.event.NavigationFailed;
 import kr.soyuo.serox.core.event.OperationFailed;
 import kr.soyuo.serox.core.event.PageLoaded;
 import kr.soyuo.serox.core.event.SearchCancelled;
@@ -71,6 +72,7 @@ public final class BrowserShellView extends BorderPane {
   private TextField addressField;
   private HBox addressBox;
   private boolean aiSearchActive;
+  private boolean errorShown;
   private final Button aiChip = new Button("Claude 요약");
   private HomeView homeView;
   private final EventSubscription connectionStatusSubscription;
@@ -84,6 +86,7 @@ public final class BrowserShellView extends BorderPane {
   private final EventSubscription searchFailedSubscription;
   private final EventSubscription searchCancelledSubscription;
   private final EventSubscription aiAnswerSubscription;
+  private final EventSubscription navigationFailedSubscription;
   private SearchResultsView resultsView;
   private boolean aiPanelOpen = true;
   private AiPanelPosition aiPanelSide = AiPanelPosition.RIGHT;
@@ -167,6 +170,8 @@ public final class BrowserShellView extends BorderPane {
     searchCancelledSubscription =
         eventBus.subscribe(SearchCancelled.class, this::showSearchCancelled);
     aiAnswerSubscription = eventBus.subscribe(AiAnswerChanged.class, this::showAiAnswer);
+    navigationFailedSubscription =
+        eventBus.subscribe(NavigationFailed.class, this::showNavigationFailed);
   }
 
   /** Supplies the AI service used to cancel an in-progress answer. */
@@ -288,7 +293,13 @@ public final class BrowserShellView extends BorderPane {
             privacyActions));
   }
 
-/** The status label's text without its "검색:" or "AI:" prefix. */  private static String statusText(Label label) {    String text = label.getText() == null ? "" : label.getText();    int colon = text.indexOf(": ");    return colon >= 0 ? text.substring(colon + 2) : text;  }
+  /** The status label's text without its "검색:" or "AI:" prefix. */
+  private static String statusText(Label label) {
+    String text = label.getText() == null ? "" : label.getText();
+    int colon = text.indexOf(": ");
+    return colon >= 0 ? text.substring(colon + 2) : text;
+  }
+
   private void cancelSettings() {
     AppearanceStyler.apply(this, settingsService.current());
     closeSettings();
@@ -313,6 +324,7 @@ public final class BrowserShellView extends BorderPane {
     searchFailedSubscription.close();
     searchCancelledSubscription.close();
     aiAnswerSubscription.close();
+    navigationFailedSubscription.close();
     if (settingsSubscription != null) {
       settingsSubscription.close();
     }
@@ -508,6 +520,30 @@ public final class BrowserShellView extends BorderPane {
         });
   }
 
+  private void showNavigationFailed(NavigationFailed event) {
+    FxThreadExecutor.execute(
+        () -> {
+          if (!event.tabId().equals(activeTabId)) {
+            return;
+          }
+          addressField.setText(event.address());
+          updateSiteInfo(Optional.empty());
+          navigationStatus.setText("열 수 없음");
+          ErrorPageView.Actions actions =
+              new ErrorPageView.Actions(
+                  () -> browserController.navigate(event.tabId(), event.address()),
+                  () -> runSearch(event.address()),
+                  () -> {
+                    addressField.requestFocus();
+                    addressField.selectAll();
+                  },
+                  () -> browserController.createTab());
+          errorShown = true;
+          setCenter(ErrorPageView.of(event.reason(), event.address(), actions));
+          refreshAiRing();
+        });
+  }
+
   private void showOperationError(OperationFailed event) {
     updateLabel(navigationStatus, event.error().safeMessage());
   }
@@ -602,7 +638,26 @@ public final class BrowserShellView extends BorderPane {
         });
   }
 
-/** The cyan ring from the design marks an address bar whose results carry an AI summary. */  private void refreshAiRing() {    if (addressBox == null) {      return;    }    boolean on = aiSearchActive && resultsView != null && getCenter() == resultsView;    addressBox.getStyleClass().remove("address-ai");    if (on) {      addressBox.getStyleClass().add("address-ai");    }  }
+
+  /**
+   * Keeps the address bar in step with what is shown: the cyan ring and the summary chip while the
+   * results carry an AI summary (as in the design), and a red address while an error page is up.
+   */
+  private void refreshAiRing() {
+    if (addressBox == null) {
+      return;
+    }
+    boolean on = aiSearchActive && resultsView != null && getCenter() == resultsView;
+    boolean error = errorShown && getCenter() instanceof ErrorPageView;
+    aiChip.setVisible(on);
+    addressBox.getStyleClass().removeAll("address-ai", "address-error");
+    if (on) {
+      addressBox.getStyleClass().add("address-ai");
+    } else if (error) {
+      addressBox.getStyleClass().add("address-error");
+    }
+  }
+
   private void showSearchCancelled(SearchCancelled event) {
     FxThreadExecutor.execute(
         () -> {
