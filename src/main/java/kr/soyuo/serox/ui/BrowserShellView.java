@@ -112,6 +112,7 @@ public final class BrowserShellView extends BorderPane {
   private SiteInfo siteInfo = SiteInfo.of(Optional.empty());
   private final Map<TabId, TabSnapshot> tabSnapshots = new HashMap<>();
   private final Map<TabId, PageLoaded> loadedPages = new HashMap<>();
+  private final Map<TabId, String> schemelessInput = new HashMap<>();
   private final Map<TabId, HBox> tabButtons = new HashMap<>();
   private final Map<TabId, Label> tabTitles = new HashMap<>();
   private final RecentSearchHistory recentSearches = new RecentSearchHistory();
@@ -606,6 +607,28 @@ public final class BrowserShellView extends BorderPane {
           addressField.setText(event.address());
           updateSiteInfo(Optional.empty());
           navigationStatus.setText("열 수 없음");
+          String typed = schemelessInput.remove(event.tabId());
+          if (typed != null
+              && event.address().startsWith("https://")
+              && (event.reason() == NavigationFailed.Reason.UNREACHABLE
+                  || event.reason() == NavigationFailed.Reason.TIMEOUT)) {
+            errorShown = true;
+            navigationStatus.setText("http 연결 확인 필요");
+            setCenter(
+                new HttpFallbackView(
+                    URI.create(event.address()).getHost(),
+                    () -> browserController.navigate(event.tabId(), "http://" + typed),
+                    () -> showNavigationFailure(event)));
+            refreshAiRing();
+            return;
+          }
+          showNavigationFailure(event);
+        });
+  }
+
+  private void showNavigationFailure(NavigationFailed event) {
+    FxThreadExecutor.execute(
+        () -> {
           ErrorPageView.Actions actions =
               new ErrorPageView.Actions(
                   () -> browserController.navigate(event.tabId(), event.address()),
@@ -890,6 +913,10 @@ public final class BrowserShellView extends BorderPane {
           runSearch(query.value());
         } else {
           searchService.cancel(activeTabId);
+          if (!input.regionMatches(true, 0, "http://", 0, 7)
+              && !input.regionMatches(true, 0, "https://", 0, 8)) {
+            schemelessInput.put(activeTabId, input);
+          }
           browserController.navigate(activeTabId, ((DirectAddress) target).uri().toString());
         }
       } catch (RuntimeException exception) {
@@ -902,6 +929,7 @@ public final class BrowserShellView extends BorderPane {
     FxThreadExecutor.execute(
         () -> {
           loadedPages.put(event.tabId(), event);
+          schemelessInput.remove(event.tabId());
           if (event.tabId().equals(activeTabId)) {
             updateSiteInfo(Optional.of(event.page().uri()));
             event.page().document().ifPresent(this::showDocument);
