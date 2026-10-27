@@ -167,6 +167,17 @@ final class AiProviderPage extends ScrollPane {
         pane.widthProperty());
   }
 
+  /** Where each provider hands out API keys; opened in the user's own browser. */
+  static URI keyPage(AiProviderId provider) {
+    return URI.create(
+        switch (provider) {
+          case CLAUDE -> "https://console.anthropic.com/settings/keys";
+          case GEMINI -> "https://aistudio.google.com/apikey";
+          case CODEX -> "https://platform.openai.com/api-keys";
+          case GROK -> "https://console.x.ai/";
+        });
+  }
+
   private VBox browserMethod() {
     VBox browser = new VBox(12);
     browser.getChildren().add(SettingsControls.label("방법 1 · 브라우저 로그인", "settings-row-title"));
@@ -179,6 +190,15 @@ final class AiProviderPage extends ScrollPane {
             default -> "";
           };
       browser.getChildren().add(SettingsControls.label(explanation, "search-state-message"));
+      Button keyPage = new Button(selected.label() + " API 키 발급 페이지 열기");
+      keyPage.getStyleClass().add("secondary-button");
+      keyPage.setGraphic(SvgIconView.icon(UiTokens.ICON_EXTERNAL_LOGIN, 16));
+      keyPage.setAccessibleText(selected.label() + " API 키 발급 페이지를 기본 브라우저에서 열기");
+      keyPage.setOnAction(event -> openBrowser.accept(keyPage(selected)));
+      browser.getChildren().addAll(
+          SettingsControls.label(
+              "기본 브라우저가 열려요. 키를 만든 뒤 아래 방법 2에 붙여 넣으세요.", "search-state-message"),
+          keyPage);
       return browser;
     }
     Button login = new Button("Continue with ChatGPT");
