@@ -720,3 +720,112 @@
 .accent-swatch-selected {
     -fx-border-color: white !important;
 }
+
+/* Settings sidebar, page title and live preview from the Figma settings screens. */
+.settings-view-root {
+    -fx-background-color: serox-surface;
+}
+
+.settings-sidebar {
+    -fx-min-width: 180px;
+    -fx-pref-width: 240px;
+    -fx-max-width: 260px;
+    -fx-padding: 24px 16px;
+    -fx-border-color: serox-border;
+    -fx-border-width: 0 1px 0 0;
+}
+
+.settings-nav {
+    -fx-min-height: 44px;
+    -fx-alignment: center-left;
+    -fx-padding: 0 14px;
+    -fx-background-color: transparent;
+    -fx-background-radius: 10px;
+    -fx-text-fill: serox-text-primary;
+    -fx-cursor: hand;
+}
+
+.settings-nav:hover {
+    -fx-background-color: serox-hover-surface;
+}
+
+.settings-nav:selected {
+    -fx-background-color: serox-ai-surface;
+    -fx-text-fill: serox-ai-accent;
+    -fx-font-weight: bold;
+}
+
+.settings-page-title {
+    -fx-text-fill: serox-text-primary;
+    -fx-font-size: 1.714em;
+    -fx-font-weight: bold;
+}
+
+.settings-info {
+    -fx-background-color: serox-surface;
+}
+
+.settings-preview {
+    -fx-padding: 112px 48px 0 0;
+}
+
+.preview-frame {
+    -fx-background-color: serox-surface;
+    -fx-background-radius: 12px;
+    -fx-border-color: serox-border;
+    -fx-border-radius: 12px;
+    -fx-pref-height: 302px;
+}
+
+.preview-topbar {
+    -fx-min-height: 26px;
+    -fx-background-color: serox-surface-muted;
+    -fx-background-radius: 12px 12px 0 0;
+}
+
+.preview-left {
+    -fx-background-color: serox-surface;
+}
+
+.preview-right {
+    -fx-background-color: serox-hover-surface;
+    -fx-background-radius: 0 0 12px 0;
+}
+
+.preview-summary-card {
+    -fx-padding: 10px;
+    -fx-background-radius: 8px;
+}
+
+.preview-summary-label {
+    -fx-text-fill: serox-ai-accent;
+    -fx-font-size: 0.857em;
+    -fx-font-weight: bold;
+}
+
+.preview-summary-text {
+    -fx-text-fill: serox-text-primary;
+    -fx-font-size: 0.929em;
+}
+
+.preview-line {
+    -fx-min-height: 8px;
+    -fx-pref-height: 8px;
+    -fx-max-height: 8px;
+    -fx-background-color: serox-border;
+    -fx-background-radius: 4px;
+}
+
+.preview-chip {
+    -fx-padding: 3px 10px;
+    -fx-background-radius: 12px;
+    -fx-text-fill: white;
+    -fx-font-size: 0.857em;
+    -fx-font-weight: bold;
+}
+
+.settings-scroll,
+.settings-scroll > .viewport,
+.settings-view {
+    -fx-background-color: serox-surface;
+}
