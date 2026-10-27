@@ -35,7 +35,8 @@ public final class UiTokens {
   public static final double CHECK_SIZE = 18;
   public static final double AI_SPARKLE_SMALL_SIZE = 14;
   public static final double SOURCE_PANE_WIDTH = 532;
-  public static final double KEY_POINT_LABEL_WIDTH = 72;`r`n  public static final double ERROR_PAGE_WIDTH = 520;
+  public static final double KEY_POINT_LABEL_WIDTH = 72;
+  public static final double ERROR_PAGE_WIDTH = 520;
   public static final int PRIVACY_LIST_LIMIT = 5;
   public static final double PLACEHOLDER_ICON_SIZE = 40;
   public static final double WINDOW_ICON_SIZE = 12;
