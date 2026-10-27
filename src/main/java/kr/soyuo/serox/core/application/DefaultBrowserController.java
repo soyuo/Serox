@@ -3,6 +3,7 @@ package kr.soyuo.serox.core.application;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
 import kr.soyuo.serox.browser.api.BrowserEngine;
 import kr.soyuo.serox.core.event.BrowserEventBus;
 import kr.soyuo.serox.core.model.TabId;
@@ -14,14 +15,15 @@ public final class DefaultBrowserController implements BrowserController {
   private final NavigationManager navigation;
   private final BrowserEventBus eventBus;
 
-  /** Creates the default tab and navigation managers around the browser engine port. */
-  public DefaultBrowserController(BrowserEngine browserEngine, BrowserEventBus eventBus) {
+  /** Creates managers around the browser engine using the supplied background executor. */
+  public DefaultBrowserController(
+      BrowserEngine browserEngine, BrowserEventBus eventBus, Executor engineExecutor) {
     this.eventBus = Objects.requireNonNull(eventBus, "eventBus");
     InMemoryTabManager tabManager = new InMemoryTabManager(eventBus);
     tabs = tabManager;
     navigation =
         new DefaultNavigationManager(
-            tabManager, browserEngine, new NavigationInputClassifier(), eventBus);
+            tabManager, browserEngine, new NavigationInputClassifier(), eventBus, engineExecutor);
   }
 
   @Override

@@ -6,6 +6,8 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import kr.soyuo.serox.browser.api.BrowserEngine;
 import kr.soyuo.serox.browser.api.PageLoadRequest;
 import kr.soyuo.serox.browser.api.PageSnapshot;
@@ -23,17 +25,20 @@ public final class DefaultNavigationManager implements NavigationManager {
   private final BrowserEngine browserEngine;
   private final NavigationInputClassifier classifier;
   private final BrowserEventBus eventBus;
+  private final Executor engineExecutor;
 
   /** Creates a navigation manager that reports state through the application event bus. */
   public DefaultNavigationManager(
       InMemoryTabManager tabs,
       BrowserEngine browserEngine,
       NavigationInputClassifier classifier,
-      BrowserEventBus eventBus) {
+      BrowserEventBus eventBus,
+      Executor engineExecutor) {
     this.tabs = Objects.requireNonNull(tabs, "tabs");
     this.browserEngine = Objects.requireNonNull(browserEngine, "browserEngine");
     this.classifier = Objects.requireNonNull(classifier, "classifier");
     this.eventBus = Objects.requireNonNull(eventBus, "eventBus");
+    this.engineExecutor = Objects.requireNonNull(engineExecutor, "engineExecutor");
   }
 
   @Override
@@ -106,16 +111,43 @@ public final class DefaultNavigationManager implements NavigationManager {
     long version = state.navigationVersion();
     publishState(state);
 
-    CompletionStage<PageSnapshot> stage;
-    try {
-      stage = browserEngine.load(new PageLoadRequest(uri));
-    } catch (RuntimeException exception) {
-      state.fail(version);
-      publishState(state);
-      return fail(exception);
-    }
-    CompletableFuture<PageSnapshot> future = stage.toCompletableFuture();
+    CompletableFuture<PageSnapshot> future = new CompletableFuture<>();
     state.setPendingLoad(future, version);
+    try {
+      engineExecutor.execute(
+          () -> {
+            if (future.isCancelled()) {
+              return;
+            }
+            CompletionStage<PageSnapshot> stage;
+            CompletableFuture<PageSnapshot> engineFuture;
+            try {
+              stage =
+                  Objects.requireNonNull(
+                      browserEngine.load(new PageLoadRequest(uri)), "browserEngine.load result");
+              engineFuture = stage.toCompletableFuture();
+            } catch (RuntimeException exception) {
+              future.completeExceptionally(exception);
+              return;
+            }
+            future.whenComplete(
+                (page, failure) -> {
+                  if (future.isCancelled()) {
+                    engineFuture.cancel(true);
+                  }
+                });
+            engineFuture.whenComplete(
+                (page, failure) -> {
+                  if (failure == null) {
+                    future.complete(page);
+                  } else {
+                    future.completeExceptionally(failure);
+                  }
+                });
+          });
+    } catch (RejectedExecutionException exception) {
+      future.completeExceptionally(exception);
+    }
     return future.handle(
         (page, failure) -> {
           if (failure != null) {
