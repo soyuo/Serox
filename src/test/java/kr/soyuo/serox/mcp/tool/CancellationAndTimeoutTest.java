@@ -29,6 +29,15 @@ import kr.soyuo.serox.search.fetch.PageFetcher;
 import org.junit.jupiter.api.Test;
 
 class CancellationAndTimeoutTest {
+  private static kr.soyuo.serox.mcp.security.AccessPolicy approvingPolicy() {
+    return new kr.soyuo.serox.mcp.security.AccessPolicy(
+        (client, tools) -> tools,
+        java.util.Set.of(SearchAndSummarizeTool.NAME),
+        2,
+        100,
+        Clock.systemUTC());
+  }
+
   private final List<JsonObject> sent = new CopyOnWriteArrayList<>();
   private final McpEndpoint endpoint = new McpEndpoint("test");
 
@@ -56,7 +65,8 @@ class CancellationAndTimeoutTest {
             new ContextBuilder(),
             Clock.systemUTC(),
             timeout);
-    new ToolRegistry().register(new SearchAndSummarizeTool(service)).installInto(endpoint);
+    new ToolRegistry(approvingPolicy()).register(new SearchAndSummarizeTool(service)).installInto(endpoint);
+    endpoint.receive("{\"jsonrpc\":\"2.0\",\"id\":0,\"method\":\"initialize\",\"params\":{}}", l -> {});
     endpoint.receive("{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}", l -> {});
   }
 

@@ -32,6 +32,15 @@ import kr.soyuo.serox.search.fetch.PageFetcher;
 import org.junit.jupiter.api.Test;
 
 class ToolRegistryTest {
+  private static kr.soyuo.serox.mcp.security.AccessPolicy approvingPolicy() {
+    return new kr.soyuo.serox.mcp.security.AccessPolicy(
+        (client, tools) -> tools,
+        java.util.Set.of(SearchAndSummarizeTool.NAME),
+        2,
+        100,
+        Clock.systemUTC());
+  }
+
   private final List<JsonObject> sent = new ArrayList<>();
   private final McpEndpoint endpoint = new McpEndpoint("test");
 
@@ -86,7 +95,10 @@ class ToolRegistryTest {
   }
 
   private void ready() {
-    new ToolRegistry().register(new SearchAndSummarizeTool(summaryService())).installInto(endpoint);
+    new ToolRegistry(approvingPolicy())
+        .register(new SearchAndSummarizeTool(summaryService()))
+        .installInto(endpoint);
+    endpoint.receive("{\"jsonrpc\":\"2.0\",\"id\":0,\"method\":\"initialize\",\"params\":{}}", line -> {});
     endpoint.receive("{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}", line -> {});
   }
 

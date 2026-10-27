@@ -21,11 +21,22 @@ public final class McpEndpoint {
   private final Map<String, McpCall> inFlight = new ConcurrentHashMap<>();
   private final String serverVersion;
   private volatile boolean initialized;
+  private volatile Consumer<JsonObject> initializeGuard = params -> {};
 
   public McpEndpoint(String serverVersion) {
     this.serverVersion = Objects.requireNonNull(serverVersion, "serverVersion");
     register("ping", (params, call) -> CompletableFuture.completedFuture(new JsonObject()));
-    register("initialize", (params, call) -> CompletableFuture.completedFuture(initialize()));
+    register(
+        "initialize",
+        (params, call) -> {
+          initializeGuard.accept(params);
+          return CompletableFuture.completedFuture(initialize());
+        });
+  }
+
+  /** Runs before a session is accepted; throwing a protocol exception refuses the session. */
+  public void setInitializeGuard(Consumer<JsonObject> guard) {
+    this.initializeGuard = Objects.requireNonNull(guard, "guard");
   }
 
   /** Adds a method that is available once the client has initialized the session. */
