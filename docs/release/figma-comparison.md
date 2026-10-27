@@ -20,6 +20,7 @@ became readable. The canvas holds about 100 frames; only the screens below were 
 - Sources are cards with a numbered badge, title and URL, and the "AI summaries may contain errors" note.
 - "Claude 요약" chip in the address bar (opens the AI panel).
 - AI not connected, failed or cancelled: a banner above the result list with a retry button instead of a side panel (checked in a rendered image against frames 31:2809 and 31:2639).
+- Numbered result rows with a "열람 중" tag and highlight on the open one, and a "검색 결과 N곳" heading (checked in a rendered image).
 - Result screen with a finished summary: wide summary, fixed source pane with the dashed placeholder.
 - Privacy page: recent searches with delete buttons, "clear all searches" and "clear visits" behind a confirm dialog, and the empty state (frames 31:5204, 31:5346).
 - Settings: the sidebar with eight sections and a live preview card; segmented options (selected `#e6effe` with a `#3e81f4` border) instead of radio buttons,

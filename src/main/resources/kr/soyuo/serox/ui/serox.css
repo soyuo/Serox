@@ -937,3 +937,17 @@
     -fx-font-weight: bold;
     -fx-background-radius: 8px;
 }
+
+/* Numbered result rows with the open row marked, as in the Figma list. */
+.search-result-open {
+    -fx-background-color: serox-ai-surface;
+    -fx-border-color: serox-logo;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+}
+
+.open-tag {
+    -fx-text-fill: serox-ai-accent;
+    -fx-font-size: 0.857em;
+    -fx-font-weight: bold;
+}
