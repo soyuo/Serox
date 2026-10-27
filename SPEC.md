@@ -90,7 +90,7 @@ Serox는 다음 문제를 해결하는 것을 목표로 한다.
 
 | 영역 | 기술 | 역할 |
 | --- | --- | --- |
-| Core | Java 21 이상 | 핵심 애플리케이션 |
+| Core | Java 25 이상 | 핵심 애플리케이션 |
 | Build | Maven | 빌드 및 의존성 관리 |
 | Desktop UI | JavaFX | 브라우저 외부 UI |
 | Network | Java HttpClient 및 자체 네트워크 추상화 | HTTP 요청 |
