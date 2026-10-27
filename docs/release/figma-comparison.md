@@ -20,8 +20,7 @@ became readable. The canvas holds about 100 frames; only the screens below were 
 - Sources are cards with a numbered badge, title and URL, and the "AI summaries may contain errors" note.
 - "Claude 요약" chip in the address bar (opens the AI panel).
 - AI not connected, failed or cancelled: a banner above the result list with a retry button instead of a side panel (checked in a rendered image against frames 31:2809 and 31:2639).
-- Address-error pages for an invalid address, an unknown site and a timeout (frames 59:7229, 59:7330, 59:7431), with a reusable page for other connection failures; the address turns red while one is shown (checked in a rendered image).
-- Fixed: the "Claude 요약" chip was never made visible because of a collapsed method; it now shows with the AI summary.
+- Source pane header (source number, address, "새 탭에서 열기") and card, and the green-dot "검색 결과 N곳을 읽고 정리했어요" line above the summary (checked in a rendered image).
 - Result screen with a finished summary: wide summary, fixed source pane with the dashed placeholder.
 - Privacy page: recent searches with delete buttons, "clear all searches" and "clear visits" behind a confirm dialog, and the empty state (frames 31:5204, 31:5346).
 - Settings: the sidebar with eight sections and a live preview card; segmented options (selected `#e6effe` with a `#3e81f4` border) instead of radio buttons,
@@ -49,5 +48,5 @@ became readable. The canvas holds about 100 frames; only the screens below were 
   keeps `#2563EB` as the default and uses it as the first swatch.
 - **Not compared at all:** search states other than the two above, error and loading frames, site information and
   permission frames, the other settings sections, and the keyboard shortcuts page.
-- No-internet search state (frame 31#3415): offline message, status and matching source pane; only connection failures show it.
+- Address-error pages for invalid addresses, unknown sites and timeouts, with an error page for other connection failures.
 - Privacy settings: search history switch and visit retention choices (7 days / 30 days / forever, capped at 5,000 visits).

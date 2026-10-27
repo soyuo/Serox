@@ -12,6 +12,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
@@ -106,6 +107,7 @@ final class AiPanelView extends VBox {
         summary.add(trimmed);
       }
     }
+    body.getChildren().add(readCount(evidence.size()));
     if (!summary.isEmpty()) {
       body.getChildren().add(summaryCard(citedParagraph(String.join(" ", summary))));
     } else {
@@ -134,6 +136,17 @@ final class AiPanelView extends VBox {
     }
     sources.getChildren().add(footnote(DISCLAIMER));
     body.getChildren().add(sources);
+  }
+
+  /** The green-dot line above the summary: how many result pages the answer is based on. */
+  private HBox readCount(int pages) {
+    Region dot = new Region();
+    dot.getStyleClass().addAll("status-dot", "status-dot-connected");
+    Label text = new Label("검색 결과 " + pages + "곳을 읽고 정리했어요");
+    text.getStyleClass().add("search-state-message");
+    HBox line = new HBox(UiTokens.SPACE_SM, dot, text);
+    line.setAlignment(Pos.CENTER_LEFT);
+    return line;
   }
 
   /** The tinted card with the sparkle label that holds the summary text. */
