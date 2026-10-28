@@ -119,7 +119,9 @@ class AiSearchServiceTest {
       search();
 
       assertEquals(Phase.FAILED, aiEvents.getLast().phase());
-      assertEquals("AI down", aiEvents.getLast().message());
+      assertEquals(
+          AiSearchService.friendlyMessage(new AiFailed("unavailable", "AI down")),
+          aiEvents.getLast().message());
       assertEquals(1, searchEvents.get());
     }
   }
