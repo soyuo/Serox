@@ -17,11 +17,14 @@ import javafx.scene.shape.SVGPath;
 /** Renders bundled Figma SVG assets to cached JavaFX images. */
 final class SvgIconView {
   private static final Map<String, javafx.scene.image.Image> IMAGE_CACHE = new HashMap<>();
+  private static final Map<String, javafx.scene.image.Image> DARK_CACHE = new HashMap<>();
 
   private SvgIconView() {}
 
+  /** An icon that follows the theme: its dark strokes turn light when the app is dark. */
   static ImageView icon(String assetName, double size) {
-    ImageView imageView = new ImageView(load(assetName));
+    ImageView imageView =
+        new ThemedIcon(load(assetName), DARK_CACHE.computeIfAbsent(assetName, SvgIconView::darkVariant));
     imageView.setFitWidth(size);
     imageView.setFitHeight(size);
     imageView.setPreserveRatio(true);
@@ -59,6 +62,34 @@ final class SvgIconView {
       return matcher.group(1);
     } catch (java.io.IOException exception) {
       throw new IllegalStateException("Unable to read UI asset: 5e811.svg", exception);
+    }
+  }
+
+  private static javafx.scene.image.Image darkVariant(String assetName) {
+    javafx.scene.image.Image light = load(assetName);
+    BufferedImage copy = SwingFXUtils.fromFXImage(light, null);
+    lightenDarkPixels(copy);
+    return SwingFXUtils.toFXImage(copy, null);
+  }
+
+  /**
+   * Turns the dark grey and black pixels of an icon light, keeping alpha and any colored
+   * pixel (green, blue, red) as it is. The bundled icons are drawn for a light background.
+   */
+  static void lightenDarkPixels(BufferedImage image) {
+    for (int y = 0; y < image.getHeight(); y++) {
+      for (int x = 0; x < image.getWidth(); x++) {
+        int argb = image.getRGB(x, y);
+        int alpha = argb >>> 24;
+        int red = (argb >> 16) & 0xFF;
+        int green = (argb >> 8) & 0xFF;
+        int blue = argb & 0xFF;
+        int spread = Math.max(red, Math.max(green, blue)) - Math.min(red, Math.min(green, blue));
+        int brightness = (red + green + blue) / 3;
+        if (alpha > 0 && spread < 48 && brightness < 150) {
+          image.setRGB(x, y, (alpha << 24) | 0xDDE3EE);
+        }
+      }
     }
   }
 
