@@ -114,6 +114,7 @@ public final class BrowserShellView extends BorderPane {
   private final Map<TabId, TabSnapshot> tabSnapshots = new HashMap<>();
   private final Map<TabId, PageLoaded> loadedPages = new HashMap<>();
   private final Map<TabId, String> schemelessInput = new HashMap<>();
+  private final Map<TabId, String> searchTitles = new HashMap<>();
   private final Map<TabId, HBox> tabButtons = new HashMap<>();
   private final Map<TabId, Label> tabTitles = new HashMap<>();
   private final RecentSearchHistory recentSearches = new RecentSearchHistory();
@@ -655,6 +656,7 @@ public final class BrowserShellView extends BorderPane {
   private void showSearchStarted(SearchStarted event) {
     FxThreadExecutor.execute(
         () -> {
+          showSearchTitle(event.tabId(), event.query());
           if (event.tabId().equals(activeTabId)) {
             addressField.setText(event.query());
             updateSiteInfo(Optional.empty());
@@ -671,6 +673,7 @@ public final class BrowserShellView extends BorderPane {
   private void showSearchCompleted(SearchCompleted event) {
     FxThreadExecutor.execute(
         () -> {
+          showSearchTitle(event.tabId(), event.query());
           if (event.tabId().equals(activeTabId)) {
             addressField.setText(event.query());
             updateSiteInfo(Optional.empty());
@@ -711,6 +714,7 @@ public final class BrowserShellView extends BorderPane {
   private void showSearchFailed(SearchFailed event) {
     FxThreadExecutor.execute(
         () -> {
+          showSearchTitle(event.tabId(), event.query());
           if (event.tabId().equals(activeTabId)) {
             addressField.setText(event.query());
             updateSiteInfo(Optional.empty());
@@ -826,12 +830,26 @@ public final class BrowserShellView extends BorderPane {
         () -> {
           tabSnapshots.remove(event.tabId());
           loadedPages.remove(event.tabId());
+          searchTitles.remove(event.tabId());
           HBox button = tabButtons.remove(event.tabId());
           tabTitles.remove(event.tabId());
           if (button != null) {
             tabStrip.getChildren().remove(button);
           }
         });
+  }
+
+  /** A search replaces the old page's title in the tab, until another page loads there. */
+  private void showSearchTitle(TabId tabId, String query) {
+    searchTitles.put(tabId, query);
+    refreshTabTitle(tabId);
+  }
+
+  private void refreshTabTitle(TabId tabId) {
+    TabSnapshot snapshot = tabSnapshots.get(tabId);
+    if (snapshot != null) {
+      updateTab(snapshot);
+    }
   }
 
   private void updateTab(TabSnapshot snapshot) {
@@ -856,7 +874,11 @@ public final class BrowserShellView extends BorderPane {
       tabTitles.put(snapshot.id(), title);
       tabStrip.getChildren().add(tab);
     }
-    title.setText(snapshot.title().isBlank() ? "새 탭" : snapshot.title());
+    String searched = searchTitles.get(snapshot.id());
+    title.setText(
+        searched != null
+            ? "검색: " + searched
+            : snapshot.title().isBlank() ? "새 탭" : snapshot.title());
     HBox tab = tabButtons.get(snapshot.id());
     tab.setAccessibleText(title.getText());
     updateActiveTabStyle();
@@ -947,6 +969,9 @@ public final class BrowserShellView extends BorderPane {
         () -> {
           loadedPages.put(event.tabId(), event);
           schemelessInput.remove(event.tabId());
+          if (searchTitles.remove(event.tabId()) != null) {
+            refreshTabTitle(event.tabId());
+          }
           if (event.tabId().equals(activeTabId)) {
             updateSiteInfo(Optional.of(event.page().uri()));
             event.page().document().ifPresent(this::showDocument);

@@ -28,6 +28,7 @@ final class AiPanelView extends VBox {
   private static final String DISCLAIMER = "AI 요약에는 오류가 있을 수 있어요. 중요한 내용은 출처에서 확인하세요.";
 
   private final Consumer<EvidenceDocument> onSource;
+  private List<EvidenceDocument> lastEvidence = List.of();
   private final VBox body = new VBox(UiTokens.SPACE_LG);
   private Runnable onCancel = () -> {};
   private Runnable onRetry = () -> {};
@@ -70,8 +71,21 @@ final class AiPanelView extends VBox {
     return button;
   }
 
+  /** The source text the AI was given for this address, when it has read that page. */
+  java.util.Optional<EvidenceDocument> evidenceFor(java.net.URI address) {
+    String wanted = trimSlash(address.toString());
+    return lastEvidence.stream()
+        .filter(document -> trimSlash(document.uri().toString()).equals(wanted))
+        .findFirst();
+  }
+
+  private static String trimSlash(String address) {
+    return address.endsWith("/") ? address.substring(0, address.length() - 1) : address;
+  }
+
   /** Renders the latest state of the AI answer. */
   void show(AiAnswerChanged event) {
+    lastEvidence = event.evidence();
     body.getChildren().clear();
     switch (event.phase()) {
       case PREPARING ->

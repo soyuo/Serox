@@ -52,8 +52,7 @@
     -fx-alignment: center-left;
     -fx-spacing: 10px;
     -fx-padding: 0 12px;
-    -fx-pref-width: 200px;
-    -fx-min-width: 200px;
+    -fx-min-width: 96px;
     -fx-max-width: 200px;
     -fx-pref-height: 34px;
     -fx-background-color: serox-surface;
@@ -76,8 +75,8 @@
     -fx-alignment: center-left;
     -fx-spacing: 10px;
     -fx-padding: 0 12px;
-    -fx-pref-width: 160px;
-    -fx-min-width: 120px;
+    -fx-min-width: 96px;
+    -fx-max-width: 200px;
     -fx-pref-height: 34px;
     -fx-background-color: transparent;
     -fx-text-fill: serox-text-secondary;
@@ -1260,4 +1259,58 @@
 
 .site-popup-note {
     -fx-padding: 8px 16px;
+}
+
+/* Scroll bars: thin, rounded and in the theme colors instead of the stock grey arrows. */
+.scroll-bar {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.scroll-bar:vertical {
+    -fx-pref-width: 12px;
+}
+
+.scroll-bar:horizontal {
+    -fx-pref-height: 12px;
+}
+
+.scroll-bar > .track,
+.scroll-bar > .track-background {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-background-radius: 6px;
+}
+
+.scroll-bar > .thumb {
+    -fx-background-color: serox-border;
+    -fx-background-insets: 2px;
+    -fx-background-radius: 6px;
+}
+
+.scroll-bar > .thumb:hover,
+.scroll-bar > .thumb:pressed {
+    -fx-background-color: serox-text-muted;
+}
+
+.scroll-bar > .increment-button,
+.scroll-bar > .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-pref-width: 0;
+    -fx-pref-height: 0;
+    -fx-min-width: 0;
+    -fx-min-height: 0;
+    -fx-max-width: 0;
+    -fx-max-height: 0;
+}
+
+.scroll-bar > .increment-button > .increment-arrow,
+.scroll-bar > .decrement-button > .decrement-arrow {
+    -fx-shape: " ";
+    -fx-padding: 0;
+}
+
+.scroll-pane > .corner {
+    -fx-background-color: transparent;
 }
