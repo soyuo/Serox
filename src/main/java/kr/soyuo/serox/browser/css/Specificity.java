@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 public record Specificity(int ids, int classesAndAttributes, int elements)
     implements Comparable<Specificity> {
   private static final Pattern ID = Pattern.compile("#[\\w-]+");
-  private static final Pattern CLASS_OR_ATTRIBUTE = Pattern.compile("\\.[\\w-]+|\\[[^]]+]");
+  private static final Pattern CLASS_OR_ATTRIBUTE = Pattern.compile("\\.[\\w-]+|\\[[^]]+]|:[\\w-]+");
   private static final Pattern ELEMENT = Pattern.compile("(?:^|\\s|>)([a-zA-Z][\\w-]*)");
 
   /** Counts ID, class/attribute, and element selectors in a supported selector. */
