@@ -21,6 +21,7 @@ import kr.soyuo.serox.browser.network.HttpBrowserEngine;
 import kr.soyuo.serox.browser.network.HttpRequestDispatcher;
 import kr.soyuo.serox.browser.network.HttpResponseHandler;
 import kr.soyuo.serox.browser.network.PublicAddressPolicy;
+import kr.soyuo.serox.browser.network.StylesheetInliner;
 import kr.soyuo.serox.browser.network.TransportScriptFetcher;
 import kr.soyuo.serox.browser.script.RhinoScriptRunner;
 import kr.soyuo.serox.browser.script.ScriptLimits;
@@ -80,7 +81,11 @@ public final class AppBootstrap {
             ScriptLimits.defaults());
     var engine =
         new HttpBrowserEngine(
-            transport, new HttpResponseHandler(), new HtmlDocumentParser(), scripts);
+            transport,
+            new HttpResponseHandler(),
+            new HtmlDocumentParser(),
+            scripts,
+            new StylesheetInliner(new TransportScriptFetcher(transport)));
     BrowserController browserController =
         new DefaultBrowserController(engine, eventBus, engineExecutor);
     var searchProvider =
