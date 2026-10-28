@@ -41,6 +41,12 @@ public final class SearchAndSummarizeTool implements McpTool {
     query.addProperty("description", "The question or search terms.");
     JsonObject properties = new JsonObject();
     properties.add("query", query);
+    JsonObject topN = new JsonObject();
+    topN.addProperty("type", "integer");
+    topN.addProperty("minimum", 1);
+    topN.addProperty("maximum", SearchSummaryService.MAX_RESULT_LIMIT);
+    topN.addProperty("description", "How many top results to read. Defaults to 5.");
+    properties.add("top_n", topN);
     JsonArray required = new JsonArray();
     required.add("query");
     JsonObject schema = new JsonObject();
@@ -54,7 +60,10 @@ public final class SearchAndSummarizeTool implements McpTool {
   @Override
   public CompletionStage<ToolResult> call(JsonObject arguments, McpCall call) {
     String query = arguments.get("query").getAsString().strip();
-    var run = service.summarize(query);
+    var run =
+        arguments.has("top_n") && !arguments.get("top_n").isJsonNull()
+            ? service.summarize(query, arguments.get("top_n").getAsInt())
+            : service.summarize(query);
     call.cancellation().thenRun(() -> run.cancel(true));
     return run.handle(
         (summary, failure) -> {

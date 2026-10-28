@@ -26,6 +26,7 @@ import kr.soyuo.serox.search.fetch.PageFetcher;
 /** Runs search, evidence fetching and AI summarisation as one call, without any UI. */
 public final class SearchSummaryService {
   public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(60);
+  public static final int MAX_RESULT_LIMIT = 10;
   private static final int RESULT_LIMIT = 5;
 
   private final Optional<SearchProvider> searchProvider;
@@ -66,6 +67,14 @@ public final class SearchSummaryService {
    * {@code timeout}.
    */
   public CompletableFuture<SearchSummary> summarize(String query) {
+    return summarize(query, RESULT_LIMIT);
+  }
+
+  /** Like {@link #summarize(String)}, reading the top {@code topN} results (1 to 10). */
+  public CompletableFuture<SearchSummary> summarize(String query, int topN) {
+    if (topN < 1 || topN > MAX_RESULT_LIMIT) {
+      return failed("invalid_query", "top_n must be between 1 and " + MAX_RESULT_LIMIT + ".");
+    }
     if (searchProvider.isEmpty()) {
       return failed("search_unconfigured", "Search is not configured.");
     }
@@ -74,7 +83,7 @@ public final class SearchSummaryService {
     }
     SearchRequest request;
     try {
-      request = new SearchRequest(query.strip(), RESULT_LIMIT);
+      request = new SearchRequest(query.strip(), topN);
     } catch (IllegalArgumentException exception) {
       return failed("invalid_query", "The query is not valid.");
     }

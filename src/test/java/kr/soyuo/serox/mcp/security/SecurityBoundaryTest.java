@@ -128,6 +128,32 @@ class SecurityBoundaryTest {
     assertTrue(body.contains("[redacted]"));
   }
 
+  @Test
+  void topNIsListedAndKeptInRange() {
+    var listed = ask("{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"tools/list\"}");
+    var properties =
+        listed
+            .getAsJsonObject("result")
+            .getAsJsonArray("tools")
+            .get(0)
+            .getAsJsonObject()
+            .getAsJsonObject("inputSchema")
+            .getAsJsonObject("properties");
+    assertTrue(properties.has("top_n"));
+
+    var fine =
+        ask(
+            "{\"jsonrpc\":\"2.0\",\"id\":6,\"method\":\"tools/call\",\"params\":"
+                + "{\"name\":\"search_and_summarize\",\"arguments\":{\"query\":\"x\",\"top_n\":3}}}");
+    assertFalse(fine.has("error"));
+
+    var tooMany =
+        ask(
+            "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":"
+                + "{\"name\":\"search_and_summarize\",\"arguments\":{\"query\":\"x\",\"top_n\":99}}}");
+    assertTrue(tooMany.has("error"));
+  }
+
   /** Emits a fixed answer. */
   private static final class AiProviderStub implements kr.soyuo.serox.ai.api.AiProvider {
     private final String answer;

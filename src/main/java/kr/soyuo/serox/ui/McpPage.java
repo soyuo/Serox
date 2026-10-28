@@ -155,7 +155,7 @@ final class McpPage extends ScrollPane {
     Label name = whole(new Label("search_and_summarize"));
     name.getStyleClass().add("tool-name");
     Label detail = wrapped(new Label("검색어를 받아 웹 검색 결과를 읽고 요약과 출처를 돌려줘요."));
-    Label input = whole(new Label("query: string"));
+    Label input = whole(new Label("query: string, top_n: number"));
     input.getStyleClass().add("tool-name");
     VBox text = new VBox(UiTokens.SPACE_XS, name, detail, input);
     HBox.setHgrow(text, Priority.ALWAYS);
