@@ -61,9 +61,18 @@ public final class JavaFxCanvasRenderer {
   private void paintText(PaintCommand.Text text, GraphicsContext graphics) {
     ComputedStyle style = text.style();
     double fontSize = style.pixels("font-size", 16);
-    FontWeight weight =
-        style.value("font-weight").equalsIgnoreCase("bold") ? FontWeight.BOLD : FontWeight.NORMAL;
-    Font font = Font.font(style.value("font-family"), weight, FontPosture.REGULAR, fontSize);
+    String weightValue = style.value("font-weight").toLowerCase(java.util.Locale.ROOT);
+    boolean bold =
+        weightValue.equals("bold")
+            || weightValue.equals("bolder")
+            || (weightValue.matches("[1-9]00") && Integer.parseInt(weightValue) >= 600);
+    FontWeight weight = bold ? FontWeight.BOLD : FontWeight.NORMAL;
+    String styleValue = style.value("font-style");
+    FontPosture posture =
+        styleValue.equals("italic") || styleValue.equals("oblique")
+            ? FontPosture.ITALIC
+            : FontPosture.REGULAR;
+    Font font = Font.font(style.value("font-family"), weight, posture, fontSize);
     graphics.setFont(font);
     graphics.setTextAlign(TextAlignment.LEFT);
     graphics.setTextBaseline(VPos.BASELINE);

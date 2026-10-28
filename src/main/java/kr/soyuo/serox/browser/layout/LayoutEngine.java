@@ -74,7 +74,6 @@ public final class LayoutEngine {
       if (borderWidth == 0) {
         borderWidth = borderShorthandWidth(style);
       }
-      double outerX = originX + marginLeft;
       double outerY = originY + marginTop;
       double contentWidth = fillWidth ? Double.NaN : widthOf(style, availableWidth);
       if (!Double.isFinite(contentWidth)) {
@@ -88,6 +87,26 @@ public final class LayoutEngine {
                     - paddingRight
                     - 2 * borderWidth);
       }
+      if (!fillWidth) {
+        double most = lengthOf(style, "max-width", availableWidth);
+        if (Double.isFinite(most)) {
+          contentWidth = Math.min(contentWidth, most);
+        }
+        double least = lengthOf(style, "min-width", availableWidth);
+        if (Double.isFinite(least)) {
+          contentWidth = Math.max(contentWidth, least);
+        }
+        double spare =
+            availableWidth
+                - (contentWidth + paddingLeft + paddingRight + 2 * borderWidth
+                    + marginLeft + marginRight);
+        boolean autoLeft = isAutoSide(style, "margin", 3);
+        boolean autoRight = isAutoSide(style, "margin", 1);
+        if (spare > 0 && autoLeft) {
+          marginLeft += autoRight ? spare / 2 : spare;
+        }
+      }
+      double outerX = originX + marginLeft;
       final double borderBoxWidth = contentWidth + paddingLeft + paddingRight + 2 * borderWidth;
       double contentX = outerX + borderWidth + paddingLeft;
       double contentY = outerY + borderWidth + paddingTop;
@@ -99,7 +118,8 @@ public final class LayoutEngine {
       if (style.value("display").equals("flex")) {
         flowHeight = layoutFlex(element, style, contentX, contentY, contentWidth);
       } else {
-        InlineFlow flow = new InlineFlow(contentX, contentWidth, contentY);
+        InlineFlow flow =
+            new InlineFlow(contentX, contentWidth, contentY, style.value("text-align"));
         for (Node child : element.children()) {
           if (child instanceof TextNode textNode) {
             flow.addText(textNode.data(), style, linkOf(element));
@@ -330,6 +350,36 @@ public final class LayoutEngine {
      * The width a flex item wants, margins included: its explicit width, or else the width of its
      * widest line of content, found by laying it out once and discarding that layout.
      */
+    /** A max-width or min-width in pixels or percent of the container; NaN when it says none. */
+    private double lengthOf(ComputedStyle style, String property, double containingWidth) {
+      double percent = style.percentage(property);
+      if (Double.isFinite(percent)) {
+        return Math.max(0, containingWidth * percent / 100);
+      }
+      return style.pixels(property, Double.NaN);
+    }
+
+    private boolean isAutoSide(ComputedStyle style, String property, int sideIndex) {
+      String sideName =
+          sideIndex == 0 ? "top" : sideIndex == 1 ? "right" : sideIndex == 2 ? "bottom" : "left";
+      String value = style.value(property + "-" + sideName);
+      if (value.isBlank()) {
+        value = style.value(property);
+      }
+      String[] parts = value.trim().split("\\s+");
+      String selected;
+      if (parts.length == 1) {
+        selected = parts[0];
+      } else if (parts.length == 2) {
+        selected = parts[sideIndex == 0 || sideIndex == 2 ? 0 : 1];
+      } else if (parts.length == 3) {
+        selected = parts[sideIndex == 0 ? 0 : sideIndex == 2 ? 2 : 1];
+      } else {
+        selected = parts[Math.min(sideIndex, parts.length - 1)];
+      }
+      return selected.equals("auto");
+    }
+
     private double widthOf(ComputedStyle style, double containingWidth) {
       double percent = style.percentage("width");
       if (Double.isFinite(percent)) {
@@ -497,11 +547,17 @@ public final class LayoutEngine {
       private double lineHeight;
       private double usedHeight;
       private boolean pendingSpace;
+      private final String align;
+      private int lineTextStart;
+      private int lineBoxStart;
 
-      private InlineFlow(double startX, double maxWidth, double startY) {
+      private InlineFlow(double startX, double maxWidth, double startY, String align) {
         this.startX = startX;
         this.maxWidth = maxWidth;
         this.startY = startY;
+        this.align = align;
+        lineTextStart = textRuns.size();
+        lineBoxStart = boxes.size();
         cursorX = startX;
         cursorY = startY;
       }
@@ -628,7 +684,7 @@ public final class LayoutEngine {
               new TextRun(
                   runX,
                   cursorY + fontSize,
-                  run.toString(),
+                  transformed(run.toString(), style.value("text-transform")),
                   style,
                   Optional.ofNullable(link),
                   nextPaintOrder()));
@@ -636,7 +692,42 @@ public final class LayoutEngine {
         }
       }
 
+      /** Moves the finished line to the centre or the right edge, as text-align asks. */
+      private void alignLine() {
+        double used = cursorX - startX;
+        double spare = maxWidth - used;
+        double dx =
+            align.equals("center") ? spare / 2 : align.equals("right") || align.equals("end") ? spare : 0;
+        if (dx > 0.5 && used > 0) {
+          shift(lineBoxStart, lineTextStart, dx, 0);
+        }
+      }
+
+      private String transformed(String text, String transform) {
+        return switch (transform) {
+          case "uppercase" -> text.toUpperCase(java.util.Locale.ROOT);
+          case "lowercase" -> text.toLowerCase(java.util.Locale.ROOT);
+          case "capitalize" -> capitalized(text);
+          default -> text;
+        };
+      }
+
+      private String capitalized(String text) {
+        StringBuilder out = new StringBuilder();
+        boolean wordStart = true;
+        for (int i = 0; i < text.length(); ) {
+          int cp = text.codePointAt(i);
+          i += Character.charCount(cp);
+          out.appendCodePoint(wordStart ? Character.toUpperCase(cp) : cp);
+          wordStart = Character.isWhitespace(cp);
+        }
+        return out.toString();
+      }
+
       private void advanceLine() {
+        alignLine();
+        lineTextStart = textRuns.size();
+        lineBoxStart = boxes.size();
         if (lineHeight == 0) {
           lineHeight = 20;
         }
@@ -654,6 +745,8 @@ public final class LayoutEngine {
       }
 
       private void addBlockHeight(double height) {
+        lineTextStart = textRuns.size();
+        lineBoxStart = boxes.size();
         usedHeight = Math.max(usedHeight, cursorY - startY + height);
         cursorY += height;
         cursorX = startX;
