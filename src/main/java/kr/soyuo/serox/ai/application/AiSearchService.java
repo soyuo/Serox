@@ -261,11 +261,19 @@ public final class AiSearchService implements AutoCloseable {
 
   /** What the person sees for a provider failure: plain Korean that says what to do next. */
   static String friendlyMessage(AiFailed failed) {
+    var status = java.util.regex.Pattern.compile("HTTP \\d{3}").matcher(failed.safeMessage());
+    String detail = status.find() ? " (" + status.group() + ")" : "";
+    return friendlyText(failed) + detail;
+  }
+
+  private static String friendlyText(AiFailed failed) {
     return switch (failed.code()) {
       case "unauthorized" ->
           "AI 제공자가 API 키를 받아 주지 않았어요. 설정의 AI 제공자에서 키를 다시 확인해 주세요.";
       case "bad_request" ->
           "AI 제공자가 요청을 받아 주지 않았어요. 설정의 AI 제공자에서 모델 ID가 맞는지 확인해 주세요.";
+      case "too_long" ->
+          "AI 답변이 길어서 중간에 잘렸어요. 질문을 줄이거나 다시 시도해 주세요.";
       case "rate_limited" -> "AI 제공자에 요청이 많아요. 잠시 뒤에 다시 시도해 주세요.";
       case "timeout" -> "AI 제공자가 시간 안에 답하지 않았어요. 다시 시도해 주세요.";
       case "network" -> "AI 제공자에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.";
