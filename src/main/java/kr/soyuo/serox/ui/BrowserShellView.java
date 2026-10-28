@@ -9,8 +9,6 @@ import java.util.Optional;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.control.Button;
-import javafx.scene.control.ContextMenu;
-import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
@@ -154,6 +152,14 @@ public final class BrowserShellView extends BorderPane {
     setTop(createBrowserChrome());
     homeView = new HomeView(previewData, recentSearches.queries(), this::searchFromHome);
     setCenter(homeView);
+    addEventFilter(
+        KeyEvent.KEY_PRESSED,
+        event -> {
+          if (event.getCode() == KeyCode.ESCAPE && getCenter() instanceof SettingsView) {
+            cancelSettings();
+            event.consume();
+          }
+        });
     centerProperty().addListener((observable, before, after) -> refreshAiRing());
     setBottom(createStatusBar());
     installKeyboardShortcuts();
@@ -332,6 +338,10 @@ public final class BrowserShellView extends BorderPane {
 
   private void showSettings() {
     if (settingsService == null) {
+      return;
+    }
+    if (getCenter() instanceof SettingsView) {
+      cancelSettings();
       return;
     }
     if (!(getCenter() instanceof SettingsView) && !(getCenter() instanceof LibraryView)) {
