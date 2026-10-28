@@ -86,6 +86,9 @@ public final class StreamingAiProvider implements AiProvider {
       body.add("contents", contents);
       JsonObject generation = new JsonObject();
       generation.addProperty("maxOutputTokens", 4096);
+      JsonObject thinking = new JsonObject();
+      thinking.addProperty("thinkingLevel", "LOW");
+      generation.add("thinkingConfig", thinking);
       body.add("generationConfig", generation);
     }
     return body;
