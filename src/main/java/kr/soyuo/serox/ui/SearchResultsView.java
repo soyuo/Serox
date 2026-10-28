@@ -31,6 +31,7 @@ final class SearchResultsView extends BorderPane {
   private AiPanelPosition panelSide = AiPanelPosition.RIGHT;
   private BiConsumer<Boolean, AiPanelPosition> onPanelChanged = (open, side) -> {};
   private final AiPanelView aiPanel = new AiPanelView(this::showEvidence);
+  private java.net.URI shownEvidence;
 
   void setSummaryPreferences(kr.soyuo.serox.core.model.SummaryPreferences preferences) {
     aiPanel.setPresentation(preferences.keyPoints(), preferences.inlineCitations());
@@ -351,6 +352,12 @@ final class SearchResultsView extends BorderPane {
     showBanner(unavailable ? banner(event) : null);
     aiPanel.show(event);
     boolean focus = event.phase() == AiAnswerChanged.Phase.COMPLETED;
+    if (!focus
+        && selected != null
+        && !selected.uri().equals(shownEvidence)
+        && aiPanel.evidenceFor(selected.uri()).isPresent()) {
+      select(selected);
+    }
     if (focus != summaryFocus) {
       summaryFocus = focus;
       refreshLayout();
@@ -406,6 +413,7 @@ final class SearchResultsView extends BorderPane {
 
   /** The source pane from the design: a header with the source, its address and an open button. */
   private void showEvidence(EvidenceDocument document) {
+    shownEvidence = document.uri();
     Label number = new Label("원문 " + document.sourceId().replaceFirst("^S", ""));
     number.getStyleClass().add("source-pane-number");
     Label address = new Label(document.uri().toString());
@@ -447,6 +455,13 @@ final class SearchResultsView extends BorderPane {
   private void select(SearchResult result) {
     selected = result;
     markOpenRow(result);
+    // When the AI has read this page, show what it read, not just a button to open the page.
+    var read = aiPanel.evidenceFor(result.uri());
+    if (read.isPresent()) {
+      showEvidence(read.get());
+      return;
+    }
+    shownEvidence = null;
     Label title = new Label(result.title());
     title.setWrapText(true);
     title.getStyleClass().add("search-preview-title");
