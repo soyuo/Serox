@@ -7,8 +7,8 @@ import java.util.Optional;
 
 /**
  * Matches the simple selectors scripts use: tag, {@code #id}, {@code .class}, {@code [attr]},
- * {@code [attr=value]}, {@code :first-child}, {@code :last-child}, descendant and child
- * combinators, and comma lists. Anything else is an error, as in a browser.
+ * {@code [attr=value]}, {@code :root}, {@code :first-child}, {@code :last-child}, descendant and
+ * child combinators, and comma lists. Anything else is an error, as in a browser.
  */
 public final class SelectorMatcher {
   /** The selector text is not one this matcher understands. */
@@ -101,8 +101,19 @@ public final class SelectorMatcher {
       }
     }
     for (String pseudo : compound.pseudos()) {
+      if (pseudo.equals("root")) {
+        if (element.parent().filter(Document.class::isInstance).isEmpty()
+            || ((Document) element.parent().orElseThrow()).documentElement().orElse(null)
+                != element) {
+          return false;
+        }
+        continue;
+      }
       List<Node> siblings =
-          element.parent().map(parent -> parent.children().stream().filter(Element.class::isInstance).toList()).orElse(List.of());
+          element
+              .parent()
+              .map(parent -> parent.children().stream().filter(Element.class::isInstance).toList())
+              .orElse(List.of());
       if (siblings.isEmpty()
           || (pseudo.equals("first-child") && siblings.get(0) != element)
           || (pseudo.equals("last-child") && siblings.get(siblings.size() - 1) != element)) {
@@ -188,7 +199,7 @@ public final class SelectorMatcher {
           end++;
         }
         String name = text.substring(i + 1, end).toLowerCase(Locale.ROOT);
-        if (!name.equals("first-child") && !name.equals("last-child")) {
+        if (!name.equals("root") && !name.equals("first-child") && !name.equals("last-child")) {
           throw new SyntaxException(whole);
         }
         pseudos.add(name);
