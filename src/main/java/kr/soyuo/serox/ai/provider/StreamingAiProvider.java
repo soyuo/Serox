@@ -27,6 +27,9 @@ public final class StreamingAiProvider implements AiProvider {
     GEMINI
   }
 
+  /** Thinking and reasoning tokens count against this, so it leaves room for the answer. */
+  private static final int MAX_OUTPUT_TOKENS = 8192;
+
   private final HttpClient client;
   private final URI endpoint;
   private final String model;
@@ -76,7 +79,7 @@ public final class StreamingAiProvider implements AiProvider {
       body.addProperty("input", PromptBuilder.userMessage(request));
       body.addProperty("stream", true);
       body.addProperty("store", false);
-      body.addProperty("max_output_tokens", 4096);
+      body.addProperty("max_output_tokens", MAX_OUTPUT_TOKENS);
     } else {
       body.add("systemInstruction", content(PromptBuilder.systemPrompt(request.answerLanguage())));
       JsonArray contents = new JsonArray();
@@ -85,7 +88,7 @@ public final class StreamingAiProvider implements AiProvider {
       contents.add(user);
       body.add("contents", contents);
       JsonObject generation = new JsonObject();
-      generation.addProperty("maxOutputTokens", 4096);
+      generation.addProperty("maxOutputTokens", MAX_OUTPUT_TOKENS);
       body.add("generationConfig", generation);
     }
     return body;
@@ -106,7 +109,9 @@ public final class StreamingAiProvider implements AiProvider {
     return switch (string(event, "type")) {
       case "response.output_text.delta" -> List.of(new AiTextDelta(string(event, "delta")));
       case "response.completed" -> List.of(new AiCompleted(List.of()));
-      case "response.failed", "response.incomplete", "response.refusal.delta", "error" ->
+      case "response.incomplete" ->
+          List.of(new AiFailed("too_long", "The AI answer was cut off before it finished."));
+      case "response.failed", "response.refusal.delta", "error" ->
           List.of(new AiFailed("provider_error", "The AI service could not complete the answer."));
       default -> List.of();
     };
@@ -139,9 +144,13 @@ public final class StreamingAiProvider implements AiProvider {
     String finish = string(candidate, "finishReason");
     if (!finish.isEmpty()) {
       events.add(
-          finish.equals("STOP")
-              ? new AiCompleted(List.of())
-              : new AiFailed("provider_error", "The AI service could not complete the answer."));
+          switch (finish) {
+            case "STOP" -> new AiCompleted(List.of());
+            case "MAX_TOKENS" ->
+                new AiFailed("too_long", "The AI answer was cut off before it finished.");
+            default ->
+                new AiFailed("provider_error", "The AI service could not complete the answer.");
+          });
     }
     return events;
   }

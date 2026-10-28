@@ -13,13 +13,22 @@ class FriendlyAiMessageTest {
     for (String code :
         List.of(
             "unauthorized", "bad_request", "rate_limited", "timeout", "network", "incomplete",
-            "invalid_response", "too_large", "unavailable", "provider_error", "anything_else")) {
+            "invalid_response", "too_large", "unavailable", "provider_error", "too_long", "anything_else")) {
       String message = AiSearchService.friendlyMessage(new AiFailed(code, "The AI API key was rejected."));
 
       assertTrue(message.matches(".*[가-힣].*"), code);
       assertFalse(message.contains("rejected"), code);
       assertFalse(message.contains(code), code);
     }
+  }
+
+  @Test
+  void theHttpStatusIsShownSoAWrongModelCanBeToldApartFromAWrongKey() {
+    String message =
+        AiSearchService.friendlyMessage(
+            new AiFailed("bad_request", "The AI service rejected the request (HTTP 404)."));
+
+    assertTrue(message.endsWith("(HTTP 404)"));
   }
 
   @Test

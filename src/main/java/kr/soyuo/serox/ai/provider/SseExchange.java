@@ -187,8 +187,10 @@ final class SseExchange implements Flow.Subscription {
       case 401, 403 -> new AiFailed("unauthorized", "The AI API key was rejected.");
       case 429 -> new AiFailed("rate_limited", "The AI service is busy. Try again shortly.");
       case 400, 404, 413, 422 ->
-          new AiFailed("bad_request", "The AI service rejected the request.");
-      default -> new AiFailed("unavailable", "The AI service is unavailable right now.");
+          new AiFailed(
+                  "bad_request", "The AI service rejected the request (HTTP " + status + ").");
+      default -> new AiFailed(
+              "unavailable", "The AI service is unavailable right now (HTTP " + status + ").");
     };
   }
 }
