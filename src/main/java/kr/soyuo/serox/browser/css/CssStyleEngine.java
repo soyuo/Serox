@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import kr.soyuo.serox.browser.dom.Document;
 import kr.soyuo.serox.browser.dom.Element;
+import kr.soyuo.serox.browser.dom.SelectorMatcher;
 
 /** Applies embedded and inline CSS with specificity, inheritance, and initial defaults. */
 public final class CssStyleEngine {
@@ -42,9 +43,30 @@ public final class CssStyleEngine {
           "align-items",
           "gap",
           "flex-grow",
-          "flex");
+          "flex",
+          "text-align",
+          "font-style",
+          "text-transform",
+          "max-width",
+          "min-width");
   private static final Set<String> INHERITED =
-      Set.of("color", "font-size", "font-weight", "font-family");
+      Set.of(
+          "color",
+          "font-size",
+          "font-weight",
+          "font-family",
+          "text-align",
+          "font-style",
+          "text-transform");
+  private static final java.util.regex.Pattern IMPORTANT =
+      java.util.regex.Pattern.compile("\\s*!\\s*important\\s*$", java.util.regex.Pattern.CASE_INSENSITIVE);
+  private static final java.util.regex.Pattern RELATIVE_LENGTH =
+      java.util.regex.Pattern.compile("-?(?:\\d+\\.?\\d*|\\.\\d+)(?:em|rem|pt)");
+  private static final java.util.regex.Pattern RELATIVE_TOKEN =
+      java.util.regex.Pattern.compile("(-?(?:\\d+\\.?\\d*|\\.\\d+))(em|rem|pt)");
+  private static final java.util.regex.Pattern VARIABLE =
+      java.util.regex.Pattern.compile("var\\(\\s*(--[\\w-]+)\\s*(?:,\\s*([^()]*))?\\)");
+  private static final double ROOT_FONT_SIZE = 16;
   private final CssParser parser;
 
   public CssStyleEngine() {
@@ -63,26 +85,32 @@ public final class CssStyleEngine {
     }
     Map<Element, ComputedStyle> computed = new IdentityHashMap<>();
     List<String> unsupported = new ArrayList<>();
+    Map<CssRule, Set<Element>> matched = new IdentityHashMap<>();
+    for (CssRule rule : rules) {
+      try {
+        Set<Element> hits = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+        hits.addAll(new SelectorMatcher(rule.selector()).selectAll(document));
+        matched.put(rule, hits);
+      } catch (SelectorMatcher.SyntaxException unsupportedSelector) {
+        unsupported.add("selector: " + rule.selector());
+      }
+    }
     for (Element element :
         document.descendants().stream()
             .filter(Element.class::isInstance)
             .map(Element.class::cast)
             .toList()) {
       Map<String, Candidate> cascade = new HashMap<>();
+      Map<String, String> custom = customProperties(element, rules, matched, computed);
       for (CssRule rule : rules) {
-        if (rule.selector().contains(":")
-            || rule.selector().contains(">")
-            || rule.selector().contains("+")
-            || rule.selector().contains("~")) {
-          unsupported.add("selector: " + rule.selector());
-          continue;
-        }
-        if (document.querySelectorAll(rule.selector()).contains(element)) {
+        Set<Element> hits = matched.get(rule);
+        if (hits != null && hits.contains(element)) {
           Specificity specificity = Specificity.of(rule.selector());
           rule.declarations()
               .forEach(
                   (name, value) ->
-                      apply(cascade, name, value, specificity, rule.sourceOrder(), unsupported));
+                      apply(
+                          cascade, name, value, specificity, rule.sourceOrder(), unsupported, custom));
         }
       }
       element
@@ -99,8 +127,10 @@ public final class CssStyleEngine {
                                   value,
                                   new Specificity(1_000, 0, 0),
                                   Integer.MAX_VALUE,
-                                  unsupported)));
+                                  unsupported,
+                                  custom)));
       Map<String, String> values = defaults(element);
+      values.putAll(custom);
       element
           .parent()
           .filter(Element.class::isInstance)
@@ -120,6 +150,7 @@ public final class CssStyleEngine {
                 }
               });
       cascade.forEach((property, candidate) -> values.put(property, candidate.value()));
+      resolveUnits(values, parentFontSize(element, computed));
       computed.put(element, new ComputedStyle(values));
     }
     return new StyleSnapshot(computed, unsupported.stream().distinct().toList());
@@ -131,20 +162,33 @@ public final class CssStyleEngine {
       String value,
       Specificity specificity,
       int sourceOrder,
-      List<String> unsupported) {
+      List<String> unsupported,
+      Map<String, String> custom) {
+    if (property.startsWith("--")) {
+      return;
+    }
+    if (value.contains("var(")) {
+      String substituted = substituteVariables(value, custom);
+      if (substituted == null) {
+        unsupported.add(property + ": " + value);
+        return;
+      }
+      value = substituted;
+    }
+    boolean important = IMPORTANT.matcher(value).find();
+    if (important) {
+      value = IMPORTANT.matcher(value).replaceFirst("").trim();
+    }
     if (!SUPPORTED_PROPERTIES.contains(property) || !isSupportedValue(property, value)) {
       unsupported.add(property + ": " + value);
       return;
     }
-    Candidate candidate = new Candidate(value, specificity, sourceOrder);
+    Candidate candidate = new Candidate(value, specificity, sourceOrder, important);
     cascade.merge(property, candidate, (left, right) -> left.compareTo(right) <= 0 ? right : left);
   }
 
   private boolean isSupportedValue(String property, String value) {
     String normalized = value.trim().toLowerCase(java.util.Locale.ROOT);
-    if (normalized.contains("!important")) {
-      return false;
-    }
     return switch (property) {
       case "display" -> Set.of("block", "inline", "none", "flex").contains(normalized);
       case "flex-direction" -> Set.of("row", "column").contains(normalized);
@@ -159,17 +203,25 @@ public final class CssStyleEngine {
       case "flex" -> isNonNegativeNumber(normalized.split("\\s+")[0]);
       case "color", "background", "background-color", "border-color" ->
           CssColor.parse(normalized).isPresent();
-      case "font-size" -> isLength(normalized);
-      case "font-weight" -> Set.of("normal", "bold", "400", "700").contains(normalized);
+      case "font-size" -> isLength(normalized) || isPercentage(normalized);
+      case "text-align" ->
+          Set.of("left", "center", "right", "start", "end").contains(normalized);
+      case "font-style" -> Set.of("normal", "italic", "oblique").contains(normalized);
+      case "text-transform" ->
+          Set.of("none", "uppercase", "lowercase", "capitalize").contains(normalized);
+      case "max-width" ->
+          normalized.equals("none") || isLength(normalized) || isPercentage(normalized);
+      case "min-width" -> isLength(normalized) || isPercentage(normalized);
+      case "font-weight" ->
+          Set.of("normal", "bold", "bolder", "lighter").contains(normalized)
+              || normalized.matches("[1-9]00");
       case "text-decoration" -> Set.of("none", "underline").contains(normalized);
       case "width" -> normalized.equals("auto") || isLength(normalized) || isPercentage(normalized);
       case "height" -> normalized.equals("auto") || isLength(normalized);
-      case "margin",
-          "margin-top",
-          "margin-right",
-          "margin-bottom",
-          "margin-left",
-          "padding",
+      case "margin", "margin-top", "margin-right", "margin-bottom", "margin-left" ->
+          java.util.Arrays.stream(normalized.split("\\s+"))
+              .allMatch(part -> part.equals("auto") || isLength(part));
+      case "padding",
           "padding-top",
           "padding-right",
           "padding-bottom",
@@ -201,6 +253,9 @@ public final class CssStyleEngine {
   }
 
   private boolean isLength(String value) {
+    if (RELATIVE_LENGTH.matcher(value).matches()) {
+      return true;
+    }
     String normalized = value.endsWith("px") ? value.substring(0, value.length() - 2) : value;
     try {
       Double.parseDouble(normalized);
@@ -217,6 +272,149 @@ public final class CssStyleEngine {
         && java.util.Arrays.stream(parts)
             .skip(1)
             .allMatch(part -> part.equals("solid") || CssColor.parse(part).isPresent());
+  }
+
+  /**
+   * The custom properties ({@code --name}) in effect for an element: those of its parent, then
+   * those the element's own rules and inline style set.
+   */
+  private Map<String, String> customProperties(
+      Element element,
+      List<CssRule> rules,
+      Map<CssRule, Set<Element>> matched,
+      Map<Element, ComputedStyle> computed) {
+    Map<String, String> custom = new HashMap<>();
+    element
+        .parent()
+        .filter(Element.class::isInstance)
+        .map(Element.class::cast)
+        .map(computed::get)
+        .ifPresent(
+            parent ->
+                parent
+                    .values()
+                    .forEach(
+                        (name, value) -> {
+                          if (name.startsWith("--")) {
+                            custom.put(name, value);
+                          }
+                        }));
+    Map<String, Candidate> own = new HashMap<>();
+    for (CssRule rule : rules) {
+      Set<Element> hits = matched.get(rule);
+      if (hits != null && hits.contains(element)) {
+        Specificity specificity = Specificity.of(rule.selector());
+        rule.declarations()
+            .forEach(
+                (name, value) -> keepCustom(own, name, value, specificity, rule.sourceOrder()));
+      }
+    }
+    element
+        .attribute("style")
+        .ifPresent(
+            inline ->
+                parser
+                    .parseDeclarations(inline)
+                    .forEach(
+                        (name, value) ->
+                            keepCustom(
+                                own, name, value, new Specificity(1_000, 0, 0), Integer.MAX_VALUE)));
+    own.forEach((name, candidate) -> custom.put(name, candidate.value()));
+    return custom;
+  }
+
+  private static void keepCustom(
+      Map<String, Candidate> own, String name, String value, Specificity specificity, int order) {
+    if (name.startsWith("--")) {
+      boolean important = IMPORTANT.matcher(value).find();
+      String clean = IMPORTANT.matcher(value).replaceFirst("").trim();
+      own.merge(
+          name,
+          new Candidate(clean, specificity, order, important),
+          (left, right) -> left.compareTo(right) <= 0 ? right : left);
+    }
+  }
+
+  /** Replaces {@code var(--x, fallback)} with its value; null when one has neither. */
+  static String substituteVariables(String value, Map<String, String> custom) {
+    String current = value;
+    for (int round = 0; round < 6 && current.contains("var("); round++) {
+      java.util.regex.Matcher matcher = VARIABLE.matcher(current);
+      StringBuilder out = new StringBuilder();
+      while (matcher.find()) {
+        String found = custom.get(matcher.group(1));
+        if (found == null) {
+          found = matcher.group(2);
+        }
+        if (found == null) {
+          return null;
+        }
+        matcher.appendReplacement(out, java.util.regex.Matcher.quoteReplacement(found.trim()));
+      }
+      matcher.appendTail(out);
+      current = out.toString();
+    }
+    return current.contains("var(") ? null : current;
+  }
+
+  private static double parentFontSize(Element element, Map<Element, ComputedStyle> computed) {
+    return element
+        .parent()
+        .filter(Element.class::isInstance)
+        .map(Element.class::cast)
+        .map(computed::get)
+        .map(parent -> parent.pixels("font-size", ROOT_FONT_SIZE))
+        .orElse(ROOT_FONT_SIZE);
+  }
+
+  /** Turns em, rem, pt and a percent font size into pixels, so later stages see only pixels. */
+  private static void resolveUnits(Map<String, String> values, double parentSize) {
+    String fontSize = values.get("font-size").trim().toLowerCase(java.util.Locale.ROOT);
+    double size;
+    try {
+      if (fontSize.endsWith("%")) {
+        size = parentSize * Double.parseDouble(fontSize.substring(0, fontSize.length() - 1)) / 100;
+      } else if (fontSize.endsWith("rem")) {
+        size = ROOT_FONT_SIZE * Double.parseDouble(fontSize.substring(0, fontSize.length() - 3));
+      } else if (fontSize.endsWith("em")) {
+        size = parentSize * Double.parseDouble(fontSize.substring(0, fontSize.length() - 2));
+      } else if (fontSize.endsWith("pt")) {
+        size = Double.parseDouble(fontSize.substring(0, fontSize.length() - 2)) * 96 / 72;
+      } else {
+        size =
+            Double.parseDouble(
+                fontSize.endsWith("px") ? fontSize.substring(0, fontSize.length() - 2) : fontSize);
+      }
+    } catch (NumberFormatException unreadable) {
+      size = parentSize;
+    }
+    final double own = Math.max(0, Math.min(size, 1000));
+    values.put("font-size", trim(own) + "px");
+    values.replaceAll(
+        (property, value) -> {
+          if (property.equals("font-size") || !RELATIVE_TOKEN.matcher(value).find()) {
+            return value;
+          }
+          return RELATIVE_TOKEN
+              .matcher(value)
+              .replaceAll(
+                  match -> {
+                    double number = Double.parseDouble(match.group(1));
+                    double pixels =
+                        switch (match.group(2)) {
+                          case "em" -> number * own;
+                          case "rem" -> number * ROOT_FONT_SIZE;
+                          default -> number * 96 / 72;
+                        };
+                    return java.util.regex.Matcher.quoteReplacement(trim(pixels) + "px");
+                  });
+        });
+  }
+
+  private static String trim(double number) {
+    return number == Math.rint(number)
+        ? Long.toString((long) number)
+        : Double.toString(Math.round(number * 100) / 100.0);
   }
 
   private Map<String, String> defaults(Element element) {
@@ -239,6 +437,11 @@ public final class CssStyleEngine {
     defaults.put("align-items", "stretch");
     defaults.put("gap", "0px");
     defaults.put("flex-grow", "0");
+    defaults.put("text-align", "left");
+    defaults.put("font-style", "normal");
+    defaults.put("text-transform", "none");
+    defaults.put("max-width", "none");
+    defaults.put("min-width", "0px");
     if (element.tagName().equals("body")) {
       defaults.put("margin", "8px");
     }
@@ -274,10 +477,14 @@ public final class CssStyleEngine {
     return "block";
   }
 
-  private record Candidate(String value, Specificity specificity, int sourceOrder)
+  private record Candidate(
+      String value, Specificity specificity, int sourceOrder, boolean important)
       implements Comparable<Candidate> {
     @Override
     public int compareTo(Candidate other) {
+      if (important != other.important) {
+        return important ? 1 : -1;
+      }
       int specificityOrder = specificity.compareTo(other.specificity);
       return specificityOrder != 0
           ? specificityOrder

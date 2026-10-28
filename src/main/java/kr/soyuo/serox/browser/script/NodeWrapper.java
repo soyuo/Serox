@@ -8,6 +8,7 @@ import kr.soyuo.serox.browser.dom.CommentNode;
 import kr.soyuo.serox.browser.dom.Document;
 import kr.soyuo.serox.browser.dom.Element;
 import kr.soyuo.serox.browser.dom.Node;
+import kr.soyuo.serox.browser.dom.SelectorMatcher;
 import kr.soyuo.serox.browser.dom.TextNode;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;

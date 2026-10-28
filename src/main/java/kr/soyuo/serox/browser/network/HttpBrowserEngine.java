@@ -21,6 +21,7 @@ public final class HttpBrowserEngine implements BrowserEngine {
   private final HttpResponseHandler responseHandler;
   private final HtmlDocumentParser documentParser;
   private final ScriptRunner scriptRunner;
+  private final StylesheetInliner stylesheets;
 
   /** Creates an engine that runs no page scripts. */
   public HttpBrowserEngine(
@@ -36,10 +37,26 @@ public final class HttpBrowserEngine implements BrowserEngine {
       HttpResponseHandler responseHandler,
       HtmlDocumentParser documentParser,
       ScriptRunner scriptRunner) {
+    this(
+        transport,
+        responseHandler,
+        documentParser,
+        scriptRunner,
+        new StylesheetInliner(kr.soyuo.serox.browser.script.ScriptFetcher.NONE));
+  }
+
+  /** Creates a browser engine that also loads the page's outside style sheets. */
+  public HttpBrowserEngine(
+      HttpTransport transport,
+      HttpResponseHandler responseHandler,
+      HtmlDocumentParser documentParser,
+      ScriptRunner scriptRunner,
+      StylesheetInliner stylesheets) {
     this.transport = Objects.requireNonNull(transport, "transport");
     this.responseHandler = Objects.requireNonNull(responseHandler, "responseHandler");
     this.documentParser = Objects.requireNonNull(documentParser, "documentParser");
     this.scriptRunner = Objects.requireNonNull(scriptRunner, "scriptRunner");
+    this.stylesheets = Objects.requireNonNull(stylesheets, "stylesheets");
   }
 
   @Override
@@ -71,9 +88,10 @@ public final class HttpBrowserEngine implements BrowserEngine {
   private PageSnapshot toPageSnapshot(DecodedHtmlResponse response) {
     Document document = documentParser.parse(response.uri(), response.html());
     try {
+      stylesheets.inline(document);
       scriptRunner.run(document);
-    } catch (RuntimeException scriptFailure) {
-      // A script problem must never stop the page from showing.
+    } catch (RuntimeException subresourceFailure) {
+      // A style sheet or script problem must never stop the page from showing.
     }
     String title =
         document.getElementsByTagName("title").stream()

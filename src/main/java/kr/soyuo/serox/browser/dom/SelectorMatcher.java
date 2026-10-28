@@ -1,20 +1,18 @@
-package kr.soyuo.serox.browser.script;
+package kr.soyuo.serox.browser.dom;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import kr.soyuo.serox.browser.dom.Element;
-import kr.soyuo.serox.browser.dom.Node;
 
 /**
  * Matches the simple selectors scripts use: tag, {@code #id}, {@code .class}, {@code [attr]},
- * {@code [attr=value]}, descendant and child combinators, and comma lists. Anything else is an
- * error, as in a browser.
+ * {@code [attr=value]}, {@code :first-child}, {@code :last-child}, descendant and child
+ * combinators, and comma lists. Anything else is an error, as in a browser.
  */
-final class SelectorMatcher {
+public final class SelectorMatcher {
   /** The selector text is not one this matcher understands. */
-  static final class SyntaxException extends RuntimeException {
+  public static final class SyntaxException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
     SyntaxException(String selector) {
@@ -23,11 +21,16 @@ final class SelectorMatcher {
   }
 
   private record Compound(
-      String tag, String id, List<String> classes, List<String[]> attributes, boolean child) {}
+      String tag,
+      String id,
+      List<String> classes,
+      List<String[]> attributes,
+      List<String> pseudos,
+      boolean child) {}
 
   private final List<List<Compound>> alternatives = new ArrayList<>();
 
-  SelectorMatcher(String selector) {
+  public SelectorMatcher(String selector) {
     if (selector == null || selector.isBlank() || selector.length() > 500) {
       throw new SyntaxException(String.valueOf(selector));
     }
@@ -37,7 +40,7 @@ final class SelectorMatcher {
   }
 
   /** All elements below {@code root}, in document order, that match. */
-  List<Element> selectAll(Node root) {
+  public List<Element> selectAll(Node root) {
     List<Element> found = new ArrayList<>();
     for (Node node : root.descendants()) {
       if (node instanceof Element element && matches(element)) {
@@ -47,11 +50,11 @@ final class SelectorMatcher {
     return found;
   }
 
-  Optional<Element> selectFirst(Node root) {
+  public Optional<Element> selectFirst(Node root) {
     return selectAll(root).stream().findFirst();
   }
 
-  boolean matches(Element element) {
+  public boolean matches(Element element) {
     for (List<Compound> chain : alternatives) {
       if (matchesChain(element, chain, chain.size() - 1)) {
         return true;
@@ -94,6 +97,15 @@ final class SelectorMatcher {
     List<String> classNames = List.of(element.attribute("class").orElse("").strip().split("\\s+"));
     for (String wanted : compound.classes()) {
       if (!classNames.contains(wanted)) {
+        return false;
+      }
+    }
+    for (String pseudo : compound.pseudos()) {
+      List<Node> siblings =
+          element.parent().map(parent -> parent.children().stream().filter(Element.class::isInstance).toList()).orElse(List.of());
+      if (siblings.isEmpty()
+          || (pseudo.equals("first-child") && siblings.get(0) != element)
+          || (pseudo.equals("last-child") && siblings.get(siblings.size() - 1) != element)) {
         return false;
       }
     }
@@ -146,6 +158,7 @@ final class SelectorMatcher {
   private static Compound parseCompound(String text, boolean child, String whole) {
     List<String> classes = new ArrayList<>();
     List<String[]> attributes = new ArrayList<>();
+    List<String> pseudos = new ArrayList<>();
     String id = "";
     int i = 0;
     while (i < text.length() && (isNameChar(text.charAt(i)) || text.charAt(i) == '*')) {
@@ -168,6 +181,17 @@ final class SelectorMatcher {
         } else {
           classes.add(name);
         }
+        i = end;
+      } else if (marker == ':') {
+        int end = i + 1;
+        while (end < text.length() && isNameChar(text.charAt(end))) {
+          end++;
+        }
+        String name = text.substring(i + 1, end).toLowerCase(Locale.ROOT);
+        if (!name.equals("first-child") && !name.equals("last-child")) {
+          throw new SyntaxException(whole);
+        }
+        pseudos.add(name);
         i = end;
       } else if (marker == '[') {
         int end = text.indexOf(']', i);
@@ -195,7 +219,7 @@ final class SelectorMatcher {
         throw new SyntaxException(whole);
       }
     }
-    return new Compound(tag, id, classes, attributes, child);
+    return new Compound(tag, id, classes, attributes, pseudos, child);
   }
 
   private static boolean isNameChar(char c) {
