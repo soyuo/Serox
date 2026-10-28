@@ -68,9 +68,7 @@ final class McpPage extends ScrollPane {
     content.setPadding(new Insets(32, 48, 32, 48));
     Label title = new Label("MCP 서버");
     title.getStyleClass().add("settings-page-title");
-    Label hint = new Label("다른 AI 에이전트가 Serox의 검색 + 요약을 도구로 부를 수 있게 해요.");
-    hint.setWrapText(true);
-    hint.getStyleClass().add("search-state-message");
+    Label hint = wrapped(new Label("다른 AI 에이전트가 Serox의 검색 + 요약을 도구로 부를 수 있게 해요."));
     VBox left = new VBox(UiTokens.SPACE_MD, serverCard(), toolSection());
     HBox.setHgrow(left, Priority.ALWAYS);
     left.setMaxWidth(UiTokens.HOME_CONTENT_WIDTH / 2);
@@ -107,6 +105,7 @@ final class McpPage extends ScrollPane {
       }
     });
     portError.setWrapText(true);
+    portError.setMinHeight(Region.USE_PREF_SIZE);
     portError.getStyleClass().add("field-error-text");
     portError.setManaged(false);
     portError.setVisible(false);
@@ -140,6 +139,7 @@ final class McpPage extends ScrollPane {
     HBox auto = row("Serox를 켤 때 자동 실행", autoStart);
 
     message.setWrapText(true);
+    message.setMinHeight(Region.USE_PREF_SIZE);
     message.getStyleClass().add("field-error-text");
     message.setManaged(false);
     message.setVisible(false);
@@ -152,12 +152,10 @@ final class McpPage extends ScrollPane {
     Label heading = new Label("에이전트가 받아 가는 도구");
     heading.getStyleClass().add("search-section-heading");
     heading.setPadding(Insets.EMPTY);
-    Label name = new Label("search_and_summarize");
+    Label name = whole(new Label("search_and_summarize"));
     name.getStyleClass().add("tool-name");
-    Label detail = new Label("검색어를 받아 웹 검색 결과를 읽고 요약과 출처를 돌려줘요.");
-    detail.setWrapText(true);
-    detail.getStyleClass().add("search-state-message");
-    Label input = new Label("query: string");
+    Label detail = wrapped(new Label("검색어를 받아 웹 검색 결과를 읽고 요약과 출처를 돌려줘요."));
+    Label input = whole(new Label("query: string"));
     input.getStyleClass().add("tool-name");
     VBox text = new VBox(UiTokens.SPACE_XS, name, detail, input);
     HBox.setHgrow(text, Priority.ALWAYS);
@@ -203,19 +201,18 @@ final class McpPage extends ScrollPane {
     List<McpActions.Call> recent = actions.recentCalls();
     calls.getChildren().clear();
     if (recent.isEmpty()) {
-      Label none = new Label("아직 에이전트가 부른 적이 없어요.");
-      none.getStyleClass().add("search-state-message");
+      Label none = wrapped(new Label("아직 에이전트가 부른 적이 없어요."));
       none.setPadding(new Insets(12, 16, 12, 16));
       calls.getChildren().add(none);
       return;
     }
     Instant now = Instant.now();
     for (McpActions.Call call : recent.subList(0, Math.min(5, recent.size()))) {
-      Label query = new Label(call.summary().isBlank() ? "(검색어 없음)" : call.summary());
+      Label query =
+          wrapped(new Label(call.summary().isBlank() ? "(검색어 없음)" : call.summary()));
       query.getStyleClass().add("privacy-query");
       String who = call.client().isBlank() ? "에이전트" : call.client();
-      Label when = new Label(who + ", " + ago(call.at(), now));
-      when.getStyleClass().add("search-state-message");
+      Label when = wrapped(new Label(who + ", " + ago(call.at(), now)));
       VBox text = new VBox(2, query, when);
       HBox.setHgrow(text, Priority.ALWAYS);
       Label result = new Label(call.success() ? "성공" : "실패");
@@ -254,17 +251,14 @@ final class McpPage extends ScrollPane {
           transport = value;
           showGuide();
         });
-    caption.setWrapText(true);
-    caption.getStyleClass().add("search-state-message");
+    wrapped(caption);
     Label appName = smallHeading("사용하는 앱");
     HBox apps =
         choice(App.values(), app, App::label, value -> {
           app = value;
           showGuide();
         });
-    where.getStyleClass().add("search-state-message");
-    where.setWrapText(true);
-    where.setMinHeight(Region.USE_PREF_SIZE);
+    wrapped(where);
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
     copy.getStyleClass().add("secondary-button");
@@ -282,11 +276,11 @@ final class McpPage extends ScrollPane {
     Label rest =
         new Label("에이전트가 Serox를 알아서 찾지는 않아요. 연결하고 나면 에이전트가 도구 이름·설명·입력값을 자동으로 읽어서, 필요할 때 스스로 호출해요.");
     rest.setWrapText(true);
+    rest.setMinHeight(Region.USE_PREF_SIZE);
     rest.getStyleClass().add("info-text");
     VBox info = new VBox(UiTokens.SPACE_XS, bold, rest);
     info.getStyleClass().add("info-box");
-    requirement.setWrapText(true);
-    requirement.getStyleClass().add("search-state-message");
+    wrapped(requirement);
     VBox box =
         new VBox(
             UiTokens.SPACE_SM,
@@ -304,8 +298,23 @@ final class McpPage extends ScrollPane {
   }
 
   private static Label smallHeading(String text) {
-    Label label = new Label(text);
+    return wrapped(new Label(text));
+  }
+
+  /**
+   * Lets a label wrap and keep the height its text needs. Without the minimum height a wrapped
+   * label in a narrow column is squeezed to one clipped line and shows only "...".
+   */
+  private static Label wrapped(Label label) {
+    label.setWrapText(true);
+    label.setMinHeight(Region.USE_PREF_SIZE);
     label.getStyleClass().add("search-state-message");
+    return label;
+  }
+
+  /** A label that never shrinks below its text, so a short name is not cut to "...". */
+  private static Label whole(Label label) {
+    label.setMinWidth(Region.USE_PREF_SIZE);
     return label;
   }
 
@@ -432,7 +441,7 @@ final class McpPage extends ScrollPane {
   }
 
   private static HBox row(String label, Node control) {
-    Label name = new Label(label);
+    Label name = whole(new Label(label));
     name.getStyleClass().add("privacy-query");
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
