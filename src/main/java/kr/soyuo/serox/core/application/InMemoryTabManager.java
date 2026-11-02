@@ -47,11 +47,19 @@ public final class InMemoryTabManager implements TabManager {
   @Override
   public synchronized CompletionStage<Void> closeTab(TabId tabId) {
     requireTab(tabId);
+    List<TabId> order = new ArrayList<>(tabs.keySet());
+    int index = order.indexOf(tabId);
     tabs.remove(tabId).cancel();
     eventBus.publish(new TabClosed(Instant.now(), tabId));
+    if (tabs.isEmpty()) {
+      // A browser window always keeps one tab.
+      return createTab().thenApply(snapshot -> null);
+    }
     if (tabId.equals(activeTabId)) {
-      activeTabId = new ArrayList<>(tabs.keySet()).stream().findFirst().orElse(null);
-      eventBus.publish(new ActiveTabChanged(Instant.now(), Optional.ofNullable(activeTabId)));
+      // Go to the tab on the right, or the one on the left when the closed tab was last.
+      order.remove(index);
+      activeTabId = order.get(Math.min(index, order.size() - 1));
+      eventBus.publish(new ActiveTabChanged(Instant.now(), Optional.of(activeTabId)));
     }
     return CompletableFuture.completedFuture(null);
   }
