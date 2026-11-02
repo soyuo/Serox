@@ -475,8 +475,8 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private HBox createToolbar() {
-    backButton = toolbarButton(UiTokens.ICON_BACK, "뒤로");
-    forwardButton = toolbarButton(UiTokens.ICON_FORWARD, "앞으로");
+    backButton = toolbarButton(UiTokens.ICON_BACK, "뒤로 (Alt+←)");
+    forwardButton = toolbarButton(UiTokens.ICON_FORWARD, "앞으로 (Alt+→)");
     backButton.setDisable(true);
     forwardButton.setDisable(true);
     backButton.setOnAction(event -> runForActiveTab(browserController::goBack));
@@ -1096,12 +1096,33 @@ public final class BrowserShellView extends BorderPane {
     if (!accelerators.containsKey(homeSearch)) {
       register(accelerators, homeSearch, () -> homeView.focusSearchField());
     }
+    // The usual browser keys for going back, forward and reloading, unless a chosen key uses them.
+    Runnable back = () -> runIfEnabled(backButton);
+    Runnable forward = () -> runIfEnabled(forwardButton);
+    for (var entry :
+        Map.<KeyCombination, Runnable>of(
+                new KeyCodeCombination(KeyCode.LEFT, KeyCombination.ALT_DOWN), back,
+                new KeyCodeCombination(KeyCode.RIGHT, KeyCombination.ALT_DOWN), forward,
+                new KeyCodeCombination(KeyCode.F5), this::reloadActivePage,
+                new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN),
+                    this::reloadActivePage)
+            .entrySet()) {
+      if (!accelerators.containsKey(entry.getKey())) {
+        register(accelerators, entry.getKey(), entry.getValue());
+      }
+    }
   }
 
   private void register(
       Map<KeyCombination, Runnable> accelerators, KeyCombination combination, Runnable action) {
     accelerators.put(combination, action);
     installedAccelerators.add(combination);
+  }
+
+  private static void runIfEnabled(Button button) {
+    if (button != null && !button.isDisabled()) {
+      button.fire();
+    }
   }
 
   private void runShortcut(ShortcutAction action) {
