@@ -12,7 +12,9 @@ import kr.soyuo.serox.core.error.ErrorCode;
 public final class NavigationInputClassifier {
   private static final Pattern SCHEME = Pattern.compile("^[A-Za-z][A-Za-z0-9+.-]*:");
   private static final Pattern HOST_LIKE =
-      Pattern.compile("^(localhost|(?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,})(?::\\d+)?(?:[/#?].*)?$");
+      Pattern.compile("^(localhost|"
+              + "(?:(?:25[0-5]|2[0-4]\\d|1?\\d?\\d)\\.){3}(?:25[0-5]|2[0-4]\\d|1?\\d?\\d)|"
+              + "(?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,})(?::\\d+)?(?:[/#?].*)?$");
 
   /** Classifies user input as a web address or search query. */
   public NavigationTarget classify(String input) {

@@ -16,6 +16,7 @@
     serox-ai-accent: #1d4ed8;
     serox-ai-ring: #22d3ee;
     serox-error-surface: #fde8e8;
+    serox-warning-surface: #fff4dc;
     serox-window-close-hover: #e81123;
     /* Modena derives every stock control (fields, combo boxes, scroll bars) from these. */
     -fx-base: serox-surface-muted;
@@ -561,6 +562,7 @@
     serox-ai-surface: #1b2a4a;
     serox-ai-accent: #93b4f8;
     serox-error-surface: #3a1d1d;
+    serox-warning-surface: #3a301a;
     -fx-base: #232a36;
     -fx-background: #14181f;
     -fx-control-inner-background: #1c222c;
@@ -1322,3 +1324,27 @@
     -fx-border-width: 2px;
     -fx-border-radius: 8px;
 }
+/* One visible focus ring for keyboard users on controls that had none. */
+.secondary-button:focused,
+.danger-button:focused,
+.new-tab-button:focused,
+.settings-nav:focused,
+.combo-box:focused,
+.choice-box:focused,
+.check-box:focused > .box,
+.radio-button:focused > .radio,
+.toggle-button:focused,
+.hyperlink:focused {
+    -fx-border-color: serox-ai-ring;
+    -fx-border-width: 2px;
+    -fx-border-radius: 8px;
+    -fx-background-insets: 0;
+}
+/* Notice above the results when the AI could not read every source. */
+.source-notice {
+    -fx-padding: 16px 20px;
+    -fx-background-color: serox-warning-surface;
+    -fx-background-radius: 14px;
+}
+.source-notice-title { -fx-font-weight: bold; }
+.unread-tag { -fx-text-fill: serox-error; -fx-font-size: 0.857em; -fx-font-weight: bold; }
