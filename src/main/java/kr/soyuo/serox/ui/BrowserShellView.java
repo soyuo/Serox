@@ -942,9 +942,9 @@ public final class BrowserShellView extends BorderPane {
 
   /** Loads the shown page again, for example after a site permission changed. */
   private void reloadActivePage() {
-    PageLoaded page = loadedPages.get(activeTabId);
-    if (page != null) {
-      browserController.navigate(activeTabId, page.page().uri().toString());
+    // Reload in place, so the page is not added to the history a second time.
+    if (activeTabId != null && loadedPages.containsKey(activeTabId)) {
+      browserController.reload(activeTabId);
     }
   }
 
