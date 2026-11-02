@@ -98,14 +98,23 @@ final class SearchResultsView extends BorderPane {
     return view;
   }
 
+  static final String SEARCH_ERROR_TITLE = "검색 서비스에 연결하지 못했어요";
+
   static SearchResultsView error(
-      String query, String error, Runnable onRetry, Consumer<SearchResult> onOpen) {
+      String query,
+      String error,
+      Runnable onRetry,
+      Runnable onOpenSettings,
+      Consumer<SearchResult> onOpen) {
     SearchResultsView view = new SearchResultsView(query, onOpen);
-    view.results
-        .getChildren()
-        .setAll(
-            view.heading("검색 결과"), view.state("검색하지 못했어요", error, view.action("다시 시도", onRetry)));
-    view.preview.setCenter(view.state("검색에 실패했어요", error, view.action("다시 시도", onRetry)));
+    VBox state = view.state(SEARCH_ERROR_TITLE, error, view.action("검색 설정 열기", onOpenSettings));
+    Button retry = view.action("다시 시도", onRetry);
+    retry.getStyleClass().setAll("button", "secondary-button");
+    state.getChildren().add(retry);
+    state.setAccessibleRole(javafx.scene.AccessibleRole.TEXT);
+    state.setAccessibleText(SEARCH_ERROR_TITLE + ". " + error);
+    view.results.getChildren().setAll(view.heading("검색 서비스 오류"), state);
+    view.preview.setCenter(view.sourcePlaceholder("보여드릴 페이지가 없어요", "검색 설정을 확인해 주세요."));
     return view;
   }
 

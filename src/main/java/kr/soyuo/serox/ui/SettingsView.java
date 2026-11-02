@@ -168,6 +168,12 @@ final class SettingsView extends HBox {
     open(Section.DESIGN);
   }
 
+  /** Shows the search page, as the search error screen's settings button asks. */
+  void openSearch() {
+    navItems.get(Section.SEARCH).setSelected(true);
+    open(Section.SEARCH);
+  }
+
   /** Shows the AI provider page, as the AI failure banner's settings button asks. */
   void openAiProviders() {
     navItems.get(Section.AI).setSelected(true);
