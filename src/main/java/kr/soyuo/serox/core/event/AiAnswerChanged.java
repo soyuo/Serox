@@ -20,8 +20,22 @@ public record AiAnswerChanged(
     String text,
     Optional<CitedAnswer> answer,
     List<EvidenceDocument> evidence,
-    String message)
+    String message,
+    String failureCode)
     implements ApplicationEvent {
+  /** An answer state without a provider failure code. */
+  public AiAnswerChanged(
+      Instant occurredAt,
+      TabId tabId,
+      long searchRequestId,
+      Phase phase,
+      String text,
+      Optional<CitedAnswer> answer,
+      List<EvidenceDocument> evidence,
+      String message) {
+    this(occurredAt, tabId, searchRequestId, phase, text, answer, evidence, message, "");
+  }
+
   /** Lifecycle of one AI answer. */
   public enum Phase {
     UNAVAILABLE,
@@ -40,5 +54,6 @@ public record AiAnswerChanged(
     Objects.requireNonNull(answer, "answer");
     evidence = List.copyOf(Objects.requireNonNull(evidence, "evidence"));
     Objects.requireNonNull(message, "message");
+    Objects.requireNonNull(failureCode, "failureCode");
   }
 }
