@@ -380,6 +380,23 @@ public final class BrowserShellView extends BorderPane {
             searchActions));
   }
 
+  /** Opens settings on the search page, for the search service error screen. */
+  private void showSearchSettings() {
+    settingsView().ifPresent(SettingsView::openSearch);
+  }
+
+  /** Opens settings on the AI provider page, for the AI failure banner. */
+  private void showAiSettings() {
+    settingsView().ifPresent(SettingsView::openAiProviders);
+  }
+
+  private Optional<SettingsView> settingsView() {
+    if (!(getCenter() instanceof SettingsView)) {
+      showSettings();
+    }
+    return getCenter() instanceof SettingsView settings ? Optional.of(settings) : Optional.empty();
+  }
+
   /** The status label's text without its "검색:" or "AI:" prefix. */
   private static String statusText(Label label) {
     String text = label.getText() == null ? "" : label.getText();
@@ -484,8 +501,8 @@ public final class BrowserShellView extends BorderPane {
   }
 
   private HBox createToolbar() {
-    backButton = toolbarButton(UiTokens.ICON_BACK, "뒤로");
-    forwardButton = toolbarButton(UiTokens.ICON_FORWARD, "앞으로");
+    backButton = toolbarButton(UiTokens.ICON_BACK, "뒤로 (Alt+←)");
+    forwardButton = toolbarButton(UiTokens.ICON_FORWARD, "앞으로 (Alt+→)");
     backButton.setDisable(true);
     forwardButton.setDisable(true);
     backButton.setOnAction(event -> runForActiveTab(browserController::goBack));
@@ -724,6 +741,7 @@ public final class BrowserShellView extends BorderPane {
                     }
                   },
                   () -> searchService.search(event.tabId(), event.query()));
+              resultsView.setOnOpenAiSettings(this::showAiSettings);
               setCenter(resultsView);
             }
           }
@@ -744,7 +762,8 @@ public final class BrowserShellView extends BorderPane {
             setCenter(
                 event.offline()
                     ? SearchResultsView.offline(event.query(), retry, open)
-                    : SearchResultsView.error(event.query(), event.safeMessage(), retry, open));
+                    : SearchResultsView.error(
+                        event.query(), event.safeMessage(), retry, this::showSearchSettings, open));
           }
         });
   }
@@ -757,6 +776,7 @@ public final class BrowserShellView extends BorderPane {
               && getCenter() == resultsView) {
             if (settingsService != null) {
               resultsView.setSummaryPreferences(settingsService.current().summary());
+              resultsView.setReadLimit(settingsService.current().search().evidencePages());
             }
             resultsView.showAi(event);
             aiSearchActive =
@@ -1120,12 +1140,33 @@ public final class BrowserShellView extends BorderPane {
     if (!accelerators.containsKey(homeSearch)) {
       register(accelerators, homeSearch, () -> homeView.focusSearchField());
     }
+    // The usual browser keys for going back, forward and reloading, unless a chosen key uses them.
+    Runnable back = () -> runIfEnabled(backButton);
+    Runnable forward = () -> runIfEnabled(forwardButton);
+    for (var entry :
+        Map.<KeyCombination, Runnable>of(
+                new KeyCodeCombination(KeyCode.LEFT, KeyCombination.ALT_DOWN), back,
+                new KeyCodeCombination(KeyCode.RIGHT, KeyCombination.ALT_DOWN), forward,
+                new KeyCodeCombination(KeyCode.F5), this::reloadActivePage,
+                new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN),
+                    this::reloadActivePage)
+            .entrySet()) {
+      if (!accelerators.containsKey(entry.getKey())) {
+        register(accelerators, entry.getKey(), entry.getValue());
+      }
+    }
   }
 
   private void register(
       Map<KeyCombination, Runnable> accelerators, KeyCombination combination, Runnable action) {
     accelerators.put(combination, action);
     installedAccelerators.add(combination);
+  }
+
+  private static void runIfEnabled(Button button) {
+    if (button != null && !button.isDisabled()) {
+      button.fire();
+    }
   }
 
   private void runShortcut(ShortcutAction action) {

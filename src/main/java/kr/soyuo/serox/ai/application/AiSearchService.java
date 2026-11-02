@@ -176,7 +176,7 @@ public final class AiSearchService implements AutoCloseable {
                     publish(
                         event, Phase.COMPLETED, answer.text(), Optional.of(answer), evidence, "");
                   }
-                  case AiFailed failed -> fail(event, run, friendlyMessage(failed));
+                  case AiFailed failed -> fail(event, run, friendlyMessage(failed), failed.code());
                 }
               }
 
@@ -191,9 +191,13 @@ public final class AiSearchService implements AutoCloseable {
   }
 
   private void fail(SearchCompleted event, Active run, String message) {
+    fail(event, run, message, "");
+  }
+
+  private void fail(SearchCompleted event, Active run, String message, String code) {
     if (isCurrent(event.tabId(), run)) {
       finish(event, run);
-      publish(event, Phase.FAILED, "", Optional.empty(), List.of(), message);
+      publish(event, Phase.FAILED, "", Optional.empty(), List.of(), message, code);
     }
   }
 
@@ -222,6 +226,7 @@ public final class AiSearchService implements AutoCloseable {
               "",
               Optional.empty(),
               List.of(),
+              "",
               ""));
     }
     return run != null;
@@ -247,6 +252,17 @@ public final class AiSearchService implements AutoCloseable {
       Optional<kr.soyuo.serox.ai.citation.CitedAnswer> answer,
       List<EvidenceDocument> evidence,
       String message) {
+    publish(event, phase, text, answer, evidence, message, "");
+  }
+
+  private void publish(
+      SearchCompleted event,
+      Phase phase,
+      String text,
+      Optional<kr.soyuo.serox.ai.citation.CitedAnswer> answer,
+      List<EvidenceDocument> evidence,
+      String message,
+      String failureCode) {
     eventBus.publish(
         new AiAnswerChanged(
             clock.instant(),
@@ -256,7 +272,8 @@ public final class AiSearchService implements AutoCloseable {
             text,
             answer,
             evidence,
-            message));
+            message,
+            failureCode));
   }
 
   /** What the person sees for a provider failure: plain Korean that says what to do next. */
