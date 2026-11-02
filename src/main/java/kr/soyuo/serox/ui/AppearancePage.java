@@ -147,17 +147,17 @@ final class AppearancePage extends ScrollPane {
 
   private HBox buttons() {
     Button apply = new Button("적용");
-    apply.getStyleClass().add("primary-button");
+    apply.getStyleClass().addAll("primary-button", "action-button");
     apply.setOnAction(
         event -> {
           onApply.accept(draft);
           message.setText("설정을 저장했어요.");
         });
     Button cancel = new Button("취소");
-    cancel.getStyleClass().add("secondary-button");
+    cancel.getStyleClass().addAll("secondary-button", "action-button");
     cancel.setOnAction(event -> onCancel.run());
     Button restore = new Button("기본값 복원");
-    restore.getStyleClass().add("secondary-button");
+    restore.getStyleClass().addAll("secondary-button", "action-button");
     restore.setOnAction(
         event -> {
           draft = keepOtherPreferences(BrowserSettings.defaults());

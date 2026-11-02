@@ -27,10 +27,10 @@ final class HttpFallbackView extends StackPane {
     detail.setAlignment(Pos.CENTER);
     detail.getStyleClass().add("search-state-message");
     Button cancelButton = new Button("취소");
-    cancelButton.getStyleClass().add("primary-button");
+    cancelButton.getStyleClass().addAll("primary-button", "action-button");
     cancelButton.setOnAction(event -> cancel.run());
     Button httpButton = new Button("http로 연결");
-    httpButton.getStyleClass().add("secondary-button");
+    httpButton.getStyleClass().addAll("secondary-button", "action-button");
     httpButton.setOnAction(event -> useHttp.run());
     HBox buttons = new HBox(UiTokens.SPACE_SM, cancelButton, httpButton);
     buttons.setAlignment(Pos.CENTER);
