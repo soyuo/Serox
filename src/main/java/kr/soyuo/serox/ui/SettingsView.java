@@ -157,7 +157,8 @@ final class SettingsView extends HBox {
               item.setSelected(true);
             }
           });
-      if (section == Section.DESIGN) {
+      // Settings open on the general page, as in the design.
+      if (section == Section.GENERAL) {
         item.setSelected(true);
       }
       navItems.put(section, item);
@@ -165,7 +166,7 @@ final class SettingsView extends HBox {
     }
     HBox.setHgrow(page, Priority.ALWAYS);
     getChildren().addAll(sidebar, page);
-    open(Section.DESIGN);
+    open(Section.GENERAL);
   }
 
   /** Shows the search page, as the search error screen's settings button asks. */
