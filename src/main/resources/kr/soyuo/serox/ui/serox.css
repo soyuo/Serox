@@ -1317,6 +1317,13 @@
     -fx-background-color: transparent;
 }
 
+/* Keyboard focus on browser tabs. */
+.active-tab:focused,
+.inactive-tab:focused {
+    -fx-border-color: serox-ai-ring;
+    -fx-border-width: 2px;
+    -fx-border-radius: 8px;
+}
 /* One visible focus ring for keyboard users on controls that had none. */
 .secondary-button:focused,
 .danger-button:focused,
