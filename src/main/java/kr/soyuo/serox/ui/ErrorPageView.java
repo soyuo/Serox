@@ -109,7 +109,7 @@ final class ErrorPageView extends StackPane {
 
   private static Button primary(String text, Runnable action) {
     Button button = new Button(text);
-    button.getStyleClass().add("primary-button");
+    button.getStyleClass().addAll("primary-button", "action-button");
     button.setAccessibleText(text);
     button.setOnAction(event -> action.run());
     return button;
@@ -117,7 +117,7 @@ final class ErrorPageView extends StackPane {
 
   private static Button secondary(String text, Runnable action) {
     Button button = new Button(text);
-    button.getStyleClass().add("secondary-button");
+    button.getStyleClass().addAll("secondary-button", "action-button");
     button.setAccessibleText(text);
     button.setOnAction(event -> action.run());
     return button;
