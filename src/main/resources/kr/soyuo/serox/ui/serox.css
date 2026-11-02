@@ -17,6 +17,7 @@
     serox-ai-ring: #22d3ee;
     serox-error-surface: #fde8e8;
     serox-warning-surface: #fff4dc;
+    serox-warning: #8a5a00;
     serox-window-close-hover: #e81123;
     /* Modena derives every stock control (fields, combo boxes, scroll bars) from these. */
     -fx-base: serox-surface-muted;
@@ -563,6 +564,7 @@
     serox-ai-accent: #93b4f8;
     serox-error-surface: #3a1d1d;
     serox-warning-surface: #3a301a;
+    serox-warning: #f0c060;
     -fx-base: #232a36;
     -fx-background: #14181f;
     -fx-control-inner-background: #1c222c;
@@ -1348,3 +1350,47 @@
 }
 .source-notice-title { -fx-font-weight: bold; }
 .unread-tag { -fx-text-fill: serox-error; -fx-font-size: 0.857em; -fx-font-weight: bold; }
+
+/* Warning cards for an expired login or a used-up limit, and the card icon. */
+.ai-banner-warning {
+    -fx-background-color: serox-warning-surface;
+}
+
+.ai-banner-warning .ai-banner-title {
+    -fx-text-fill: serox-warning;
+}
+
+.ai-banner-icon {
+    -fx-background-color: serox-ai-accent;
+    -fx-background-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-size: 0.800em;
+    -fx-font-weight: bold;
+}
+
+.ai-banner-error .ai-banner-icon {
+    -fx-background-color: serox-error;
+}
+
+.ai-banner-warning .ai-banner-icon {
+    -fx-background-color: serox-warning;
+}
+
+/* Buttons on result cards size to their label, as in the design, unlike the round search button. */
+.primary-button.action-button {
+    -fx-pref-width: -1;
+    -fx-min-width: -1;
+    -fx-max-width: -1;
+    -fx-padding: 0 16px;
+    -fx-background-radius: 8px;
+}
+
+.primary-button.action-button:focused {
+    -fx-border-radius: 8px;
+}
+
+.secondary-button.action-button {
+    -fx-pref-height: 40px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+}
