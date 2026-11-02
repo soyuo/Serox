@@ -767,6 +767,7 @@ public final class BrowserShellView extends BorderPane {
               && getCenter() == resultsView) {
             if (settingsService != null) {
               resultsView.setSummaryPreferences(settingsService.current().summary());
+              resultsView.setReadLimit(settingsService.current().search().evidencePages());
             }
             resultsView.showAi(event);
             aiSearchActive =
