@@ -86,6 +86,7 @@ public final class BrowserShellView extends BorderPane {
   private final EventSubscription aiAnswerSubscription;
   private final EventSubscription navigationFailedSubscription;
   private SearchResultsView resultsView;
+  private final Map<TabId, ResultsBehind> resultsBehind = new java.util.HashMap<>();
   private javafx.scene.Scene acceleratorScene;
   private final List<KeyCombination> installedAccelerators = new java.util.ArrayList<>();
   private boolean aiPanelOpen = true;
@@ -479,7 +480,7 @@ public final class BrowserShellView extends BorderPane {
     forwardButton = toolbarButton(UiTokens.ICON_FORWARD, "앞으로");
     backButton.setDisable(true);
     forwardButton.setDisable(true);
-    backButton.setOnAction(event -> runForActiveTab(browserController::goBack));
+    backButton.setOnAction(event -> goBack());
     forwardButton.setOnAction(event -> runForActiveTab(browserController::goForward));
 
     addressField = new TextField();
@@ -666,6 +667,7 @@ public final class BrowserShellView extends BorderPane {
   private void showSearchStarted(SearchStarted event) {
     FxThreadExecutor.execute(
         () -> {
+          resultsBehind.remove(event.tabId());
           showSearchTitle(event.tabId(), event.query());
           if (event.tabId().equals(activeTabId)) {
             addressField.setText(event.query());
@@ -675,7 +677,7 @@ public final class BrowserShellView extends BorderPane {
                 SearchResultsView.loading(
                     event.query(),
                     () -> searchService.cancel(event.tabId()),
-                    result -> browserController.navigate(event.tabId(), result.uri().toString())));
+                    result -> openResult(event.tabId(), result)));
           }
         });
   }
@@ -694,14 +696,13 @@ public final class BrowserShellView extends BorderPane {
                   SearchResultsView.empty(
                       event.query(),
                       () -> searchService.search(event.tabId(), event.query()),
-                      result ->
-                          browserController.navigate(event.tabId(), result.uri().toString())));
+                      result -> openResult(event.tabId(), result)));
             } else {
               resultsView =
                   SearchResultsView.results(
                       event.query(),
                       event.response().results(),
-                      result -> browserController.navigate(event.tabId(), result.uri().toString()));
+                      result -> openResult(event.tabId(), result));
               resultsView.configureAiPanel(
                   aiPanelOpen,
                   aiPanelSide,
@@ -731,7 +732,7 @@ public final class BrowserShellView extends BorderPane {
             navigationStatus.setText(event.offline() ? "오프라인" : event.safeMessage());
             Runnable retry = () -> searchService.search(event.tabId(), event.query());
             java.util.function.Consumer<kr.soyuo.serox.search.api.SearchResult> open =
-                result -> browserController.navigate(event.tabId(), result.uri().toString());
+                result -> openResult(event.tabId(), result);
             setCenter(
                 event.offline()
                     ? SearchResultsView.offline(event.query(), retry, open)
@@ -787,7 +788,7 @@ public final class BrowserShellView extends BorderPane {
                 SearchResultsView.cancelled(
                     event.query(),
                     () -> searchService.search(event.tabId(), event.query()),
-                    result -> browserController.navigate(event.tabId(), result.uri().toString())));
+                    result -> openResult(event.tabId(), result)));
           }
         });
   }
@@ -840,6 +841,7 @@ public final class BrowserShellView extends BorderPane {
         () -> {
           tabSnapshots.remove(event.tabId());
           loadedPages.remove(event.tabId());
+          resultsBehind.remove(event.tabId());
           searchTitles.remove(event.tabId());
           HBox button = tabButtons.remove(event.tabId());
           tabTitles.remove(event.tabId());
@@ -956,6 +958,7 @@ public final class BrowserShellView extends BorderPane {
   private void navigateToAddress() {
     if (activeTabId != null && !addressField.getText().isBlank()) {
       String input = addressField.getText().strip();
+      resultsBehind.remove(activeTabId);
       try {
         NavigationTarget target = new NavigationInputClassifier().classify(input);
         if (target instanceof SearchQuery query) {
@@ -1019,8 +1022,59 @@ public final class BrowserShellView extends BorderPane {
     searchService.search(activeTabId, normalized);
   }
 
+  /** Opens a search result, remembering the results so Back can return to them. */
+  private void openResult(TabId tabId, kr.soyuo.serox.search.api.SearchResult result) {
+    javafx.scene.Node screen = getCenter();
+    if (tabId.equals(activeTabId) && screen instanceof SearchResultsView) {
+      resultsBehind.put(tabId, new ResultsBehind(screen, result.uri()));
+    }
+    browserController.navigate(tabId, result.uri().toString());
+  }
+
+  /** The search results a page was opened from, and the address that was opened. */
+  private record ResultsBehind(javafx.scene.Node screen, java.net.URI opened) {}
+
+  /** Whether Back on the active tab should return to the search results. */
+  private boolean backGoesToResults() {
+    ResultsBehind behind = resultsBehind.get(activeTabId);
+    if (behind == null || !(getCenter() instanceof CanvasPageView)) {
+      return false;
+    }
+    TabSnapshot snapshot = tabSnapshots.get(activeTabId);
+    if (snapshot == null || !snapshot.canGoBack()) {
+      return true;
+    }
+    return snapshot.currentUri().map(uri -> sameAddress(uri, behind.opened())).orElse(false);
+  }
+
+  private static boolean sameAddress(java.net.URI a, java.net.URI b) {
+    String left = a.toString().replaceAll("/+$", "");
+    String right = b.toString().replaceAll("/+$", "");
+    return left.equalsIgnoreCase(right);
+  }
+
+  private void goBack() {
+    if (backGoesToResults()) {
+      ResultsBehind behind = resultsBehind.remove(activeTabId);
+      if (behind.screen() instanceof SearchResultsView results) {
+        resultsView = results;
+      }
+      String searched = searchTitles.get(activeTabId);
+      if (searched != null) {
+        addressField.setText(searched);
+      }
+      updateSiteInfo(Optional.empty());
+      setCenter(behind.screen());
+      refreshAiRing();
+      backButton.setDisable(true);
+      return;
+    }
+    runForActiveTab(browserController::goBack);
+  }
+
   private void updateHistoryButtons(TabSnapshot snapshot) {
-    backButton.setDisable(snapshot == null || !snapshot.canGoBack());
+    backButton.setDisable(
+        (snapshot == null || !snapshot.canGoBack()) && !resultsBehind.containsKey(activeTabId));
     forwardButton.setDisable(snapshot == null || !snapshot.canGoForward());
   }
 
