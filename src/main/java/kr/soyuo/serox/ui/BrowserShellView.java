@@ -373,12 +373,19 @@ public final class BrowserShellView extends BorderPane {
 
   /** Opens settings on the search page, for the search service error screen. */
   private void showSearchSettings() {
+    settingsView().ifPresent(SettingsView::openSearch);
+  }
+
+  /** Opens settings on the AI provider page, for the AI failure banner. */
+  private void showAiSettings() {
+    settingsView().ifPresent(SettingsView::openAiProviders);
+  }
+
+  private Optional<SettingsView> settingsView() {
     if (!(getCenter() instanceof SettingsView)) {
       showSettings();
     }
-    if (getCenter() instanceof SettingsView settings) {
-      settings.openSearch();
-    }
+    return getCenter() instanceof SettingsView settings ? Optional.of(settings) : Optional.empty();
   }
 
   /** The status label's text without its "검색:" or "AI:" prefix. */
@@ -725,6 +732,7 @@ public final class BrowserShellView extends BorderPane {
                     }
                   },
                   () -> searchService.search(event.tabId(), event.query()));
+              resultsView.setOnOpenAiSettings(this::showAiSettings);
               setCenter(resultsView);
             }
           }

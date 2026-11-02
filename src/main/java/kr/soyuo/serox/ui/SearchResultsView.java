@@ -30,6 +30,7 @@ final class SearchResultsView extends BorderPane {
   private boolean panelOpen = true;
   private AiPanelPosition panelSide = AiPanelPosition.RIGHT;
   private BiConsumer<Boolean, AiPanelPosition> onPanelChanged = (open, side) -> {};
+  private Runnable onOpenAiSettings = () -> {};
   private final AiPanelView aiPanel = new AiPanelView(this::showEvidence);
   private java.net.URI shownEvidence;
 
@@ -291,12 +292,30 @@ final class SearchResultsView extends BorderPane {
     refreshLayout();
   }
 
+  /** The banner title for a provider failure code, as in the design's failure states. */
+  static String failureTitle(String code) {
+    return switch (code) {
+      case "unauthorized" -> "AI 연결을 다시 확인해 주세요";
+      case "rate_limited" -> "사용 한도에 도달했어요";
+      case "network" -> "AI에 연결하지 못했어요";
+      case "timeout" -> "AI 응답이 늦어지고 있어요";
+      default -> "요약하지 못했어요";
+    };
+  }
+
+  /** Sets what the banner's AI 설정 열기 button does. */
+  void setOnOpenAiSettings(Runnable action) {
+    onOpenAiSettings = action;
+  }
+
   /** The card above the result list that explains why there is no summary, as in the design. */
   private VBox banner(AiAnswerChanged event) {
     boolean failed = event.phase() == AiAnswerChanged.Phase.FAILED;
+    String code = failed ? event.failureCode() : "";
+    boolean fixInSettings = code.equals("unauthorized") || code.equals("rate_limited");
     String title =
         switch (event.phase()) {
-          case FAILED -> "요약하지 못했어요";
+          case FAILED -> failureTitle(code);
           case CANCELLED -> "요약을 취소했어요";
           default -> "AI를 연결하면 요약해 드려요";
         };
@@ -304,9 +323,22 @@ final class SearchResultsView extends BorderPane {
     Label heading = new Label(title);
     heading.getStyleClass().add("ai-banner-title");
     VBox card = new VBox(UiTokens.SPACE_SM, heading, message(detail));
-    if (failed || event.phase() == AiAnswerChanged.Phase.CANCELLED) {
-      card.getChildren().add(action("다시 시도", () -> aiPanel.retry()));
+    javafx.scene.layout.HBox actions = new javafx.scene.layout.HBox(UiTokens.SPACE_SM);
+    if (fixInSettings) {
+      actions.getChildren().add(action("AI 설정 열기", onOpenAiSettings));
     }
+    if (failed || event.phase() == AiAnswerChanged.Phase.CANCELLED) {
+      Button retry = action("다시 시도", () -> aiPanel.retry());
+      if (fixInSettings) {
+        retry.getStyleClass().setAll("button", "secondary-button");
+      }
+      actions.getChildren().add(retry);
+    }
+    if (!actions.getChildren().isEmpty()) {
+      card.getChildren().add(actions);
+    }
+    card.setAccessibleRole(javafx.scene.AccessibleRole.TEXT);
+    card.setAccessibleText(title + ". " + detail);
     card.getStyleClass().add("ai-banner");
     if (failed) {
       card.getStyleClass().add("ai-banner-error");

@@ -174,6 +174,12 @@ final class SettingsView extends HBox {
     open(Section.SEARCH);
   }
 
+  /** Shows the AI provider page, as the AI failure banner's settings button asks. */
+  void openAiProviders() {
+    navItems.get(Section.AI).setSelected(true);
+    open(Section.AI);
+  }
+
   private void open(Section section) {
     if (section == Section.DESIGN) {
       HBox design = new HBox(UiTokens.SPACE_LG * 3, appearance, preview);
