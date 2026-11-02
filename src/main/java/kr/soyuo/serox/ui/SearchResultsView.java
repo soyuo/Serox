@@ -94,7 +94,7 @@ final class SearchResultsView extends BorderPane {
     Label heading = new Label(title);
     heading.getStyleClass().add("source-notice-title");
     Button retry = action("못 읽은 곳 다시 시도", () -> aiPanel.retry());
-    retry.getStyleClass().setAll("button", "secondary-button");
+    retry.getStyleClass().setAll("button", "secondary-button", "action-button");
     sourceNotice = new VBox(UiTokens.SPACE_SM, heading, message(detail), retry);
     sourceNotice.getStyleClass().add("source-notice");
     sourceNotice.setAccessibleRole(javafx.scene.AccessibleRole.TEXT);
@@ -166,7 +166,7 @@ final class SearchResultsView extends BorderPane {
     SearchResultsView view = new SearchResultsView(query, onOpen);
     VBox state = view.state(SEARCH_ERROR_TITLE, error, view.action("검색 설정 열기", onOpenSettings));
     Button retry = view.action("다시 시도", onRetry);
-    retry.getStyleClass().setAll("button", "secondary-button");
+    retry.getStyleClass().setAll("button", "secondary-button", "action-button");
     state.getChildren().add(retry);
     state.setAccessibleRole(javafx.scene.AccessibleRole.TEXT);
     state.setAccessibleText(SEARCH_ERROR_TITLE + ". " + error);
@@ -285,7 +285,9 @@ final class SearchResultsView extends BorderPane {
 
   private Button action(String title, Runnable action) {
     Button button = new Button(title);
-    button.getStyleClass().add("primary-button");
+    button.getStyleClass().addAll("primary-button", "action-button");
+    // Keep the whole label; a squeezed row must not cut it to "다시 로그…".
+    button.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
     button.setOnAction(event -> action.run());
     return button;
   }
@@ -357,7 +359,7 @@ final class SearchResultsView extends BorderPane {
   /** The banner title for a provider failure code, as in the design's failure states. */
   static String failureTitle(String code) {
     return switch (code) {
-      case "unauthorized" -> "AI 연결을 다시 확인해 주세요";
+      case "unauthorized" -> "로그인이 만료됐어요";
       case "rate_limited" -> "사용 한도에 도달했어요";
       case "network" -> "AI에 연결하지 못했어요";
       case "timeout" -> "AI 응답이 늦어지고 있어요";
@@ -365,7 +367,31 @@ final class SearchResultsView extends BorderPane {
     };
   }
 
-  /** Sets what the banner's AI 설정 열기 button does. */
+  /** The banner text under the title for a provider failure code, or empty to use the message. */
+  static String failureDetail(String code) {
+    return switch (code) {
+      case "unauthorized" -> "다시 로그인하면 바로 요약해 드려요.";
+      case "rate_limited" -> "다른 AI로 요약하거나 잠시 뒤 다시 시도해 주세요.";
+      default -> "";
+    };
+  }
+
+  /** The settings button label for a banner, or empty when the banner has none. */
+  static String settingsAction(AiAnswerChanged.Phase phase, String code) {
+    if (phase == AiAnswerChanged.Phase.UNAVAILABLE) {
+      return "AI 연결하기";
+    }
+    if (phase != AiAnswerChanged.Phase.FAILED) {
+      return "";
+    }
+    return switch (code) {
+      case "unauthorized" -> "다시 로그인하기";
+      case "rate_limited" -> "다른 AI로 요약";
+      default -> "";
+    };
+  }
+
+  /** Sets what the banner's settings button does. */
   void setOnOpenAiSettings(Runnable action) {
     onOpenAiSettings = action;
   }
@@ -374,25 +400,38 @@ final class SearchResultsView extends BorderPane {
   private VBox banner(AiAnswerChanged event) {
     boolean failed = event.phase() == AiAnswerChanged.Phase.FAILED;
     String code = failed ? event.failureCode() : "";
-    boolean fixInSettings = code.equals("unauthorized") || code.equals("rate_limited");
+    String settingsLabel = settingsAction(event.phase(), code);
+    boolean fixInSettings = !settingsLabel.isEmpty();
+    boolean warning = code.equals("unauthorized") || code.equals("rate_limited");
     String title =
         switch (event.phase()) {
           case FAILED -> failureTitle(code);
           case CANCELLED -> "요약을 취소했어요";
           default -> "AI를 연결하면 요약해 드려요";
         };
-    String detail = event.message().isBlank() ? "검색 결과 목록은 그대로 볼 수 있어요." : event.message();
+    String detail =
+        event.phase() == AiAnswerChanged.Phase.UNAVAILABLE
+            ? "지금은 검색 결과만 보여드려요. 브라우저 로그인이나 API 키로 연결할 수 있어요."
+            : !failureDetail(code).isEmpty()
+                ? failureDetail(code)
+                : event.message().isBlank() ? "검색 결과 목록은 그대로 볼 수 있어요." : event.message();
     Label heading = new Label(title);
+    Label icon = new Label("!");
+    icon.getStyleClass().add("ai-banner-icon");
+    icon.setMinSize(20, 20);
+    icon.setAlignment(javafx.geometry.Pos.CENTER);
+    heading.setGraphic(icon);
+    heading.setGraphicTextGap(UiTokens.SPACE_SM);
     heading.getStyleClass().add("ai-banner-title");
     VBox card = new VBox(UiTokens.SPACE_SM, heading, message(detail));
     javafx.scene.layout.HBox actions = new javafx.scene.layout.HBox(UiTokens.SPACE_SM);
     if (fixInSettings) {
-      actions.getChildren().add(action("AI 설정 열기", onOpenAiSettings));
+      actions.getChildren().add(action(settingsLabel, onOpenAiSettings));
     }
     if (failed || event.phase() == AiAnswerChanged.Phase.CANCELLED) {
       Button retry = action("다시 시도", () -> aiPanel.retry());
       if (fixInSettings) {
-        retry.getStyleClass().setAll("button", "secondary-button");
+        retry.getStyleClass().setAll("button", "secondary-button", "action-button");
       }
       actions.getChildren().add(retry);
     }
@@ -402,7 +441,9 @@ final class SearchResultsView extends BorderPane {
     card.setAccessibleRole(javafx.scene.AccessibleRole.TEXT);
     card.setAccessibleText(title + ". " + detail);
     card.getStyleClass().add("ai-banner");
-    if (failed) {
+    if (warning) {
+      card.getStyleClass().add("ai-banner-warning");
+    } else if (failed) {
       card.getStyleClass().add("ai-banner-error");
     }
     return card;
