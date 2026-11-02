@@ -1314,3 +1314,11 @@
 .scroll-pane > .corner {
     -fx-background-color: transparent;
 }
+
+/* Keyboard focus on browser tabs. */
+.active-tab:focused,
+.inactive-tab:focused {
+    -fx-border-color: serox-ai-ring;
+    -fx-border-width: 2px;
+    -fx-border-radius: 8px;
+}

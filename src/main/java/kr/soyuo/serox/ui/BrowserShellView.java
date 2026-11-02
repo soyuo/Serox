@@ -880,6 +880,18 @@ public final class BrowserShellView extends BorderPane {
       HBox tab = new HBox(UiTokens.SPACE_SM, title, close);
       tab.setAlignment(Pos.CENTER_LEFT);
       tab.setOnMouseClicked(event -> browserController.activateTab(snapshot.id()));
+      tab.setFocusTraversable(true);
+      tab.setAccessibleRole(javafx.scene.AccessibleRole.TAB_ITEM);
+      tab.setOnKeyPressed(
+          event -> {
+            if (event.getCode() == KeyCode.ENTER || event.getCode() == KeyCode.SPACE) {
+              browserController.activateTab(snapshot.id());
+              event.consume();
+            } else if (event.getCode() == KeyCode.DELETE) {
+              browserController.closeTab(snapshot.id());
+              event.consume();
+            }
+          });
       tabButtons.put(snapshot.id(), tab);
       tabTitles.put(snapshot.id(), title);
       tabStrip.getChildren().add(tab);
@@ -900,6 +912,13 @@ public final class BrowserShellView extends BorderPane {
             button
                 .getStyleClass()
                 .setAll(tabId.equals(activeTabId) ? "active-tab" : "inactive-tab"));
+    tabButtons.forEach(
+        (tabId, button) ->
+        {
+          Label title = tabTitles.get(tabId);
+          String name = title == null ? "탭" : title.getText();
+          button.setAccessibleText(tabId.equals(activeTabId) ? name + ", 선택됨" : name);
+        });
   }
 
   private void updateAddress(TabSnapshot snapshot) {
@@ -1095,6 +1114,64 @@ public final class BrowserShellView extends BorderPane {
     KeyCodeCombination homeSearch = new KeyCodeCombination(KeyCode.K, KeyCombination.CONTROL_DOWN);
     if (!accelerators.containsKey(homeSearch)) {
       register(accelerators, homeSearch, () -> homeView.focusSearchField());
+    }
+    // Tab switching keys, as in other browsers, unless a chosen key uses them.
+    Map<KeyCombination, Runnable> tabKeys = new java.util.LinkedHashMap<>();
+    tabKeys.put(
+        new KeyCodeCombination(KeyCode.TAB, KeyCombination.CONTROL_DOWN), () -> switchTab(1));
+    tabKeys.put(
+        new KeyCodeCombination(KeyCode.TAB, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN),
+        () -> switchTab(-1));
+    KeyCode[] digits = {
+      KeyCode.DIGIT1, KeyCode.DIGIT2, KeyCode.DIGIT3, KeyCode.DIGIT4,
+      KeyCode.DIGIT5, KeyCode.DIGIT6, KeyCode.DIGIT7, KeyCode.DIGIT8, KeyCode.DIGIT9
+    };
+    for (int i = 0; i < digits.length; i++) {
+      int position = i == digits.length - 1 ? -1 : i;
+      tabKeys.put(
+          new KeyCodeCombination(digits[i], KeyCombination.CONTROL_DOWN), () -> pickTab(position));
+    }
+    tabKeys.forEach(
+        (combination, action) -> {
+          if (!accelerators.containsKey(combination)) {
+            register(accelerators, combination, action);
+          }
+        });
+  }
+
+  /** Tab ids in the order the tab strip shows them. */
+  private List<TabId> tabOrder() {
+    List<TabId> order = new java.util.ArrayList<>();
+    for (javafx.scene.Node node : tabStrip.getChildren()) {
+      tabButtons.forEach(
+          (id, button) -> {
+            if (button == node) {
+              order.add(id);
+            }
+          });
+    }
+    return order;
+  }
+
+  /** Activates the tab {@code step} places away from the active one, wrapping around. */
+  private void switchTab(int step) {
+    List<TabId> order = tabOrder();
+    if (order.size() < 2) {
+      return;
+    }
+    int index = Math.max(0, order.indexOf(activeTabId));
+    browserController.activateTab(order.get(Math.floorMod(index + step, order.size())));
+  }
+
+  /** Activates the tab at a position, or the last tab when the position is -1. */
+  private void pickTab(int position) {
+    List<TabId> order = tabOrder();
+    if (order.isEmpty()) {
+      return;
+    }
+    int index = position < 0 ? order.size() - 1 : position;
+    if (index < order.size()) {
+      browserController.activateTab(order.get(index));
     }
   }
 
