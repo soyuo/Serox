@@ -142,6 +142,14 @@ final class SettingsView extends HBox {
     setAccessibleText("설정");
     VBox sidebar = new VBox(UiTokens.SPACE_SM);
     sidebar.getStyleClass().add("settings-sidebar");
+    // A back button and title on top, as in the design, so settings can be left without the toolbar.
+    javafx.scene.control.Button back = new javafx.scene.control.Button("‹  설정");
+    back.getStyleClass().add("settings-back");
+    back.setAccessibleText("설정 닫기");
+    back.setMaxWidth(Double.MAX_VALUE);
+    back.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+    back.setOnAction(event -> onCancel.run());
+    sidebar.getChildren().add(back);
     ToggleGroup group = new ToggleGroup();
     for (Section section : Section.values()) {
       ToggleButton item = new ToggleButton(section.label);

@@ -1417,3 +1417,23 @@
     -fx-background-color: serox-surface-muted;
     -fx-background-radius: 8px;
 }
+
+/* Back button and title on top of the settings sidebar. */
+.settings-back {
+    -fx-background-color: transparent;
+    -fx-text-fill: serox-text-primary;
+    -fx-font-size: 1.231em;
+    -fx-font-weight: bold;
+    -fx-padding: 8px 12px 16px 12px;
+    -fx-cursor: hand;
+}
+
+.settings-back:hover {
+    -fx-text-fill: serox-primary;
+}
+
+.settings-back:focused {
+    -fx-border-color: serox-ai-ring;
+    -fx-border-width: 2px;
+    -fx-border-radius: 8px;
+}
