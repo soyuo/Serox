@@ -86,6 +86,7 @@ public final class BrowserShellView extends BorderPane {
   private final EventSubscription aiAnswerSubscription;
   private final EventSubscription navigationFailedSubscription;
   private SearchResultsView resultsView;
+  private final Map<TabId, javafx.scene.Node> tabScreens = new java.util.HashMap<>();
   private javafx.scene.Scene acceleratorScene;
   private final List<KeyCombination> installedAccelerators = new java.util.ArrayList<>();
   private boolean aiPanelOpen = true;
@@ -152,6 +153,14 @@ public final class BrowserShellView extends BorderPane {
     setTop(createBrowserChrome());
     homeView = new HomeView(previewData, recentSearches.queries(), this::searchFromHome);
     setCenter(homeView);
+    // Remember each tab's screen, so switching tabs does not lose its search results or error.
+    centerProperty()
+        .addListener(
+            (observable, oldCenter, newCenter) -> {
+              if (activeTabId != null && newCenter != null && !(newCenter instanceof SettingsView)) {
+                tabScreens.put(activeTabId, newCenter);
+              }
+            });
     addEventFilter(
         KeyEvent.KEY_PRESSED,
         event -> {
@@ -821,6 +830,20 @@ public final class BrowserShellView extends BorderPane {
             navigationStatus.setText(statusText(snapshot.navigationStatus()));
             updateHistoryButtons(snapshot);
           }
+          javafx.scene.Node screen = tabScreens.get(activeTabId);
+          if (screen != null) {
+            // Bring back what the tab last showed: search results, an error or a page.
+            if (screen instanceof SearchResultsView results) {
+              resultsView = results;
+            }
+            String searched = searchTitles.get(activeTabId);
+            if (searched != null && !(screen instanceof CanvasPageView)) {
+              addressField.setText(searched);
+            }
+            setCenter(screen);
+            refreshAiRing();
+            return;
+          }
           PageLoaded page = loadedPages.get(activeTabId);
           if (page == null) {
             showHomeView();
@@ -840,6 +863,7 @@ public final class BrowserShellView extends BorderPane {
         () -> {
           tabSnapshots.remove(event.tabId());
           loadedPages.remove(event.tabId());
+          tabScreens.remove(event.tabId());
           searchTitles.remove(event.tabId());
           HBox button = tabButtons.remove(event.tabId());
           tabTitles.remove(event.tabId());
