@@ -1394,3 +1394,26 @@
     -fx-border-radius: 8px;
     -fx-background-radius: 8px;
 }
+
+/* Round icon above a search state message, and the status line dot. */
+.search-state-icon {
+    -fx-background-color: serox-surface-muted;
+    -fx-background-radius: 24px;
+    -fx-text-fill: serox-text-secondary;
+    -fx-font-size: 1.538em;
+    -fx-font-weight: bold;
+}
+
+.status-dot {
+    -fx-fill: serox-success;
+}
+
+.status-dot.status-dot-error {
+    -fx-fill: serox-error;
+}
+
+.search-tips {
+    -fx-padding: 12px 16px;
+    -fx-background-color: serox-surface-muted;
+    -fx-background-radius: 8px;
+}
