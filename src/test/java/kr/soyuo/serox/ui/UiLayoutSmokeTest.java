@@ -80,7 +80,7 @@ class UiLayoutSmokeTest {
                       SearchResultsView.loading(LONG_TEXT, () -> {}, r -> {}),
                       SearchResultsView.empty(LONG_TEXT, () -> {}, r -> {}),
                       SearchResultsView.cancelled(LONG_TEXT, () -> {}, r -> {}),
-                      SearchResultsView.error(LONG_TEXT, LONG_TEXT, () -> {}, r -> {}),
+                      SearchResultsView.error(LONG_TEXT, LONG_TEXT, () -> {}, () -> {}, r -> {}),
                       SearchResultsView.results(LONG_TEXT, List.of(longResult()), r -> {}))) {
                 double w = minimumWidthAfterLayout(view);
                 max = Math.max(max, w);
