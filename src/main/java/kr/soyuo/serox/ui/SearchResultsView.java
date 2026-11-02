@@ -43,6 +43,63 @@ final class SearchResultsView extends BorderPane {
   private boolean hasResults;
   private List<SearchResult> found = List.of();
   private VBox banner;
+  private VBox sourceNotice;
+  private int readLimit = 5;
+
+  /** How many top results the AI tries to read, so unread ones can be told apart. */
+  void setReadLimit(int limit) {
+    readLimit = Math.max(1, limit);
+  }
+
+  /** The results the AI tried to read but has no text for, in result order. */
+  static List<SearchResult> unreadSources(
+      List<SearchResult> found, List<EvidenceDocument> evidence, int limit) {
+    java.util.Set<String> read = new java.util.HashSet<>();
+    for (EvidenceDocument document : evidence) {
+      read.add(trimSlash(document.uri().toString()));
+    }
+    return found.stream()
+        .limit(limit)
+        .filter(result -> !read.contains(trimSlash(result.uri().toString())))
+        .toList();
+  }
+
+  private static String trimSlash(String address) {
+    return address.endsWith("/") ? address.substring(0, address.length() - 1) : address;
+  }
+
+  /** Shows or clears the notice and row tags for sources the AI could not read. */
+  private void showSourceNotice(AiAnswerChanged event) {
+    if (sourceNotice != null) {
+      results.getChildren().remove(sourceNotice);
+      sourceNotice = null;
+    }
+    List<SearchResult> unread =
+        event.phase() == AiAnswerChanged.Phase.COMPLETED
+            ? unreadSources(found, event.evidence(), readLimit)
+            : List.of();
+    for (javafx.scene.Node row : results.getChildren()) {
+      if (row instanceof Button item && item.getProperties().get("unread") instanceof Label tag) {
+        tag.setVisible(unread.contains(item.getProperties().get("result")));
+        tag.setManaged(tag.isVisible());
+      }
+    }
+    if (unread.isEmpty()) {
+      return;
+    }
+    int tried = Math.min(found.size(), readLimit);
+    String title = tried + "곳 중 " + (tried - unread.size()) + "곳을 읽고 정리했어요";
+    String detail = unread.size() + "곳은 읽지 못했어요. 접근을 막았거나 시간이 오래 걸렸어요.";
+    Label heading = new Label(title);
+    heading.getStyleClass().add("source-notice-title");
+    Button retry = action("못 읽은 곳 다시 시도", () -> aiPanel.retry());
+    retry.getStyleClass().setAll("button", "secondary-button");
+    sourceNotice = new VBox(UiTokens.SPACE_SM, heading, message(detail), retry);
+    sourceNotice.getStyleClass().add("source-notice");
+    sourceNotice.setAccessibleRole(javafx.scene.AccessibleRole.TEXT);
+    sourceNotice.setAccessibleText(title + ". " + detail);
+    results.getChildren().add(Math.min(1, results.getChildren().size()), sourceNotice);
+  }
 
   private SearchResultsView(String query, Consumer<SearchResult> onOpenResult) {
     this.query = query;
@@ -142,7 +199,11 @@ final class SearchResultsView extends BorderPane {
       HBox.setHgrow(gap, Priority.ALWAYS);
       title.setMinWidth(0);
       HBox.setHgrow(title, Priority.SOMETIMES);
-      HBox head = new HBox(UiTokens.SPACE_SM + 2, badge, title, gap, openTag);
+      Label unreadTag = new Label("읽지 못함");
+      unreadTag.getStyleClass().add("unread-tag");
+      unreadTag.setVisible(false);
+      unreadTag.setManaged(false);
+      HBox head = new HBox(UiTokens.SPACE_SM + 2, badge, title, gap, unreadTag, openTag);
       head.setAlignment(Pos.CENTER_LEFT);
       Label snippet = new Label(result.snippet());
       snippet.setWrapText(true);
@@ -156,6 +217,7 @@ final class SearchResultsView extends BorderPane {
       item.getStyleClass().add("search-result-item");
       item.getProperties().put("result", result);
       item.getProperties().put("tag", openTag);
+      item.getProperties().put("unread", unreadTag);
       item.setOnAction(event -> view.select(result));
       view.results.getChildren().add(item);
     }
@@ -350,6 +412,9 @@ final class SearchResultsView extends BorderPane {
                 || event.phase() == AiAnswerChanged.Phase.FAILED
                 || event.phase() == AiAnswerChanged.Phase.CANCELLED);
     showBanner(unavailable ? banner(event) : null);
+    if (hasResults) {
+      showSourceNotice(event);
+    }
     aiPanel.show(event);
     boolean focus = event.phase() == AiAnswerChanged.Phase.COMPLETED;
     if (!focus
