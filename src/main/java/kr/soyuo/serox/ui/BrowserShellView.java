@@ -371,6 +371,16 @@ public final class BrowserShellView extends BorderPane {
             searchActions));
   }
 
+  /** Opens settings on the AI provider page, for the AI failure banner. */
+  private void showAiSettings() {
+    if (!(getCenter() instanceof SettingsView)) {
+      showSettings();
+    }
+    if (getCenter() instanceof SettingsView settings) {
+      settings.openAiProviders();
+    }
+  }
+
   /** The status label's text without its "검색:" or "AI:" prefix. */
   private static String statusText(Label label) {
     String text = label.getText() == null ? "" : label.getText();
@@ -715,6 +725,7 @@ public final class BrowserShellView extends BorderPane {
                     }
                   },
                   () -> searchService.search(event.tabId(), event.query()));
+              resultsView.setOnOpenAiSettings(this::showAiSettings);
               setCenter(resultsView);
             }
           }
