@@ -88,6 +88,7 @@ public final class BrowserShellView extends BorderPane {
   private SearchResultsView resultsView;
   private final Map<TabId, ResultsBehind> resultsBehind = new java.util.HashMap<>();
   private final Map<TabId, javafx.scene.Node> tabScreens = new java.util.HashMap<>();
+  private final Map<TabId, SearchResultsView> tabResults = new java.util.HashMap<>();
   private javafx.scene.Scene acceleratorScene;
   private final List<KeyCombination> installedAccelerators = new java.util.ArrayList<>();
   private boolean aiPanelOpen = true;
@@ -695,16 +696,18 @@ public final class BrowserShellView extends BorderPane {
         () -> {
           resultsBehind.remove(event.tabId());
           showSearchTitle(event.tabId(), event.query());
+          tabResults.remove(event.tabId());
           if (event.tabId().equals(activeTabId)) {
             addressField.setText(event.query());
             updateSiteInfo(Optional.empty());
             navigationStatus.setText("검색 중…");
-            setCenter(
-                SearchResultsView.loading(
-                    event.query(),
-                    () -> searchService.cancel(event.tabId()),
-                    result -> openResult(event.tabId(), result)));
           }
+          showForTab(
+              event.tabId(),
+              SearchResultsView.loading(
+                  event.query(),
+                  () -> searchService.cancel(event.tabId()),
+                  result -> openResult(event.tabId(), result)));
         });
   }
 
@@ -712,24 +715,27 @@ public final class BrowserShellView extends BorderPane {
     FxThreadExecutor.execute(
         () -> {
           showSearchTitle(event.tabId(), event.query());
+          int count = event.response().results().size();
           if (event.tabId().equals(activeTabId)) {
             addressField.setText(event.query());
             updateSiteInfo(Optional.empty());
-            int count = event.response().results().size();
             navigationStatus.setText("검색 결과 " + count + "개");
+          }
+          {
             if (count == 0) {
-              setCenter(
+              showForTab(
+                  event.tabId(),
                   SearchResultsView.empty(
                       event.query(),
                       () -> searchService.search(event.tabId(), event.query()),
                       result -> openResult(event.tabId(), result)));
             } else {
-              resultsView =
+              SearchResultsView view =
                   SearchResultsView.results(
                       event.query(),
                       event.response().results(),
                       result -> openResult(event.tabId(), result));
-              resultsView.configureAiPanel(
+              view.configureAiPanel(
                   aiPanelOpen,
                   aiPanelSide,
                   (open, side) -> {
@@ -742,8 +748,12 @@ public final class BrowserShellView extends BorderPane {
                     }
                   },
                   () -> searchService.search(event.tabId(), event.query()));
-              resultsView.setOnOpenAiSettings(this::showAiSettings);
-              setCenter(resultsView);
+              view.setOnOpenAiSettings(this::showAiSettings);
+              tabResults.put(event.tabId(), view);
+              if (event.tabId().equals(activeTabId)) {
+                resultsView = view;
+              }
+              showForTab(event.tabId(), view);
             }
           }
         });
@@ -757,10 +767,13 @@ public final class BrowserShellView extends BorderPane {
             addressField.setText(event.query());
             updateSiteInfo(Optional.empty());
             navigationStatus.setText(event.offline() ? "오프라인" : event.safeMessage());
+          }
+          {
             Runnable retry = () -> searchService.search(event.tabId(), event.query());
             java.util.function.Consumer<kr.soyuo.serox.search.api.SearchResult> open =
                 result -> openResult(event.tabId(), result);
-            setCenter(
+            showForTab(
+                event.tabId(),
                 event.offline()
                     ? SearchResultsView.offline(event.query(), retry, open)
                     : SearchResultsView.error(
@@ -769,17 +782,29 @@ public final class BrowserShellView extends BorderPane {
         });
   }
 
+  /** Shows a screen on its tab: now if the tab is active, otherwise when it is next chosen. */
+  private void showForTab(TabId tabId, javafx.scene.Node screen) {
+    if (tabId.equals(activeTabId)) {
+      setCenter(screen);
+    } else {
+      tabScreens.put(tabId, screen);
+    }
+  }
+
   private void showAiAnswer(AiAnswerChanged event) {
     FxThreadExecutor.execute(
         () -> {
-          if (event.tabId().equals(activeTabId)
-              && resultsView != null
-              && getCenter() == resultsView) {
-            if (settingsService != null) {
-              resultsView.setSummaryPreferences(settingsService.current().summary());
-              resultsView.setReadLimit(settingsService.current().search().evidencePages());
-            }
-            resultsView.showAi(event);
+          // Each tab keeps its own results, so a summary that ends in the background is not lost.
+          SearchResultsView view = tabResults.get(event.tabId());
+          if (view == null) {
+            return;
+          }
+          if (settingsService != null) {
+            view.setSummaryPreferences(settingsService.current().summary());
+            view.setReadLimit(settingsService.current().search().evidencePages());
+          }
+          view.showAi(event);
+          if (event.tabId().equals(activeTabId) && getCenter() == view) {
             aiSearchActive =
                 event.phase() == AiAnswerChanged.Phase.PREPARING
                     || event.phase() == AiAnswerChanged.Phase.STREAMING
@@ -813,12 +838,13 @@ public final class BrowserShellView extends BorderPane {
         () -> {
           if (event.tabId().equals(activeTabId)) {
             navigationStatus.setText("검색 취소됨");
-            setCenter(
-                SearchResultsView.cancelled(
-                    event.query(),
-                    () -> searchService.search(event.tabId(), event.query()),
-                    result -> openResult(event.tabId(), result)));
           }
+          showForTab(
+              event.tabId(),
+              SearchResultsView.cancelled(
+                  event.query(),
+                  () -> searchService.search(event.tabId(), event.query()),
+                  result -> openResult(event.tabId(), result)));
         });
   }
 
@@ -886,6 +912,7 @@ public final class BrowserShellView extends BorderPane {
           loadedPages.remove(event.tabId());
           resultsBehind.remove(event.tabId());
           tabScreens.remove(event.tabId());
+          tabResults.remove(event.tabId());
           searchTitles.remove(event.tabId());
           HBox button = tabButtons.remove(event.tabId());
           tabTitles.remove(event.tabId());
