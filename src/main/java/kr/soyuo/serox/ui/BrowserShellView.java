@@ -371,6 +371,23 @@ public final class BrowserShellView extends BorderPane {
             searchActions));
   }
 
+  /** Opens settings on the search page, for the search service error screen. */
+  private void showSearchSettings() {
+    settingsView().ifPresent(SettingsView::openSearch);
+  }
+
+  /** Opens settings on the AI provider page, for the AI failure banner. */
+  private void showAiSettings() {
+    settingsView().ifPresent(SettingsView::openAiProviders);
+  }
+
+  private Optional<SettingsView> settingsView() {
+    if (!(getCenter() instanceof SettingsView)) {
+      showSettings();
+    }
+    return getCenter() instanceof SettingsView settings ? Optional.of(settings) : Optional.empty();
+  }
+
   /** The status label's text without its "검색:" or "AI:" prefix. */
   private static String statusText(Label label) {
     String text = label.getText() == null ? "" : label.getText();
@@ -715,6 +732,7 @@ public final class BrowserShellView extends BorderPane {
                     }
                   },
                   () -> searchService.search(event.tabId(), event.query()));
+              resultsView.setOnOpenAiSettings(this::showAiSettings);
               setCenter(resultsView);
             }
           }
@@ -735,7 +753,8 @@ public final class BrowserShellView extends BorderPane {
             setCenter(
                 event.offline()
                     ? SearchResultsView.offline(event.query(), retry, open)
-                    : SearchResultsView.error(event.query(), event.safeMessage(), retry, open));
+                    : SearchResultsView.error(
+                        event.query(), event.safeMessage(), retry, this::showSearchSettings, open));
           }
         });
   }
