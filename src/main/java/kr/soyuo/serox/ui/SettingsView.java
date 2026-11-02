@@ -27,6 +27,9 @@ final class SettingsView extends HBox {
     }
   }
 
+  private final java.util.Map<Section, ToggleButton> navItems =
+      new java.util.EnumMap<>(Section.class);
+
   private enum Section {
     GENERAL("일반"),
     SEARCH("검색"),
@@ -157,11 +160,18 @@ final class SettingsView extends HBox {
       if (section == Section.DESIGN) {
         item.setSelected(true);
       }
+      navItems.put(section, item);
       sidebar.getChildren().add(item);
     }
     HBox.setHgrow(page, Priority.ALWAYS);
     getChildren().addAll(sidebar, page);
     open(Section.DESIGN);
+  }
+
+  /** Shows the search page, as the search error screen's settings button asks. */
+  void openSearch() {
+    navItems.get(Section.SEARCH).setSelected(true);
+    open(Section.SEARCH);
   }
 
   private void open(Section section) {
