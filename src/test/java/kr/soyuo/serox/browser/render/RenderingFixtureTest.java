@@ -24,7 +24,8 @@ class RenderingFixtureTest {
     var layout = new LayoutEngine().layout(document, styles, new LayoutConstraints(240, 160, 0, 0));
     DisplayList displayList = new DisplayListBuilder().build(layout);
 
-    assertTrue(styles.unsupportedDeclarations().contains("display: grid"));
+    // grid is laid out as a block; its children stack.
+    assertTrue(styles.unsupportedDeclarations().stream().noneMatch(d -> d.startsWith("display")));
     assertEquals(
         "block",
         styles.styleOf(document.getElementById("unsupported").orElseThrow()).value("display"));

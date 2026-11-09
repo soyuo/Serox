@@ -238,7 +238,7 @@ class RhinoScriptRunnerTest {
 
   @Test
   void aBadSelectorIsAnErrorNotACrash() {
-    var document = parse("<p id='a'>x</p><script>document.querySelector('p:hover');</script>");
+    var document = parse("<p id='a'>x</p><script>document.querySelector('p:bogus');</script>");
 
     var report = runner().run(document);
 

@@ -11,15 +11,36 @@ public sealed interface PaintCommand
         PaintCommand.StrokeRect,
         PaintCommand.Text,
         PaintCommand.ImagePlaceholder,
-        PaintCommand.FormControl {
-  /** Fills a rectangular area with a color. */
-  record FillRect(double x, double y, double width, double height, CssColor color)
+        PaintCommand.FormControl,
+        PaintCommand.Shadow {
+  /** A soft shadow under a box, as box-shadow draws it. */
+  record Shadow(
+      double x, double y, double width, double height, CssColor color, double blur, double radius)
       implements PaintCommand {}
+
+  /** Fills a rectangular area with a color. */
+  record FillRect(double x, double y, double width, double height, CssColor color, double radius)
+      implements PaintCommand {
+    public FillRect(double x, double y, double width, double height, CssColor color) {
+      this(x, y, width, height, color, 0);
+    }
+  }
 
   /** Strokes a rectangular border. */
   record StrokeRect(
-      double x, double y, double width, double height, CssColor color, double lineWidth)
-      implements PaintCommand {}
+      double x,
+      double y,
+      double width,
+      double height,
+      CssColor color,
+      double lineWidth,
+      double radius)
+      implements PaintCommand {
+    public StrokeRect(
+        double x, double y, double width, double height, CssColor color, double lineWidth) {
+      this(x, y, width, height, color, lineWidth, 0);
+    }
+  }
 
   /** Draws styled text with an optional link destination. */
   record Text(double x, double baselineY, String value, ComputedStyle style, Optional<URI> link)
