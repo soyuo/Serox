@@ -7,7 +7,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Path;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -18,7 +17,7 @@ class ChatGptAccountsTest {
   @TempDir Path directory;
 
   @Test
-  void browserAttemptUsesOwnRegistrationPkceAndStableHost() throws Exception {
+  void browserAttemptUsesCodexClientPkceAndCallbackPort() throws Exception {
     try (var accounts = new ChatGptAccounts(directory)) {
       CompletableFuture<URI> opened = new CompletableFuture<>();
       var result = accounts.signIn("", opened::complete);
@@ -26,14 +25,17 @@ class ChatGptAccountsTest {
       var parameters = ChatGptAccounts.query(url.getRawQuery());
       assertEquals("https", url.getScheme());
       assertEquals("auth.openai.com", url.getHost());
-      assertEquals("dynamic_agent_client", parameters.get("client_id"));
-      assertEquals("Serox", parameters.get("agent_name_hint"));
+      assertEquals("/oauth/authorize", url.getPath());
+      assertEquals(ChatGptAccounts.CLIENT_ID, parameters.get("client_id"));
+      assertEquals("true", parameters.get("codex_cli_simplified_flow"));
+      assertEquals("codex_cli_rs", parameters.get("originator"));
       assertEquals("S256", parameters.get("code_challenge_method"));
       assertEquals(43, parameters.get("code_challenge").length());
-      assertTrue(parameters.get("scope").contains("chatgpt.tokens.use.direct"));
+      assertEquals("openid profile email offline_access", parameters.get("scope"));
       URI callback = URI.create(parameters.get("redirect_uri"));
       assertEquals("127.0.0.1", callback.getHost());
       assertEquals("/auth/callback", callback.getPath());
+      assertTrue(callback.getPort() == 1455 || callback.getPort() == 1457);
       var client = HttpClient.newHttpClient();
       URI wrong = URI.create(callback + "?state=wrong&code=unused");
       assertEquals(
@@ -58,7 +60,6 @@ class ChatGptAccountsTest {
       CompletableFuture<URI> second = new CompletableFuture<>();
       var retried = accounts.signIn("", second::complete);
       var retry = ChatGptAccounts.query(second.get(5, TimeUnit.SECONDS).getRawQuery());
-      assertEquals(parameters.get("ext_agent_host_id"), retry.get("ext_agent_host_id"));
       assertNotEquals(parameters.get("state"), retry.get("state"));
       assertNotEquals(parameters.get("nonce"), retry.get("nonce"));
       URI denied =
@@ -72,16 +73,16 @@ class ChatGptAccountsTest {
   }
 
   @Test
-  void rejectsMissingChangedOrBorrowedClientRegistration() throws Exception {
-    assertEquals("oaiapp_new", ChatGptAccounts.issuedClient(Map.of("client_id", "oaiapp_new"), ""));
-    assertEquals("oaiapp_old", ChatGptAccounts.issuedClient(Map.of(), "oaiapp_old"));
-    assertThrows(java.io.IOException.class, () -> ChatGptAccounts.issuedClient(Map.of(), ""));
-    assertThrows(
-        java.io.IOException.class,
-        () -> ChatGptAccounts.issuedClient(Map.of("client_id", "dynamic_agent_client"), ""));
-    assertThrows(
-        java.io.IOException.class,
-        () -> ChatGptAccounts.issuedClient(Map.of("client_id", "oaiapp_changed"), "oaiapp_old"));
+  void readsWorkspaceAndOnboardingState() throws Exception {
+    var claims =
+        com.google.gson.JsonParser.parseString(
+                "{\"https://api.openai.com/auth\":{\"chatgpt_account_id\":\"ws-1\"}}")
+            .getAsJsonObject();
+    assertEquals("ws-1", ChatGptAccounts.chatGptAccountId(claims));
+    assertEquals("", ChatGptAccounts.chatGptAccountId(new com.google.gson.JsonObject()));
+    assertEquals(
+        "abc", ChatGptAccounts.callbackState("abc.onboarding_entrypoint=life_sciences"));
+    assertEquals("abc", ChatGptAccounts.callbackState("abc"));
     assertThrows(IllegalArgumentException.class, () -> ChatGptAccounts.query("state=a&state=b"));
   }
 }

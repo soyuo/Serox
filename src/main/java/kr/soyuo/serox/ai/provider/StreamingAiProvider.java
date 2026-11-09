@@ -36,10 +36,23 @@ public final class StreamingAiProvider implements AiProvider {
   private final String model;
   private final String apiKey;
   private final Protocol protocol;
+  private final java.util.Map<String, String> headers;
 
   /** The explicit endpoint allows deterministic tests without using live credentials. */
   public StreamingAiProvider(
       HttpClient client, URI endpoint, String model, String apiKey, Protocol protocol) {
+    this(client, endpoint, model, apiKey, protocol, java.util.Map.of());
+  }
+
+  /** Same, with extra request headers such as the ChatGPT workspace. */
+  public StreamingAiProvider(
+      HttpClient client,
+      URI endpoint,
+      String model,
+      String apiKey,
+      Protocol protocol,
+      java.util.Map<String, String> headers) {
+    this.headers = java.util.Map.copyOf(headers);
     this.client = Objects.requireNonNull(client, "client");
     this.endpoint = Objects.requireNonNull(endpoint, "endpoint");
     this.model = Objects.requireNonNull(model, "model");
@@ -51,8 +64,10 @@ public final class StreamingAiProvider implements AiProvider {
   public Flow.Publisher<AiEvent> analyze(AiRequest request) {
     Objects.requireNonNull(request, "request");
     return subscriber -> {
+      HttpRequest.Builder builder = HttpRequest.newBuilder(endpoint);
+      headers.forEach(builder::header);
       HttpRequest httpRequest =
-          HttpRequest.newBuilder(endpoint)
+          builder
               .timeout(Duration.ofSeconds(60))
               .header("Content-Type", "application/json")
               .header("Accept", "text/event-stream")
@@ -77,7 +92,23 @@ public final class StreamingAiProvider implements AiProvider {
     if (protocol != Protocol.GEMINI) {
       body.addProperty("model", model);
       body.addProperty("instructions", PromptBuilder.systemPrompt(request.answerLanguage()));
-      body.addProperty("input", PromptBuilder.userMessage(request));
+      if (protocol == Protocol.CHATGPT_PLAN) {
+        // The Codex backend takes input as a list of message items.
+        JsonObject text = new JsonObject();
+        text.addProperty("type", "input_text");
+        text.addProperty("text", PromptBuilder.userMessage(request));
+        JsonArray parts = new JsonArray();
+        parts.add(text);
+        JsonObject message = new JsonObject();
+        message.addProperty("type", "message");
+        message.addProperty("role", "user");
+        message.add("content", parts);
+        JsonArray input = new JsonArray();
+        input.add(message);
+        body.add("input", input);
+      } else {
+        body.addProperty("input", PromptBuilder.userMessage(request));
+      }
       body.addProperty("stream", true);
       body.addProperty("store", false);
       if (protocol == Protocol.RESPONSES) {

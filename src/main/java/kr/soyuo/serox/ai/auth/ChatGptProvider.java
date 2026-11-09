@@ -52,7 +52,10 @@ public final class ChatGptProvider implements AiProvider {
                               if (cancelled.get()) {
                                 return;
                               }
-                              AiProviders.createChatGptPlan(model, new SecretValue(token))
+                              AiProviders.createChatGptPlan(
+                                      model,
+                                      new SecretValue(token),
+                                      accounts.chatGptAccountId(accountId))
                                   .analyze(request)
                                   .subscribe(
                                       new Flow.Subscriber<>() {

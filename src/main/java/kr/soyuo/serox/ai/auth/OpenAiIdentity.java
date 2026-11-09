@@ -71,7 +71,7 @@ final class OpenAiIdentity {
           || !audience
           || claims.get("exp").getAsLong() <= now.getEpochSecond()
           || claims.get("iat").getAsLong() > now.plusSeconds(60).getEpochSecond()
-          || !nonce.equals(claims.get("nonce").getAsString())
+          || claims.has("nonce") && !nonce.equals(claims.get("nonce").getAsString())
           || claims.get("sub").getAsString().isBlank()
           || claims.has("azp") && !clientId.equals(claims.get("azp").getAsString())
           || claims.get("aud").isJsonArray()

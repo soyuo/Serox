@@ -53,16 +53,25 @@ public final class AiProviders {
   }
 
   /** Creates the ChatGPT plan-sharing Responses client, which has a narrower request contract. */
-  public static AiProvider createChatGptPlan(String model, SecretValue accessToken) {
+  /** The ChatGPT plan backend Codex CLI uses; it needs the workspace header with the token. */
+  private static final URI CHATGPT_RESPONSES =
+      URI.create("https://chatgpt.com/backend-api/codex/responses");
+
+  public static AiProvider createChatGptPlan(
+      String model, SecretValue accessToken, String chatGptAccountId) {
     if (!model.matches("[A-Za-z0-9._:-]{1,128}")) {
       throw new IllegalArgumentException("Invalid AI model identifier");
     }
     return new StreamingAiProvider(
         client(),
-        OPENAI_RESPONSES,
+        CHATGPT_RESPONSES,
         model,
         accessToken.revealForRequest(),
-        StreamingAiProvider.Protocol.CHATGPT_PLAN);
+        StreamingAiProvider.Protocol.CHATGPT_PLAN,
+        chatGptAccountId.isEmpty()
+            ? java.util.Map.of("originator", "codex_cli_rs")
+            : java.util.Map.of(
+                "originator", "codex_cli_rs", "chatgpt-account-id", chatGptAccountId));
   }
 
   private static HttpClient client() {
