@@ -24,7 +24,8 @@ public final class StreamingAiProvider implements AiProvider {
   /** The two supported wire formats; OpenAI and xAI share the Responses format. */
   public enum Protocol {
     RESPONSES,
-    GEMINI
+    GEMINI,
+    CHATGPT_PLAN
   }
 
   /** Thinking and reasoning tokens count against this, so it leaves room for the answer. */
@@ -73,13 +74,15 @@ public final class StreamingAiProvider implements AiProvider {
 
   private JsonObject body(AiRequest request) {
     JsonObject body = new JsonObject();
-    if (protocol == Protocol.RESPONSES) {
+    if (protocol != Protocol.GEMINI) {
       body.addProperty("model", model);
       body.addProperty("instructions", PromptBuilder.systemPrompt(request.answerLanguage()));
       body.addProperty("input", PromptBuilder.userMessage(request));
       body.addProperty("stream", true);
       body.addProperty("store", false);
-      body.addProperty("max_output_tokens", MAX_OUTPUT_TOKENS);
+      if (protocol == Protocol.RESPONSES) {
+        body.addProperty("max_output_tokens", MAX_OUTPUT_TOKENS);
+      }
     } else {
       body.add("systemInstruction", content(PromptBuilder.systemPrompt(request.answerLanguage())));
       JsonArray contents = new JsonArray();
