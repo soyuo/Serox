@@ -117,7 +117,9 @@ final class AiProviderPage extends ScrollPane {
     key.setAccessibleText(selected.label() + " API 키");
     TextField model =
         new TextField(
-            service.snapshot().provider() == selected && !service.snapshot().browser()
+            service.snapshot().provider() == selected
+                && !service.snapshot().browser()
+                && !service.snapshot().local()
                 ? service.snapshot().model()
                 : selected.defaultModel());
     model.setAccessibleText(selected.label() + " 모델 ID");
@@ -180,11 +182,13 @@ final class AiProviderPage extends ScrollPane {
 
   private VBox browserMethod() {
     VBox browser = new VBox(12);
+    if (selected == AiProviderId.CLAUDE) {
+      return claudeCodeMethod();
+    }
     browser.getChildren().add(SettingsControls.label("방법 1 · 브라우저 로그인", "settings-row-title"));
     if (selected != AiProviderId.CODEX) {
       String explanation =
           switch (selected) {
-            case CLAUDE -> "Claude는 타사 앱의 Claude.ai 계정 로그인을 제공하지 않아요. API 키로 연결하세요.";
             case GEMINI -> "Google 계정 로그인은 Serox용 OAuth 클라이언트 등록이 필요해요. 현재는 Gemini API 키로 연결하세요.";
             case GROK -> "Grok API는 API 키로 연결해요. Grok 웹사이트 로그인은 API 연결을 승인하지 않아요.";
             default -> "";
@@ -275,8 +279,36 @@ final class AiProviderPage extends ScrollPane {
     return browser;
   }
 
+  /** Claude subscription use through the user's own installed Claude Code CLI. */
+  private VBox claudeCodeMethod() {
+    VBox method = new VBox(12);
+    method.getChildren().add(SettingsControls.label("방법 1 · Claude Code", "settings-row-title"));
+    boolean using = service.snapshot().local();
+    TextField model =
+        new TextField(using ? service.snapshot().model() : "sonnet");
+    model.setAccessibleText("Claude Code 모델");
+    model.setPromptText("sonnet, opus, haiku 또는 모델 ID");
+    Button connect = new Button(using ? "Claude Code 모델 바꾸기" : "Claude Code로 연결");
+    connect.getStyleClass().add("connection-primary");
+    connect.setOnAction(event -> run(service.useClaudeCode(model.getText().strip())));
+    method
+        .getChildren()
+        .addAll(
+            SettingsControls.label(
+                "이 컴퓨터에 설치된 Claude Code가 자기 로그인으로 요약해요. Pro·Max 구독 사용량을 써요. Serox는 Claude 토큰을 보지 않아요."
+                    + " 먼저 터미널에서 claude 를 실행해 로그인해 두세요.",
+                "search-state-message"),
+            SettingsControls.row("모델", "Claude Code에 넘길 모델 이름이에요.", model),
+            connect);
+    if (using) {
+      method.getChildren().add(SettingsControls.label("Claude Code 사용 중", "settings-row-title"));
+    }
+    return method;
+  }
+
   private boolean connected(AiProviderId id) {
-    return service.snapshot().configured().contains(id)
+    return id == AiProviderId.CLAUDE && service.snapshot().local()
+        || service.snapshot().configured().contains(id)
         || id == AiProviderId.CODEX
             && service.snapshot().accounts().stream()
                 .anyMatch(ChatGptAccounts.Account::planEnabled);
