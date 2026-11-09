@@ -42,7 +42,14 @@ public final class CssParser {
         }
         int close = matching(source, open);
         String header = source.substring(cursor, open).trim().toLowerCase(Locale.ROOT);
-        if (header.startsWith("@media") && mediaApplies(header.substring(6))) {
+        if (header.startsWith("@media") && mediaApplies(header.substring(6))
+            || header.startsWith("@supports")
+            || header.startsWith("@layer")
+            || header.startsWith("@container")
+            || header.startsWith("@scope")
+            || header.startsWith("@document")
+            || header.startsWith("@-moz-document")) {
+          // Feature, layer and container blocks hold ordinary rules; read them in order.
           parseInto(source.substring(open + 1, close), rules);
         }
         cursor = close + 1;
@@ -51,14 +58,13 @@ public final class CssParser {
       if (open < 0) {
         break;
       }
-      int close = source.indexOf('}', open + 1);
-      if (close < 0) {
-        break;
-      }
+      int close = matching(source, open);
       String selectorText = source.substring(cursor, open).trim();
       if (!selectorText.isEmpty()) {
-        Map<String, String> declarations = parseDeclarations(source.substring(open + 1, close));
-        for (String selector : selectorText.split(",")) {
+        // Nested rules (CSS nesting) are skipped; the block's own declarations still apply.
+        Map<String, String> declarations =
+            parseDeclarations(withoutNestedBlocks(source.substring(open + 1, close)));
+        for (String selector : splitSelectors(selectorText)) {
           if (!selector.isBlank() && !declarations.isEmpty()) {
             rules.add(new CssRule(selector.trim(), declarations, rules.size()));
           }
@@ -66,6 +72,57 @@ public final class CssParser {
       }
       cursor = close + 1;
     }
+  }
+
+  /** Splits a selector list on commas outside parentheses, brackets and quotes. */
+  static List<String> splitSelectors(String text) {
+    List<String> parts = new ArrayList<>();
+    int depth = 0;
+    char quote = 0;
+    int start = 0;
+    for (int i = 0; i < text.length(); i++) {
+      char c = text.charAt(i);
+      if (quote != 0) {
+        if (c == '\\') {
+          i++;
+        } else if (c == quote) {
+          quote = 0;
+        }
+      } else if (c == '"' || c == '\'') {
+        quote = c;
+      } else if (c == '(' || c == '[') {
+        depth++;
+      } else if ((c == ')' || c == ']') && depth > 0) {
+        depth--;
+      } else if (c == ',' && depth == 0) {
+        parts.add(text.substring(start, i));
+        start = i + 1;
+      }
+    }
+    parts.add(text.substring(start));
+    return parts;
+  }
+
+  /** The block text with any nested {@code selector { ... }} rules taken out. */
+  private static String withoutNestedBlocks(String block) {
+    if (block.indexOf('{') < 0) {
+      return block;
+    }
+    StringBuilder out = new StringBuilder();
+    int i = 0;
+    while (i < block.length()) {
+      int open = block.indexOf('{', i);
+      if (open < 0) {
+        out.append(block, i, block.length());
+        break;
+      }
+      // Drop the nested selector too: everything after the last declaration end before it.
+      int lastEnd = Math.max(block.lastIndexOf(';', open), block.lastIndexOf('}', open));
+      int keepUntil = Math.max(i, lastEnd + 1);
+      out.append(block, i, keepUntil).append(';');
+      i = matching(block, open) + 1;
+    }
+    return out.toString();
   }
 
   /** The index of the brace that closes the one at {@code open}, or the last index if none. */

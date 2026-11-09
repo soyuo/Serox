@@ -2,6 +2,7 @@ package kr.soyuo.serox.browser.css;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.net.URI;
 import kr.soyuo.serox.browser.dom.Document;
@@ -33,7 +34,7 @@ class CssSupportTest {
   }
 
   @Test
-  void firstAndLastChildMatchAndHoverIsReportedNotApplied() {
+  void firstAndLastChildMatchAndHoverIsValidButNotApplied() {
     var document =
         page(
             "li:first-child { color: red } li:last-child { color: blue } a:hover { color: green }",
@@ -44,7 +45,9 @@ class CssSupportTest {
     assertEquals("red", styles.styleOf(document.getElementById("a").orElseThrow()).value("color"));
     assertEquals("black", styles.styleOf(document.getElementById("b").orElseThrow()).value("color"));
     assertEquals("blue", styles.styleOf(document.getElementById("c").orElseThrow()).value("color"));
-    assertTrue(styles.unsupportedDeclarations().contains("selector: a:hover"));
+    // :hover is valid CSS but never true in a static drawing.
+    assertNotEquals("green", styles.styleOf(document.getElementById("l").orElseThrow()).value("color"));
+    assertTrue(styles.unsupportedDeclarations().stream().noneMatch(d -> d.contains("a:hover")));
   }
 
   @Test

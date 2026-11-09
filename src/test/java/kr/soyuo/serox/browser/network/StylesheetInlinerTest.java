@@ -87,10 +87,10 @@ class StylesheetInlinerTest {
   void onlyAFewSheetsAreLoaded() {
     var inliner = new StylesheetInliner(uri -> Optional.of("p { color: red }"));
     var links = new StringBuilder();
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < 60; i++) {
       links.append("<link rel='stylesheet' href='s").append(i).append(".css'>");
     }
 
-    assertEquals(8, inliner.inline(parse(links.toString())));
+    assertEquals(48, inliner.inline(parse(links.toString())));
   }
 }

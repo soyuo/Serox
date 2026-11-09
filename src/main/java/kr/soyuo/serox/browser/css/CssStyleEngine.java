@@ -86,32 +86,49 @@ public final class CssStyleEngine {
     Map<Element, ComputedStyle> computed = new IdentityHashMap<>();
     List<String> unsupported = new ArrayList<>();
     Map<CssRule, Set<Element>> matched = new IdentityHashMap<>();
+    List<Element> elements =
+        document.descendants().stream()
+            .filter(Element.class::isInstance)
+            .map(Element.class::cast)
+            .toList();
+    Map<String, SelectorMatcher> matchers = new HashMap<>();
     for (CssRule rule : rules) {
       try {
+        // One selector list becomes many rules; parse each selector once.
+        SelectorMatcher matcher =
+            matchers.computeIfAbsent(rule.selector(), SelectorMatcher::new);
         Set<Element> hits = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
-        hits.addAll(new SelectorMatcher(rule.selector()).selectAll(document));
+        for (Element element : elements) {
+          if (matcher.matches(element)) {
+            hits.add(element);
+          }
+        }
         matched.put(rule, hits);
       } catch (SelectorMatcher.SyntaxException unsupportedSelector) {
         unsupported.add("selector: " + rule.selector());
       }
     }
-    for (Element element :
-        document.descendants().stream()
-            .filter(Element.class::isInstance)
-            .map(Element.class::cast)
-            .toList()) {
-      Map<String, Candidate> cascade = new HashMap<>();
-      Map<String, String> custom = customProperties(element, rules, matched, computed);
-      for (CssRule rule : rules) {
-        Set<Element> hits = matched.get(rule);
-        if (hits != null && hits.contains(element)) {
-          Specificity specificity = Specificity.of(rule.selector());
-          rule.declarations()
-              .forEach(
-                  (name, value) ->
-                      apply(
-                          cascade, name, value, specificity, rule.sourceOrder(), unsupported, custom));
+    // Each element's matching rules, in source order, so the cascade skips rules that missed.
+    Map<Element, List<CssRule>> byElement = new IdentityHashMap<>();
+    for (CssRule rule : rules) {
+      Set<Element> hits = matched.get(rule);
+      if (hits != null) {
+        for (Element hit : hits) {
+          byElement.computeIfAbsent(hit, key -> new ArrayList<>()).add(rule);
         }
+      }
+    }
+    for (Element element : elements) {
+      Map<String, Candidate> cascade = new HashMap<>();
+      List<CssRule> own = byElement.getOrDefault(element, List.of());
+      Map<String, String> custom = customProperties(element, own, computed);
+      for (CssRule rule : own) {
+        Specificity specificity = Specificity.of(rule.selector());
+        rule.declarations()
+            .forEach(
+                (name, value) ->
+                    apply(
+                        cascade, name, value, specificity, rule.sourceOrder(), unsupported, custom));
       }
       element
           .attribute("style")
@@ -279,10 +296,7 @@ public final class CssStyleEngine {
    * those the element's own rules and inline style set.
    */
   private Map<String, String> customProperties(
-      Element element,
-      List<CssRule> rules,
-      Map<CssRule, Set<Element>> matched,
-      Map<Element, ComputedStyle> computed) {
+      Element element, List<CssRule> rules, Map<Element, ComputedStyle> computed) {
     Map<String, String> custom = new HashMap<>();
     element
         .parent()
@@ -301,13 +315,9 @@ public final class CssStyleEngine {
                         }));
     Map<String, Candidate> own = new HashMap<>();
     for (CssRule rule : rules) {
-      Set<Element> hits = matched.get(rule);
-      if (hits != null && hits.contains(element)) {
-        Specificity specificity = Specificity.of(rule.selector());
-        rule.declarations()
-            .forEach(
-                (name, value) -> keepCustom(own, name, value, specificity, rule.sourceOrder()));
-      }
+      Specificity specificity = Specificity.of(rule.selector());
+      rule.declarations()
+          .forEach((name, value) -> keepCustom(own, name, value, specificity, rule.sourceOrder()));
     }
     element
         .attribute("style")
