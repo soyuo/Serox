@@ -8,7 +8,6 @@ import kr.soyuo.serox.ai.api.AiFailed;
 import kr.soyuo.serox.ai.api.AiProvider;
 import kr.soyuo.serox.ai.api.AiRequest;
 import kr.soyuo.serox.ai.provider.AiProviders;
-import kr.soyuo.serox.core.model.AiProviderId;
 import kr.soyuo.serox.core.model.SecretValue;
 
 /**
@@ -53,7 +52,7 @@ public final class ChatGptProvider implements AiProvider {
                               if (cancelled.get()) {
                                 return;
                               }
-                              AiProviders.create(AiProviderId.CODEX, model, new SecretValue(token))
+                              AiProviders.createChatGptPlan(model, new SecretValue(token))
                                   .analyze(request)
                                   .subscribe(
                                       new Flow.Subscriber<>() {

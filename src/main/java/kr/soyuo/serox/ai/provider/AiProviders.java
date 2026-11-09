@@ -11,6 +11,8 @@ import kr.soyuo.serox.core.model.SecretValue;
 
 /** Constructs only the provider explicitly selected by the user. */
 public final class AiProviders {
+  private static final URI OPENAI_RESPONSES = URI.create("https://api.openai.com/v1/responses");
+
   private AiProviders() {}
 
   public static Optional<AiProvider> fromConfiguration(AppConfiguration configuration) {
@@ -23,11 +25,7 @@ public final class AiProviders {
     if (!model.matches("[A-Za-z0-9._:-]{1,128}")) {
       throw new IllegalArgumentException("Invalid AI model identifier");
     }
-    HttpClient client =
-        HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .followRedirects(HttpClient.Redirect.NEVER)
-            .build();
+    HttpClient client = client();
     String secret = key.revealForRequest();
     return switch (id) {
       case CLAUDE -> new ClaudeProvider(client, ClaudeProvider.DEFAULT_ENDPOINT, model, secret);
@@ -43,11 +41,7 @@ public final class AiProviders {
               StreamingAiProvider.Protocol.GEMINI);
       case CODEX ->
           new StreamingAiProvider(
-              client,
-              URI.create("https://api.openai.com/v1/responses"),
-              model,
-              secret,
-              StreamingAiProvider.Protocol.RESPONSES);
+              client, OPENAI_RESPONSES, model, secret, StreamingAiProvider.Protocol.RESPONSES);
       case GROK ->
           new StreamingAiProvider(
               client,
@@ -56,5 +50,25 @@ public final class AiProviders {
               secret,
               StreamingAiProvider.Protocol.RESPONSES);
     };
+  }
+
+  /** Creates the ChatGPT plan-sharing Responses client, which has a narrower request contract. */
+  public static AiProvider createChatGptPlan(String model, SecretValue accessToken) {
+    if (!model.matches("[A-Za-z0-9._:-]{1,128}")) {
+      throw new IllegalArgumentException("Invalid AI model identifier");
+    }
+    return new StreamingAiProvider(
+        client(),
+        OPENAI_RESPONSES,
+        model,
+        accessToken.revealForRequest(),
+        StreamingAiProvider.Protocol.CHATGPT_PLAN);
+  }
+
+  private static HttpClient client() {
+    return HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(10))
+        .followRedirects(HttpClient.Redirect.NEVER)
+        .build();
   }
 }
