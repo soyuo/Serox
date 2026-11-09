@@ -127,6 +127,7 @@ public final class BrowserShellView extends BorderPane {
   private Button forwardButton;
   private double dragOffsetX;
   private double dragOffsetY;
+  private boolean windowDrag;
   private Cursor resizeCursor = Cursor.DEFAULT;
   private double resizeStartX;
   private double resizeStartY;
@@ -475,23 +476,58 @@ public final class BrowserShellView extends BorderPane {
     HBox bar = new HBox(left, controls);
     bar.setAlignment(Pos.CENTER_LEFT);
     bar.getStyleClass().add("titlebar");
-    bar.setOnMousePressed(
+    // A filter sees presses on the tab strip's empty space too, which covers most of the bar.
+    bar.addEventFilter(
+        javafx.scene.input.MouseEvent.MOUSE_PRESSED,
         event -> {
+          windowDrag = event.isPrimaryButtonDown() && !onControl(event.getTarget(), bar);
+          if (!windowDrag) {
+            return;
+          }
           if (event.getClickCount() == 2) {
+            windowDrag = false;
             stage().setMaximized(!stage().isMaximized());
-          } else {
-            dragOffsetX = event.getScreenX() - stage().getX();
-            dragOffsetY = event.getScreenY() - stage().getY();
+            return;
           }
+          dragOffsetX = event.getScreenX() - stage().getX();
+          dragOffsetY = event.getScreenY() - stage().getY();
         });
-    bar.setOnMouseDragged(
+    bar.addEventFilter(
+        javafx.scene.input.MouseEvent.MOUSE_DRAGGED,
         event -> {
-          if (!stage().isMaximized() && event.getTarget() == bar) {
-            stage().setX(event.getScreenX() - dragOffsetX);
-            stage().setY(event.getScreenY() - dragOffsetY);
+          if (!windowDrag) {
+            return;
           }
+          javafx.stage.Stage window = stage();
+          if (window.isMaximized()) {
+            // Restore under the pointer, keeping the same relative grab point.
+            double ratio = event.getSceneX() / Math.max(1, bar.getWidth());
+            window.setMaximized(false);
+            dragOffsetX = window.getWidth() * ratio;
+            dragOffsetY = event.getSceneY();
+          }
+          window.setX(event.getScreenX() - dragOffsetX);
+          window.setY(event.getScreenY() - dragOffsetY);
+          event.consume();
         });
+    bar.addEventFilter(
+        javafx.scene.input.MouseEvent.MOUSE_RELEASED, event -> windowDrag = false);
     return bar;
+  }
+
+  /** Whether a press landed on a button, tab or field inside the title bar, not empty space. */
+  private static boolean onControl(Object target, javafx.scene.Node bar) {
+    for (javafx.scene.Node node = target instanceof javafx.scene.Node start ? start : null;
+        node != null && node != bar;
+        node = node.getParent()) {
+      if (node instanceof javafx.scene.control.ButtonBase
+          || node instanceof javafx.scene.control.TextInputControl
+          || node.getAccessibleRole() == javafx.scene.AccessibleRole.TAB_ITEM
+          || node instanceof javafx.scene.control.ScrollBar) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private Button windowButton(String asset, String accessibleName) {

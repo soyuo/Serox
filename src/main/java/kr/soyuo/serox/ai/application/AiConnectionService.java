@@ -156,11 +156,12 @@ public final class AiConnectionService implements AutoCloseable {
     Snapshot value = current;
     boolean connected =
         value.local()
-            || value.browser()
-            ? value.accounts().stream()
-                .anyMatch(
-                    account -> account.id().equals(value.accountId()) && account.planEnabled())
-            : value.configured().contains(value.provider());
+            || (value.browser()
+                ? value.accounts().stream()
+                    .anyMatch(
+                        account ->
+                            account.id().equals(value.accountId()) && account.planEnabled())
+                : value.configured().contains(value.provider()));
     events.publish(
         new ConnectionStatusChanged(
             Instant.now(),
