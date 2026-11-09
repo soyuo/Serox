@@ -31,6 +31,7 @@ final class SearchResultsView extends BorderPane {
   private AiPanelPosition panelSide = AiPanelPosition.RIGHT;
   private BiConsumer<Boolean, AiPanelPosition> onPanelChanged = (open, side) -> {};
   private Runnable onOpenAiSettings = () -> {};
+  private Consumer<SearchResult> onOpenInNewTab;
   private final AiPanelView aiPanel = new AiPanelView(this::openEvidence);
   private java.net.URI shownEvidence;
 
@@ -441,6 +442,11 @@ final class SearchResultsView extends BorderPane {
     };
   }
 
+  /** Sets how a source opens in a new tab; without it the source opens in this tab. */
+  void setOnOpenInNewTab(Consumer<SearchResult> action) {
+    onOpenInNewTab = action;
+  }
+
   /** Sets what the banner's settings button does. */
   void setOnOpenAiSettings(Runnable action) {
     onOpenAiSettings = action;
@@ -634,6 +640,12 @@ final class SearchResultsView extends BorderPane {
     return holder;
   }
 
+  private void openInNewTab(SearchResult result) {
+    // The page now has its own tab, so give the width back to the answer.
+    closeSource();
+    (onOpenInNewTab != null ? onOpenInNewTab : onOpenResult).accept(result);
+  }
+
   /** Opens the source pane with a source picked under the answer. */
   private void openEvidence(EvidenceDocument document) {
     sourceOpen = true;
@@ -656,7 +668,7 @@ final class SearchResultsView extends BorderPane {
     open.setAccessibleText("새 탭에서 원문 열기");
     open.setOnAction(
         event ->
-            onOpenResult.accept(
+            openInNewTab(
                 new SearchResult(document.sourceId(), document.uri(), document.title(), "", 1)));
     javafx.scene.layout.HBox header =
         new javafx.scene.layout.HBox(UiTokens.SPACE_SM, number, address, open);

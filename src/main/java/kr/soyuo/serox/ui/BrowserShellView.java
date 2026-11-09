@@ -785,6 +785,7 @@ public final class BrowserShellView extends BorderPane {
                   },
                   () -> searchService.search(event.tabId(), event.query()));
               view.setOnOpenAiSettings(this::showAiSettings);
+              view.setOnOpenInNewTab(this::openInNewTab);
               tabResults.put(event.tabId(), view);
               if (event.tabId().equals(activeTabId)) {
                 resultsView = view;
@@ -1155,6 +1156,14 @@ public final class BrowserShellView extends BorderPane {
       resultsBehind.put(tabId, new ResultsBehind(screen, result.uri()));
     }
     browserController.navigate(tabId, result.uri().toString());
+  }
+
+  /** Opens a source in a new tab, which becomes the active tab. */
+  private void openInNewTab(kr.soyuo.serox.search.api.SearchResult result) {
+    String address = result.uri().toString();
+    browserController
+        .createTab()
+        .thenAccept(tab -> browserController.navigate(tab.id(), address));
   }
 
   /** The search results a page was opened from, and the address that was opened. */

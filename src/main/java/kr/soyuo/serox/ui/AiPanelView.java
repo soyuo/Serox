@@ -93,14 +93,18 @@ final class AiPanelView extends VBox {
           body.getChildren()
               .add(
                   summaryCard(
-                      note("검색 결과 페이지를 읽고 있어요…"), actionButton("취소", () -> onCancel.run())));
-      case STREAMING ->
-          body.getChildren()
-              .add(
-                  summaryCard(
-                      note("답변을 작성하고 있어요…"),
-                      paragraph(event.text().replace("**", "").replace("__", "")),
+                      working("검색 결과 페이지를 읽고 있어요…"),
                       actionButton("취소", () -> onCancel.run())));
+      case STREAMING -> {
+        String text = event.text().replace("**", "").replace("__", "");
+        // The spinner shows only until the first character of the answer arrives.
+        body.getChildren()
+            .add(
+                text.isEmpty()
+                    ? summaryCard(
+                        working("답변을 작성하고 있어요…"), actionButton("취소", () -> onCancel.run()))
+                    : summaryCard(paragraph(text), actionButton("취소", () -> onCancel.run())));
+      }
       case COMPLETED -> showAnswer(event.answer().orElseThrow(), event.evidence());
       case UNAVAILABLE -> body.getChildren().add(summaryCard(note(event.message())));
       case FAILED ->
@@ -301,6 +305,17 @@ final class AiPanelView extends VBox {
     label.setWrapText(true);
     label.getStyleClass().add("search-state-message");
     return label;
+  }
+
+  /** A small spinner with a status line, shown while no answer text has arrived. */
+  private HBox working(String text) {
+    javafx.scene.control.ProgressIndicator spinner = new javafx.scene.control.ProgressIndicator();
+    spinner.getStyleClass().add("ai-spinner");
+    spinner.setPrefSize(18, 18);
+    spinner.setMaxSize(18, 18);
+    HBox line = new HBox(UiTokens.SPACE_SM, spinner, note(text));
+    line.setAlignment(Pos.CENTER_LEFT);
+    return line;
   }
 
   private Label footnote(String text) {
