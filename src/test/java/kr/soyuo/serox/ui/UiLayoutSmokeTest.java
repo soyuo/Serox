@@ -99,6 +99,7 @@ class UiLayoutSmokeTest {
         onFx(
             () -> {
               var view = SearchResultsView.results("q", List.of(longResult()), r -> {});
+              view.selectRelative(1);
               minimumWidthAfterLayout(view);
               return view.lookup(".search-preview").getLayoutBounds().getWidth();
             });
