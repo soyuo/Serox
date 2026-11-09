@@ -641,6 +641,8 @@ final class SearchResultsView extends BorderPane {
   }
 
   private void openInNewTab(SearchResult result) {
+    // The page now has its own tab, so give the width back to the answer.
+    closeSource();
     (onOpenInNewTab != null ? onOpenInNewTab : onOpenResult).accept(result);
   }
 
