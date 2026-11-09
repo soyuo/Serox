@@ -12,13 +12,11 @@ import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Orientation;
 import javafx.scene.Cursor;
 import javafx.scene.canvas.Canvas;
-import javafx.scene.control.Label;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
 import kr.soyuo.serox.browser.css.CssStyleEngine;
 import kr.soyuo.serox.browser.css.StyleSnapshot;
 import kr.soyuo.serox.browser.dom.Document;
@@ -34,7 +32,6 @@ public final class CanvasPageView extends BorderPane {
   private final StackPane viewport = new StackPane(canvas);
   private final ScrollBar verticalScroll = new ScrollBar();
   private final ScrollBar horizontalScroll = new ScrollBar();
-  private final Label fallbackNotice = new Label();
   private final CssStyleEngine styleEngine = new CssStyleEngine();
   private final LayoutEngine layoutEngine = new LayoutEngine();
   private final DisplayListBuilder displayListBuilder = new DisplayListBuilder();
@@ -76,10 +73,9 @@ public final class CanvasPageView extends BorderPane {
     horizontalScroll
         .valueProperty()
         .addListener((observable, oldValue, newValue) -> renderAtScroll());
-    fallbackNotice.getStyleClass().add("render-fallback-notice");
     setCenter(viewport);
     setRight(verticalScroll);
-    setBottom(new VBox(fallbackNotice, horizontalScroll));
+    setBottom(horizontalScroll);
     sceneProperty()
         .addListener(
             (observable, oldScene, newScene) -> {
@@ -162,16 +158,8 @@ public final class CanvasPageView extends BorderPane {
     lastLayout = layout;
     lastDisplayList = displayListBuilder.build(layout);
     renderer.render(lastDisplayList, canvas, images);
-    boolean hasFallbacks = !lastStyles.unsupportedDeclarations().isEmpty();
-    fallbackNotice.setVisible(hasFallbacks);
-    fallbackNotice.setManaged(hasFallbacks);
-    fallbackNotice.setText(
-        hasFallbacks ? "Some page styles are not supported and were ignored." : "");
-    fallbackNotice.setAccessibleText(
-        hasFallbacks
-            ? "Unsupported styles ignored: "
-                + String.join(", ", lastStyles.unsupportedDeclarations())
-            : "");
+    // Almost every real page uses some CSS the engine skips, so no banner is shown for it;
+    // unsupportedDeclarations() still lists what was ignored.
   }
 
   private void cancelImages() {
