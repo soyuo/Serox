@@ -172,9 +172,9 @@ public final class CssStyleEngine {
   private static final java.util.regex.Pattern IMPORTANT =
       java.util.regex.Pattern.compile("\\s*!\\s*important\\s*$", java.util.regex.Pattern.CASE_INSENSITIVE);
   private static final java.util.regex.Pattern RELATIVE_LENGTH =
-      java.util.regex.Pattern.compile("-?(?:\\d+\\.?\\d*|\\.\\d+)(?:em|rem|pt)");
+      java.util.regex.Pattern.compile("-?(?:\\d+\\.?\\d*|\\.\\d+)(?:em|rem|pt|vh|vw|vmin|vmax|ch|ex)");
   private static final java.util.regex.Pattern RELATIVE_TOKEN =
-      java.util.regex.Pattern.compile("(-?(?:\\d+\\.?\\d*|\\.\\d+))(em|rem|pt)");
+      java.util.regex.Pattern.compile("(-?(?:\\d+\\.?\\d*|\\.\\d+))(em|rem|pt|vh|vw|vmin|vmax|ch|ex)(?![a-z])");
   private static final java.util.regex.Pattern VARIABLE =
       java.util.regex.Pattern.compile("var\\(\\s*(--[\\w-]+)\\s*(?:,\\s*([^()]*))?\\)");
   private static final double ROOT_FONT_SIZE = 16;
@@ -216,7 +216,9 @@ public final class CssStyleEngine {
         }
         matched.put(rule, hits);
       } catch (SelectorMatcher.SyntaxException unsupportedSelector) {
-        unsupported.add("selector: " + rule.selector());
+        if (!rule.selector().matches("(?s).*::?-(ms|moz|webkit|o)-.*")) {
+          unsupported.add("selector: " + rule.selector());
+        }
       }
     }
     // Each element's matching rules, in source order, so the cascade skips rules that missed.
@@ -340,8 +342,20 @@ public final class CssStyleEngine {
         unsupported.add(property + ": " + value);
         return;
       }
+      if (substituted.equals(INVALID_AT_COMPUTED_TIME)
+          || substituted.matches("(?i).*(^|\\s)initial(\\s|$).*") && !substituted.trim()
+              .equalsIgnoreCase("initial")) {
+        // The "space toggle" pattern: a toggle variable set to initial voids the declaration.
+        return;
+      }
       value = substituted;
     }
+    String resolved = CssValues.resolveFunctions(value);
+    if (resolved == null) {
+      unsupported.add(property + ": " + value);
+      return;
+    }
+    value = resolved;
     boolean important = IMPORTANT.matcher(value).find();
     if (important) {
       value = IMPORTANT.matcher(value).replaceFirst("").trim();
@@ -371,6 +385,10 @@ public final class CssStyleEngine {
     for (Map.Entry<String, String> entry : expanded.entrySet()) {
       String name = entry.getKey();
       String part = entry.getValue();
+      if (name.equals("-serox-background-image")) {
+        unsupported.add("background-image: " + part);
+        continue;
+      }
       if (!SUPPORTED_PROPERTIES.contains(name) || !isSupportedValue(name, part)) {
         unsupported.add(property + ": " + value);
         continue;
@@ -481,19 +499,19 @@ public final class CssStyleEngine {
         }
       }
       case "background" -> {
-        // Only the color of a background is drawn; image layers are reported.
+        // Only the color of a background is drawn; an image layer is reported on its own.
         if (lower.contains("url(") || lower.contains("gradient(")) {
-          return null;
+          out.put("-serox-background-image", lower);
         }
         CssColor color = null;
-        for (String token : colorTokens(lower)) {
+        for (String token : colorTokens(lower.replaceAll("[a-z-]*gradient\\(.*\\)|url\\([^)]*\\)", " "))) {
           java.util.Optional<CssColor> parsed = CssColor.parse(token);
           if (parsed.isPresent()) {
             color = parsed.get();
             out.put("background-color", token);
           }
         }
-        if (color == null && !lower.equals("none")) {
+        if (color == null && !lower.equals("none") && out.isEmpty()) {
           // Position, size or repeat alone: nothing to draw.
           return Map.of();
         }
@@ -793,14 +811,16 @@ public final class CssStyleEngine {
               || Set.of("fit-content", "max-content", "min-content").contains(normalized);
       case "margin", "margin-top", "margin-right", "margin-bottom", "margin-left" ->
           java.util.Arrays.stream(normalized.split("\\s+"))
-              .allMatch(part -> part.equals("auto") || isLength(part));
+              .allMatch(part -> part.equals("auto") || isLength(part) || isSignedPercentage(part));
       case "padding",
           "padding-top",
           "padding-right",
           "padding-bottom",
           "padding-left",
           "border-width" ->
-          java.util.Arrays.stream(normalized.split("\\s+")).allMatch(this::isLength);
+          java.util.Arrays.stream(normalized.split("\\s+"))
+              .allMatch(part -> isLength(part)
+                  || !property.equals("border-width") && isPercentage(part));
       case "border" -> isBorderValue(normalized);
       default -> true;
     };
@@ -907,6 +927,10 @@ public final class CssStyleEngine {
     }
   }
 
+  private boolean isSignedPercentage(String value) {
+    return value.startsWith("-") ? isPercentage(value.substring(1)) : isPercentage(value);
+  }
+
   private boolean isPercentage(String value) {
     if (!value.endsWith("%")) {
       return false;
@@ -995,6 +1019,9 @@ public final class CssStyleEngine {
   }
 
   /** Replaces {@code var(--x, fallback)} with its value; null when one has neither. */
+  /** A var() that resolves to nothing: the declaration is dropped, as a browser does. */
+  static final String INVALID_AT_COMPUTED_TIME = "\u0000invalid";
+
   static String substituteVariables(String value, Map<String, String> custom) {
     String current = value;
     for (int round = 0; round < 6 && current.contains("var("); round++) {
@@ -1002,11 +1029,13 @@ public final class CssStyleEngine {
       StringBuilder out = new StringBuilder();
       while (matcher.find()) {
         String found = custom.get(matcher.group(1));
-        if (found == null) {
+        // A custom property set to initial holds the guaranteed-invalid value on purpose.
+        boolean voided = found != null && found.trim().equalsIgnoreCase("initial");
+        if (found == null || voided) {
           found = matcher.group(2);
         }
         if (found == null) {
-          return null;
+          return voided ? INVALID_AT_COMPUTED_TIME : null;
         }
         matcher.appendReplacement(out, java.util.regex.Matcher.quoteReplacement(found.trim()));
       }
@@ -1063,6 +1092,15 @@ public final class CssStyleEngine {
                         switch (match.group(2)) {
                           case "em" -> number * own;
                           case "rem" -> number * ROOT_FONT_SIZE;
+                          case "vw" -> number * CssValues.VIEWPORT_WIDTH / 100;
+                          case "vh" -> number * CssValues.VIEWPORT_HEIGHT / 100;
+                          case "vmin" ->
+                              number * Math.min(CssValues.VIEWPORT_WIDTH, CssValues.VIEWPORT_HEIGHT)
+                                  / 100;
+                          case "vmax" ->
+                              number * Math.max(CssValues.VIEWPORT_WIDTH, CssValues.VIEWPORT_HEIGHT)
+                                  / 100;
+                          case "ch", "ex" -> number * own * 0.5;
                           default -> number * 96 / 72;
                         };
                     return java.util.regex.Matcher.quoteReplacement(trim(pixels) + "px");

@@ -34,6 +34,9 @@ public final class LayoutEngine {
     private final List<TextRun> textRuns = new ArrayList<>();
     private int paintOrder;
 
+    /** The containing width percent margins and paddings resolve against. */
+    private double percentBase;
+
     private Pass(StyleSnapshot styles, URI documentUri) {
       this.styles = styles;
       this.documentUri = documentUri;
@@ -62,6 +65,7 @@ public final class LayoutEngine {
       if (style.value("display").equals("none")) {
         return 0;
       }
+      percentBase = availableWidth;
       double marginLeft = side(style, "margin", 3, 0);
       double marginRight = side(style, "margin", 1, 0);
       double marginTop = side(style, "margin", 0, 0);
@@ -442,6 +446,7 @@ public final class LayoutEngine {
 
     private double outerWidthOf(Element item, double available) {
       ComputedStyle style = styles.styleOf(item);
+      percentBase = available;
       double chrome =
           side(style, "margin", 3, 0)
               + side(style, "margin", 1, 0)
@@ -577,6 +582,9 @@ public final class LayoutEngine {
         selected = parts[Math.min(sideIndex, parts.length - 1)];
       }
       try {
+        if (selected.endsWith("%")) {
+          return percentBase * Double.parseDouble(selected.substring(0, selected.length() - 1)) / 100;
+        }
         return Double.parseDouble(selected.replace("px", ""));
       } catch (NumberFormatException exception) {
         return fallback;
