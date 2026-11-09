@@ -5,6 +5,7 @@ import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
+import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -30,6 +31,8 @@ public final class ChatGptAccounts implements AutoCloseable {
   private static final URI TOKEN = URI.create("https://auth.openai.com/api/accounts/oauth/token");
   private static final String RESOURCE = "https://api.openai.com/v1";
   private static final String PLAN_SCOPE = "chatgpt.tokens.use.direct";
+  private static final int REGISTRATION_CALLBACK_PORT = 1455;
+  private static final int FALLBACK_CALLBACK_PORT = 1457;
   private final ProtectedLocalStore store;
   private final Path directory;
   private final OAuthHttp http = new OAuthHttp();
@@ -107,9 +110,7 @@ public final class ChatGptAccounts implements AutoCloseable {
                     String state = random();
                     String nonce = random();
                     String verifier = random();
-                    server =
-                        HttpServer.create(
-                            new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0), 4);
+                    server = callbackServer(existingId.isEmpty());
                     int port = server.getAddress().getPort();
                     String callback = "http://127.0.0.1:" + port + "/auth/callback";
                     CompletableFuture<Map<String, String>> returned = new CompletableFuture<>();
@@ -362,6 +363,18 @@ public final class ChatGptAccounts implements AutoCloseable {
       throw new IOException("Invalid ChatGPT host identifier");
     }
     return host;
+  }
+
+  private static HttpServer callbackServer(boolean newRegistration) throws IOException {
+    InetAddress loopback = InetAddress.getByName("127.0.0.1");
+    if (!newRegistration) {
+      return HttpServer.create(new InetSocketAddress(loopback, 0), 4);
+    }
+    try {
+      return HttpServer.create(new InetSocketAddress(loopback, REGISTRATION_CALLBACK_PORT), 4);
+    } catch (BindException portInUse) {
+      return HttpServer.create(new InetSocketAddress(loopback, FALLBACK_CALLBACK_PORT), 4);
+    }
   }
 
   static String issuedClient(Map<String, String> response, String existing) throws IOException {
