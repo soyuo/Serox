@@ -60,9 +60,15 @@ class SourceShortcutsTest {
   }
 
   private static String openRow(SearchResultsView view) {
+    // The list shows only while the AI panel is closed.
+    view.togglePanel();
+    view.applyCss();
+    view.layout();
     var open = view.lookupAll(".search-result-open");
     assertEquals(1, open.size());
-    return open.iterator().next().getAccessibleText();
+    String text = open.iterator().next().getAccessibleText();
+    view.togglePanel();
+    return text;
   }
 
   @Test

@@ -31,7 +31,7 @@ final class SearchResultsView extends BorderPane {
   private AiPanelPosition panelSide = AiPanelPosition.RIGHT;
   private BiConsumer<Boolean, AiPanelPosition> onPanelChanged = (open, side) -> {};
   private Runnable onOpenAiSettings = () -> {};
-  private final AiPanelView aiPanel = new AiPanelView(this::showEvidence);
+  private final AiPanelView aiPanel = new AiPanelView(this::openEvidence);
   private java.net.URI shownEvidence;
 
   void setSummaryPreferences(kr.soyuo.serox.core.model.SummaryPreferences preferences) {
@@ -40,7 +40,8 @@ final class SearchResultsView extends BorderPane {
 
   private SearchResult selected;
   private final ScrollPane listScroll;
-  private boolean summaryFocus;
+  /** Whether the source pane beside the AI answer is open; it opens when a source is picked. */
+  private boolean sourceOpen;
   private boolean hasResults;
   private List<SearchResult> found = List.of();
   private VBox banner;
@@ -394,22 +395,14 @@ final class SearchResultsView extends BorderPane {
   }
 
   private void applyPanel() {
-    setLeft(null);
-    setRight(null);
-    aiPanel.getStyleClass().removeAll("ai-panel-left");
-    if (panelOpen && banner == null) {
-      if (panelSide == AiPanelPosition.LEFT) {
-        aiPanel.getStyleClass().add("ai-panel-left");
-        setLeft(aiPanel);
-      } else {
-        setRight(aiPanel);
-      }
-    }
     panelToggle.setText(panelOpen ? "AI 패널 닫기" : "AI 패널 열기");
     panelToggle.setAccessibleText(panelToggle.getText());
     panelPosition.setText(panelSide == AiPanelPosition.RIGHT ? "왼쪽으로 이동" : "오른쪽으로 이동");
     panelPosition.setAccessibleText(panelPosition.getText());
     panelPosition.setDisable(!panelOpen);
+    // The answer fills the view, so moving it to a side means nothing there.
+    panelPosition.setVisible(!aiMode());
+    panelPosition.setManaged(panelPosition.isVisible());
     refreshLayout();
   }
 
@@ -531,7 +524,9 @@ final class SearchResultsView extends BorderPane {
     }
     int index = selected == null ? -1 : found.indexOf(selected);
     int next = index < 0 ? (step > 0 ? 0 : found.size() - 1) : index + step;
+    sourceOpen = true;
     select(found.get(Math.max(0, Math.min(found.size() - 1, next))));
+    refreshLayout();
   }
 
   /** Opens the AI panel if it was closed; used by the address bar's summary chip. */
@@ -555,46 +550,70 @@ final class SearchResultsView extends BorderPane {
       showSourceNotice(event);
     }
     aiPanel.show(event);
-    boolean focus = event.phase() == AiAnswerChanged.Phase.COMPLETED;
-    if (!focus
-        && selected != null
+    if (event.phase() == AiAnswerChanged.Phase.PREPARING) {
+      // A new answer starts with the whole width again.
+      sourceOpen = false;
+    }
+    if (selected != null
         && !selected.uri().equals(shownEvidence)
         && aiPanel.evidenceFor(selected.uri()).isPresent()) {
       select(selected);
     }
-    if (focus != summaryFocus) {
-      summaryFocus = focus;
-      refreshLayout();
-      if (focus) {
-        preview.setCenter(sourcePlaceholder());
-      } else if (selected != null) {
-        select(selected);
-      }
-    }
+    refreshLayout();
+  }
+
+  /** The AI answer owns the view: results exist, the panel is open and no banner replaces it. */
+  private boolean aiMode() {
+    return hasResults && panelOpen && banner == null;
   }
 
   /**
-   * With a finished summary the design gives the summary the width and keeps a fixed source pane on
-   * the other side; the result list steps aside because the sources are listed in the summary.
+   * With the AI answer the answer takes the whole width from the start, sources listed under it.
+   * Picking a source pushes the answer aside and opens the source pane on the right; its close
+   * button gives the width back. Without the answer the result list and preview show instead.
    */
   private void refreshLayout() {
-    boolean focused = summaryFocus && panelOpen;
-    content.setLeft(focused ? null : listScroll);
     aiPanel.prefWidthProperty().unbind();
-    if (focused) {
-      aiPanel.prefWidthProperty().bind(widthProperty().subtract(UiTokens.SOURCE_PANE_WIDTH));
-      if (!aiPanel.getStyleClass().contains("ai-panel-wide")) {
-        aiPanel.getStyleClass().add("ai-panel-wide");
+    aiPanel.getStyleClass().remove("ai-panel-wide");
+    preview.prefWidthProperty().unbind();
+    if (aiMode()) {
+      aiPanel.getStyleClass().add("ai-panel-wide");
+      content.setLeft(null);
+      content.setCenter(aiPanel);
+      preview.setTop(sourceCloseBar());
+      if (sourceOpen) {
+        preview.setPrefWidth(UiTokens.SOURCE_PANE_WIDTH);
+        preview.setMinWidth(UiTokens.SOURCE_PANE_WIDTH);
+        content.setRight(preview);
+      } else {
+        content.setRight(null);
       }
     } else {
-      aiPanel.prefWidthProperty().bind(widthProperty().multiply(0.3));
-      aiPanel.getStyleClass().remove("ai-panel-wide");
+      preview.setTop(null);
+      preview.setPrefWidth(Region.USE_COMPUTED_SIZE);
+      preview.setMinWidth(Region.USE_COMPUTED_SIZE);
+      content.setRight(null);
+      content.setLeft(listScroll);
+      content.setCenter(preview);
     }
   }
 
-  /** The dashed card shown until the user picks a source, as in the design. */
-  private VBox sourcePlaceholder() {
-    return sourcePlaceholder("출처를 누르면 원문이 열려요", "고른 출처의 페이지가 여기에 보여요.");
+  /** The bar with the X that closes the source pane. */
+  private HBox sourceCloseBar() {
+    Button close = new Button("✕");
+    close.getStyleClass().add("secondary-button");
+    close.setAccessibleText("출처 닫기");
+    close.setOnAction(event -> closeSource());
+    HBox bar = new HBox(close);
+    bar.setAlignment(Pos.CENTER_RIGHT);
+    bar.setPadding(new Insets(UiTokens.SPACE_SM, UiTokens.SPACE_LG, 0, UiTokens.SPACE_LG));
+    return bar;
+  }
+
+  /** Closes the source pane so the answer takes the width back. */
+  void closeSource() {
+    sourceOpen = false;
+    refreshLayout();
   }
 
   private VBox sourcePlaceholder(String heading, String detail) {
@@ -613,6 +632,13 @@ final class SearchResultsView extends BorderPane {
     holder.setPadding(new Insets(UiTokens.SPACE_LG));
     holder.getStyleClass().add("source-holder");
     return holder;
+  }
+
+  /** Opens the source pane with a source picked under the answer. */
+  private void openEvidence(EvidenceDocument document) {
+    sourceOpen = true;
+    showEvidence(document);
+    refreshLayout();
   }
 
   /** The source pane from the design: a header with the source, its address and an open button. */
