@@ -24,6 +24,7 @@ import kr.soyuo.serox.core.event.AiAnswerChanged;
 /** Shows the AI summary, key points and verified sources for one search. */
 final class AiPanelView extends VBox {
   private static final Pattern CITATION_MARKER = Pattern.compile("\\[S(\\d+)]");
+  private static final Pattern BOLD = Pattern.compile("\\*\\*(.+?)\\*\\*|__(.+?)__");
   private static final int MAX_LABEL_CHARS = 12;
   private static final String DISCLAIMER = "AI 요약에는 오류가 있을 수 있어요. 중요한 내용은 출처에서 확인하세요.";
 
@@ -98,7 +99,7 @@ final class AiPanelView extends VBox {
               .add(
                   summaryCard(
                       note("답변을 작성하고 있어요…"),
-                      paragraph(event.text()),
+                      paragraph(event.text().replace("**", "").replace("__", "")),
                       actionButton("취소", () -> onCancel.run())));
       case COMPLETED -> showAnswer(event.answer().orElseThrow(), event.evidence());
       case UNAVAILABLE -> body.getChildren().add(summaryCard(note(event.message())));
@@ -117,7 +118,8 @@ final class AiPanelView extends VBox {
     List<String> summary = new ArrayList<>();
     List<String> points = new ArrayList<>();
     for (String line : answer.text().split("\\R")) {
-      String trimmed = line.strip();
+      // Headings are shown as plain text.
+      String trimmed = line.strip().replaceFirst("^#{1,6}\\s+", "");
       if (trimmed.isEmpty()) {
         continue;
       }
@@ -167,16 +169,21 @@ final class AiPanelView extends VBox {
   private javafx.scene.Node keyPointRow(String point) {
     int colon = point.indexOf(':');
     boolean labelled =
-        colon > 0 && colon <= MAX_LABEL_CHARS && !point.substring(0, colon).contains("[");
+        colon > 0
+            && plain(point.substring(0, colon)).length() <= MAX_LABEL_CHARS
+            && !point.substring(0, colon).contains("[");
     if (!labelled) {
       return citedParagraph(point);
     }
-    Label label = new Label(point.substring(0, colon).strip());
+    Label label = new Label(plain(point.substring(0, colon)));
     label.getStyleClass().add("key-point-label");
+    label.setWrapText(true);
     label.setMinWidth(UiTokens.KEY_POINT_LABEL_WIDTH);
     label.setPrefWidth(UiTokens.KEY_POINT_LABEL_WIDTH);
     label.setAlignment(Pos.TOP_LEFT);
-    TextFlow text = citedParagraph(point.substring(colon + 1).strip());
+    // "**Label:** text" leaves the closing marker after the colon.
+    TextFlow text =
+        citedParagraph(point.substring(colon + 1).replaceFirst("^\\s*(\\*\\*|__)", "").strip());
     HBox.setHgrow(text, Priority.ALWAYS);
     HBox row = new HBox(UiTokens.SPACE_MD + 2, label, text);
     row.setAlignment(Pos.TOP_LEFT);
@@ -210,26 +217,48 @@ final class AiPanelView extends VBox {
     }
     TextFlow flow = new TextFlow();
     flow.getStyleClass().add("ai-panel-flow");
+    Matcher bold = BOLD.matcher(text);
+    int last = 0;
+    while (bold.find()) {
+      addCited(flow, text.substring(last, bold.start()), false);
+      addCited(flow, bold.group(1) != null ? bold.group(1) : bold.group(2), true);
+      last = bold.end();
+    }
+    addCited(flow, text.substring(last), false);
+    return flow;
+  }
+
+  /** Adds text with each [S1] marker drawn as a small numbered chip. */
+  private void addCited(TextFlow flow, String text, boolean strong) {
     Matcher matcher = CITATION_MARKER.matcher(text);
     int last = 0;
     while (matcher.find()) {
-      addText(flow, text.substring(last, matcher.start()));
+      addText(flow, text.substring(last, matcher.start()), strong);
       Label chip = new Label(matcher.group(1));
       chip.getStyleClass().add("citation-chip");
       chip.setAccessibleText("출처 " + matcher.group(1));
       flow.getChildren().add(chip);
       last = matcher.end();
     }
-    addText(flow, text.substring(last));
-    return flow;
+    addText(flow, text.substring(last), strong);
   }
 
-  private void addText(TextFlow flow, String text) {
+  private void addText(TextFlow flow, String text, boolean strong) {
+    // Unpaired markers left by the model are dropped rather than shown.
+    text = text.replace("**", "").replace("__", "");
     if (!text.isEmpty()) {
       Text run = new Text(text);
       run.getStyleClass().add("ai-panel-run");
+      if (strong) {
+        run.getStyleClass().add("ai-panel-strong");
+      }
       flow.getChildren().add(run);
     }
+  }
+
+  /** Text without markdown emphasis markers. */
+  static String plain(String text) {
+    return text.replace("**", "").replace("__", "").strip();
   }
 
   private Button sourceButton(Citation citation, EvidenceDocument document) {

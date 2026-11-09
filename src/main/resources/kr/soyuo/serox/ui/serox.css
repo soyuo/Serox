@@ -1437,3 +1437,7 @@
     -fx-border-width: 2px;
     -fx-border-radius: 8px;
 }
+
+.ai-panel-strong {
+  -fx-font-weight: bold;
+}
