@@ -24,6 +24,7 @@ import kr.soyuo.serox.ai.auth.ChatGptProvider;
 import kr.soyuo.serox.ai.auth.ProtectedLocalStore;
 import kr.soyuo.serox.ai.auth.ProviderKeyTest;
 import kr.soyuo.serox.ai.provider.AiProviders;
+import kr.soyuo.serox.ai.provider.ClaudeCodeProvider;
 import kr.soyuo.serox.core.application.AppConfiguration;
 import kr.soyuo.serox.core.event.BrowserEventBus;
 import kr.soyuo.serox.core.event.ConnectionStatusChanged;
@@ -43,7 +44,8 @@ public final class AiConnectionService implements AutoCloseable {
       Set<AiProviderId> configured,
       List<ChatGptAccounts.Account> accounts,
       List<ChatGptAccounts.Model> models,
-      String message) {}
+      String message,
+      boolean local) {}
 
   private final AiSearchService ai;
   private final BrowserEventBus events;
@@ -71,6 +73,7 @@ public final class AiConnectionService implements AutoCloseable {
     AiProviderId selected = configuration.aiProvider();
     String model = configuration.aiModel();
     boolean browser = false;
+    boolean local = false;
     String accountId = "";
     List<ChatGptAccounts.Account> savedAccounts = List.of();
     try {
@@ -102,6 +105,7 @@ public final class AiConnectionService implements AutoCloseable {
         }
         browser = data.get("browser").getAsBoolean();
         accountId = data.get("account").getAsString();
+        local = data.has("local") && data.get("local").getAsBoolean();
       }
       savedAccounts = accounts.accounts();
     } catch (Exception exception) {
@@ -112,6 +116,7 @@ public final class AiConnectionService implements AutoCloseable {
       selected = configuration.aiProvider();
       model = configuration.aiModel();
       browser = false;
+      local = false;
       accountId = "";
     }
     lockChannel = channel;
@@ -125,7 +130,8 @@ public final class AiConnectionService implements AutoCloseable {
             Set.copyOf(keys.keySet()),
             savedAccounts,
             List.of(),
-            message);
+            message,
+            local);
     install();
   }
 
@@ -149,7 +155,8 @@ public final class AiConnectionService implements AutoCloseable {
   public void announce() {
     Snapshot value = current;
     boolean connected =
-        value.browser()
+        value.local()
+            || value.browser()
             ? value.accounts().stream()
                 .anyMatch(
                     account -> account.id().equals(value.accountId()) && account.planEnabled())
@@ -161,7 +168,9 @@ public final class AiConnectionService implements AutoCloseable {
             connected ? ServiceStatus.CONNECTED : ServiceStatus.DISCONNECTED,
             connected
                 ? "켜짐 ("
-                    + (value.browser() ? "ChatGPT" : value.provider().label())
+                    + (value.local()
+                        ? "Claude Code"
+                        : value.browser() ? "ChatGPT" : value.provider().label())
                     + " · "
                     + value.model()
                     + ")"
@@ -224,7 +233,8 @@ public final class AiConnectionService implements AutoCloseable {
                               Set.copyOf(keys.keySet()),
                               accounts.accounts(),
                               List.of(),
-                              "로그인했지만 ChatGPT 플랜 사용 승인이 필요해요. 다시 로그인해 승인하세요.");
+                              "로그인했지만 ChatGPT 플랜 사용 승인이 필요해요. 다시 로그인해 승인하세요.",
+                              current.local());
                       return current;
                     });
               }
@@ -254,7 +264,8 @@ public final class AiConnectionService implements AutoCloseable {
                   Set.copyOf(keys.keySet()),
                   accounts.accounts(),
                   models,
-                  "ChatGPT 계정을 연결했어요.");
+                  "ChatGPT 계정을 연결했어요.",
+                  false);
           save();
           install();
           return current;
@@ -295,7 +306,8 @@ public final class AiConnectionService implements AutoCloseable {
                   List.of(),
                   revoked
                       ? "로그아웃했어요."
-                      : "이 컴퓨터에서 로그아웃했어요. 원격 해제는 확인하지 못했어요. ChatGPT 설정에서 Serox 연결을 해제하세요.");
+                      : "이 컴퓨터에서 로그아웃했어요. 원격 해제는 확인하지 못했어요. ChatGPT 설정에서 Serox 연결을 해제하세요.",
+                  current.local());
           install();
           return current;
         });
@@ -311,11 +323,40 @@ public final class AiConnectionService implements AutoCloseable {
         Set.copyOf(keys.keySet()),
         current.accounts(),
         current.models(),
-        message);
+        message,
+        false);
+  }
+
+  /** Uses the Claude Code CLI installed on this computer, signed in with its own account. */
+  public CompletableFuture<Snapshot> useClaudeCode(String model) {
+    return task(
+        () -> {
+          requireWritable();
+          validateModel(model);
+          String version =
+              ClaudeCodeProvider.installedVersion()
+                  .orElseThrow(() -> new IOException("Claude Code is not installed"));
+          current =
+              new Snapshot(
+                  AiProviderId.CLAUDE,
+                  model,
+                  false,
+                  "",
+                  Set.copyOf(keys.keySet()),
+                  current.accounts(),
+                  current.models(),
+                  "Claude Code(" + version + ")를 연결했어요.",
+                  true);
+          save();
+          install();
+          return current;
+        });
   }
 
   private void install() {
-    if (current.browser()) {
+    if (current.local()) {
+      ai.setProvider(Optional.of(new ClaudeCodeProvider(current.model())));
+    } else if (current.browser()) {
       boolean allowed =
           current.accounts().stream()
               .anyMatch(
@@ -339,6 +380,7 @@ public final class AiConnectionService implements AutoCloseable {
     data.addProperty("model", current.model());
     data.addProperty("browser", current.browser());
     data.addProperty("account", current.accountId());
+    data.addProperty("local", current.local());
     JsonObject stored = new JsonObject();
     savedKeys.forEach((id, key) -> stored.addProperty(id.name(), key.revealForRequest()));
     data.add("keys", stored);
