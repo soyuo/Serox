@@ -70,22 +70,19 @@ public final class LayoutEngine {
       double paddingRight = side(style, "padding", 1, 0);
       double paddingTop = side(style, "padding", 0, 0);
       final double paddingBottom = side(style, "padding", 2, 0);
-      double borderWidth = style.pixels("border-width", borderShorthandWidth(style));
-      if (borderWidth == 0) {
-        borderWidth = borderShorthandWidth(style);
-      }
+      double borderTop = borderSide(style, "top");
+      double borderRight = borderSide(style, "right");
+      double borderBottom = borderSide(style, "bottom");
+      double borderLeft = borderSide(style, "left");
+      double horizontalChrome = paddingLeft + paddingRight + borderLeft + borderRight;
+      boolean borderBox = style.value("box-sizing").equals("border-box");
       double outerY = originY + marginTop;
       double contentWidth = fillWidth ? Double.NaN : widthOf(style, availableWidth);
+      if (Double.isFinite(contentWidth) && borderBox) {
+        contentWidth = Math.max(0, contentWidth - horizontalChrome);
+      }
       if (!Double.isFinite(contentWidth)) {
-        contentWidth =
-            Math.max(
-                0,
-                availableWidth
-                    - marginLeft
-                    - marginRight
-                    - paddingLeft
-                    - paddingRight
-                    - 2 * borderWidth);
+        contentWidth = Math.max(0, availableWidth - marginLeft - marginRight - horizontalChrome);
       }
       if (!fillWidth) {
         double most = lengthOf(style, "max-width", availableWidth);
@@ -97,9 +94,7 @@ public final class LayoutEngine {
           contentWidth = Math.max(contentWidth, least);
         }
         double spare =
-            availableWidth
-                - (contentWidth + paddingLeft + paddingRight + 2 * borderWidth
-                    + marginLeft + marginRight);
+            availableWidth - (contentWidth + horizontalChrome + marginLeft + marginRight);
         boolean autoLeft = isAutoSide(style, "margin", 3);
         boolean autoRight = isAutoSide(style, "margin", 1);
         if (spare > 0 && autoLeft) {
@@ -107,9 +102,9 @@ public final class LayoutEngine {
         }
       }
       double outerX = originX + marginLeft;
-      final double borderBoxWidth = contentWidth + paddingLeft + paddingRight + 2 * borderWidth;
-      double contentX = outerX + borderWidth + paddingLeft;
-      double contentY = outerY + borderWidth + paddingTop;
+      final double borderBoxWidth = contentWidth + horizontalChrome;
+      double contentX = outerX + borderLeft + paddingLeft;
+      double contentY = outerY + borderTop + paddingTop;
       final int boxIndex = boxes.size();
       final int boxPaintOrder = nextPaintOrder();
       boxes.add(null);
@@ -143,11 +138,23 @@ public final class LayoutEngine {
         flow.finishLine();
         flowHeight = flow.height();
       }
+      double verticalChrome = paddingTop + paddingBottom + borderTop + borderBottom;
       double contentHeight = style.pixels("height", flowHeight);
       if (!Double.isFinite(contentHeight)) {
         contentHeight = flowHeight;
+      } else if (borderBox && !style.value("height").equals("auto")) {
+        contentHeight = Math.max(0, contentHeight - verticalChrome);
       }
-      double borderBoxHeight = contentHeight + paddingTop + paddingBottom + 2 * borderWidth;
+      double tallest = style.pixels("max-height", Double.NaN);
+      if (Double.isFinite(tallest)) {
+        contentHeight = Math.min(contentHeight, borderBox ? tallest - verticalChrome : tallest);
+      }
+      double shortest = style.pixels("min-height", Double.NaN);
+      if (Double.isFinite(shortest)) {
+        contentHeight = Math.max(contentHeight, borderBox ? shortest - verticalChrome : shortest);
+      }
+      contentHeight = Math.max(0, contentHeight);
+      double borderBoxHeight = contentHeight + verticalChrome;
       boxes.set(
           boxIndex,
           new LayoutBox(
@@ -183,9 +190,16 @@ public final class LayoutEngine {
         return 0;
       }
       double gap = Math.max(0, style.pixels("gap", 0));
-      return style.value("flex-direction").equals("column")
-          ? layoutFlexColumn(items, style, contentX, contentY, contentWidth, gap)
-          : layoutFlexRow(items, style, contentX, contentY, contentWidth, gap);
+      String direction = style.value("flex-direction");
+      if (direction.endsWith("-reverse")) {
+        java.util.Collections.reverse(items);
+      }
+      if (direction.startsWith("column")) {
+        double rowGap = style.pixels("row-gap", Double.NaN);
+        return layoutFlexColumn(
+            items, style, contentX, contentY, contentWidth, Double.isFinite(rowGap) ? rowGap : gap);
+      }
+      return layoutFlexRow(items, style, contentX, contentY, contentWidth, gap);
     }
 
     private double layoutFlexRow(
@@ -195,16 +209,18 @@ public final class LayoutEngine {
         double startY,
         double width,
         double gap) {
-      if (!style.value("flex-wrap").equals("wrap")) {
+      if (!style.value("flex-wrap").startsWith("wrap")) {
         return layoutFlexLine(items, style, startX, startY, width, gap);
       }
+      double rowGapValue = style.pixels("row-gap", Double.NaN);
+      double rowGap = Double.isFinite(rowGapValue) ? Math.max(0, rowGapValue) : gap;
       double cursorY = startY;
       List<Element> line = new ArrayList<>();
       double lineWidth = 0;
       for (Element item : items) {
         double base = outerWidthOf(item, width);
         if (!line.isEmpty() && lineWidth + gap + base > width) {
-          cursorY += layoutFlexLine(line, style, startX, cursorY, width, gap) + gap;
+          cursorY += layoutFlexLine(line, style, startX, cursorY, width, gap) + rowGap;
           line.clear();
           lineWidth = 0;
         }
@@ -243,8 +259,15 @@ public final class LayoutEngine {
           finalWidth[i] += free * grow[i] / growSum;
         }
       } else if (free < 0 && baseSum > 0) {
+        double[] weight = new double[count];
+        double weightSum = 0;
         for (int i = 0; i < count; i++) {
-          finalWidth[i] = Math.max(0, base[i] + free * base[i] / baseSum);
+          weight[i] = base[i] * shrinkOf(styles.styleOf(items.get(i)));
+          weightSum += weight[i];
+        }
+        for (int i = 0; i < count; i++) {
+          finalWidth[i] =
+              weightSum > 0 ? Math.max(0, base[i] + free * weight[i] / weightSum) : base[i];
         }
       } else if (free > 0) {
         switch (style.value("justify-content")) {
@@ -254,6 +277,10 @@ public final class LayoutEngine {
           case "space-around" -> {
             leading = free / (2 * count);
             between = gap + free / count;
+          }
+          case "space-evenly" -> {
+            leading = free / (count + 1);
+            between = gap + free / (count + 1);
           }
           default -> {}
         }
@@ -333,6 +360,19 @@ public final class LayoutEngine {
       return Math.max(0, grow);
     }
 
+    private double shrinkOf(ComputedStyle style) {
+      String flex = style.value("flex").trim();
+      String[] parts = flex.split("\\s+");
+      if (parts.length >= 2 && !flex.isEmpty()) {
+        double fromShorthand = parseNumber(parts[1]);
+        if (parts[1].matches("[0-9.]+")) {
+          return Math.max(0, fromShorthand);
+        }
+      }
+      String own = style.value("flex-shrink");
+      return own.isEmpty() ? 1 : Math.max(0, parseNumber(own));
+    }
+
     private double parseNumber(String value) {
       try {
         return Double.parseDouble(value.trim());
@@ -341,9 +381,21 @@ public final class LayoutEngine {
       }
     }
 
-    private double borderWidthOf(ComputedStyle style) {
+    /** One side's border width: its own longhand, else the all-sides width; none means zero. */
+    private double borderSide(ComputedStyle style, String sideName) {
+      String sideStyle = style.value("border-" + sideName + "-style");
+      if (sideStyle.isEmpty()) {
+        sideStyle = style.value("border-style");
+      }
+      if (sideStyle.equals("none") || sideStyle.equals("hidden")) {
+        return 0;
+      }
+      double own = style.pixels("border-" + sideName + "-width", Double.NaN);
+      if (Double.isFinite(own)) {
+        return Math.max(0, own);
+      }
       double width = style.pixels("border-width", borderShorthandWidth(style));
-      return width == 0 ? borderShorthandWidth(style) : width;
+      return Math.max(0, width == 0 ? borderShorthandWidth(style) : width);
     }
 
     /**
@@ -395,9 +447,15 @@ public final class LayoutEngine {
               + side(style, "margin", 1, 0)
               + side(style, "padding", 3, 0)
               + side(style, "padding", 1, 0)
-              + 2 * borderWidthOf(style);
+              + borderSide(style, "left")
+              + borderSide(style, "right");
       double explicit = widthOf(style, available);
       if (Double.isFinite(explicit)) {
+        if (style.value("box-sizing").equals("border-box")) {
+          // The width already holds padding and border; only the margins are added.
+          double margins = side(style, "margin", 3, 0) + side(style, "margin", 1, 0);
+          return Math.max(explicit, chrome - margins) + margins;
+        }
         return explicit + chrome;
       }
       if (!style.value("flex").isBlank()) {
@@ -564,12 +622,40 @@ public final class LayoutEngine {
 
       private void addText(String text, ComputedStyle style, URI link) {
         double fontSize = style.pixels("font-size", 16);
-        double glyphWidth = Math.max(1, fontSize * 0.55);
+        double letterSpacing = style.pixels("letter-spacing", 0);
+        double wordSpacing = style.pixels("word-spacing", 0);
+        double glyphWidth = Math.max(1, fontSize * 0.55 + letterSpacing);
+        double spaceWidth = Math.max(0, fontSize * 0.55 * 0.55 + letterSpacing + wordSpacing);
+        String whiteSpace = style.value("white-space");
+        boolean keepSpaces =
+            whiteSpace.equals("pre") || whiteSpace.equals("pre-wrap")
+                || whiteSpace.equals("break-spaces");
+        boolean keepBreaks = keepSpaces || whiteSpace.equals("pre-line");
+        boolean wraps = !whiteSpace.equals("nowrap") && !whiteSpace.equals("pre");
+        double lineBox = lineHeightOf(style, fontSize);
         StringBuilder run = new StringBuilder();
         double runX = cursorX;
         int offset = 0;
         while (offset < text.length()) {
           int codePoint = text.codePointAt(offset);
+          if (keepBreaks && codePoint == '\n') {
+            flushRun(run, runX, style, link);
+            lineHeight = Math.max(lineHeight, lineBox);
+            advanceLine();
+            runX = cursorX;
+            offset++;
+            continue;
+          }
+          if (keepSpaces && Character.isWhitespace(codePoint)) {
+            double advance = codePoint == '\t' ? spaceWidth * 8 : spaceWidth;
+            if (run.isEmpty()) {
+              runX = cursorX;
+            }
+            run.appendCodePoint(' ');
+            cursorX += advance;
+            offset += Character.charCount(codePoint);
+            continue;
+          }
           if (Character.isWhitespace(codePoint)) {
             while (offset < text.length()) {
               int whitespace = text.codePointAt(offset);
@@ -590,23 +676,25 @@ public final class LayoutEngine {
             offset += Character.charCount(wordCodePoint);
           }
           String word = text.substring(wordStart, offset);
-          lineHeight = Math.max(lineHeight, Math.ceil(fontSize * 1.3));
+          lineHeight = Math.max(lineHeight, lineBox);
           double wordWidth = word.codePoints().count() * glyphWidth;
-          double spacingWidth = pendingSpace && cursorX > startX ? glyphWidth * 0.55 : 0;
-          if (cursorX > startX && cursorX + spacingWidth + wordWidth > startX + maxWidth) {
+          double spacingWidth = pendingSpace && cursorX > startX ? spaceWidth : 0;
+          if (wraps
+              && cursorX > startX
+              && cursorX + spacingWidth + wordWidth > startX + maxWidth) {
             flushRun(run, runX, style, link);
             advanceLine();
             pendingSpace = false;
             runX = cursorX;
           }
           if (pendingSpace && cursorX > startX) {
-            runX = appendGlyph(' ', glyphWidth * 0.55, run, style, link, runX);
+            runX = appendGlyph(' ', spaceWidth, run, style, link, runX, wraps);
           }
           pendingSpace = false;
           for (int wordOffset = 0; wordOffset < word.length(); ) {
             int wordCodePoint = word.codePointAt(wordOffset);
             wordOffset += Character.charCount(wordCodePoint);
-            runX = appendGlyph(wordCodePoint, glyphWidth, run, style, link, runX);
+            runX = appendGlyph(wordCodePoint, glyphWidth, run, style, link, runX, wraps);
           }
         }
         flushRun(run, runX, style, link);
@@ -618,8 +706,9 @@ public final class LayoutEngine {
           StringBuilder run,
           ComputedStyle style,
           URI link,
-          double runX) {
-        if (cursorX + advance > startX + maxWidth && cursorX > startX) {
+          double runX,
+          boolean wraps) {
+        if (wraps && cursorX + advance > startX + maxWidth && cursorX > startX) {
           flushRun(run, runX, style, link);
           advanceLine();
           if (Character.isWhitespace(codePoint)) {
@@ -680,10 +769,13 @@ public final class LayoutEngine {
       private void flushRun(StringBuilder run, double runX, ComputedStyle style, URI link) {
         if (!run.isEmpty()) {
           double fontSize = style.pixels("font-size", 16);
+          // Extra line height is split above and below the text; normal height keeps one em.
+          double baseline =
+              fontSize + (lineHeightOf(style, fontSize) - Math.ceil(fontSize * 1.3)) / 2;
           textRuns.add(
               new TextRun(
                   runX,
-                  cursorY + fontSize,
+                  cursorY + baseline,
                   transformed(run.toString(), style.value("text-transform")),
                   style,
                   Optional.ofNullable(link),
@@ -759,6 +851,24 @@ public final class LayoutEngine {
 
       private double height() {
         return Math.max(usedHeight, cursorY - startY);
+      }
+
+      private double lineHeightOf(ComputedStyle style, double fontSize) {
+        String value = style.value("line-height").trim();
+        if (value.isEmpty() || value.equals("normal")) {
+          return Math.ceil(fontSize * 1.3);
+        }
+        try {
+          if (value.endsWith("%")) {
+            return Math.max(1, fontSize * Double.parseDouble(value.substring(0, value.length() - 1)) / 100);
+          }
+          if (value.endsWith("px")) {
+            return Math.max(1, Double.parseDouble(value.substring(0, value.length() - 2)));
+          }
+          return Math.max(1, fontSize * Double.parseDouble(value));
+        } catch (NumberFormatException unreadable) {
+          return Math.ceil(fontSize * 1.3);
+        }
       }
 
       private double attributePixels(Element element, String name, double fallback) {

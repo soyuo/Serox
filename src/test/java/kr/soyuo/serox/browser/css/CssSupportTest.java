@@ -124,7 +124,10 @@ class CssSupportTest {
 
     var styles = new CssStyleEngine().compute(document);
 
-    assertEquals("0 auto", styles.styleOf(document.getElementById("a").orElseThrow()).value("margin"));
+    var style = styles.styleOf(document.getElementById("a").orElseThrow());
+    assertEquals("auto", style.value("margin-left"));
+    assertEquals("auto", style.value("margin-right"));
+    assertEquals("0", style.value("margin-top"));
     assertTrue(styles.unsupportedDeclarations().isEmpty());
   }
 

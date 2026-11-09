@@ -39,22 +39,42 @@ public final class JavaFxCanvasRenderer {
       PaintCommand command, GraphicsContext graphics, java.util.Map<String, Image> images) {
     if (command instanceof PaintCommand.FillRect rect) {
       graphics.setFill(color(rect.color()));
-      graphics.fillRect(rect.x(), rect.y(), rect.width(), rect.height());
+      if (rect.radius() > 0) {
+        double arc = rect.radius() * 2;
+        graphics.fillRoundRect(rect.x(), rect.y(), rect.width(), rect.height(), arc, arc);
+      } else {
+        graphics.fillRect(rect.x(), rect.y(), rect.width(), rect.height());
+      }
     } else if (command instanceof PaintCommand.StrokeRect rect) {
       graphics.setStroke(color(rect.color()));
       graphics.setLineWidth(rect.lineWidth());
-      graphics.strokeRect(rect.x(), rect.y(), rect.width(), rect.height());
+      // The border sits inside the box, as CSS draws it.
+      double inset = rect.lineWidth() / 2;
+      double w = rect.width() - rect.lineWidth();
+      double h = rect.height() - rect.lineWidth();
+      if (rect.radius() > 0) {
+        double arc = Math.max(0, rect.radius() * 2 - rect.lineWidth());
+        graphics.strokeRoundRect(rect.x() + inset, rect.y() + inset, w, h, arc, arc);
+      } else {
+        graphics.strokeRect(rect.x() + inset, rect.y() + inset, w, h);
+      }
     } else if (command instanceof PaintCommand.Text text) {
+      graphics.setGlobalAlpha(DisplayListBuilder.opacity(text.style()));
       paintText(text, graphics);
+      graphics.setGlobalAlpha(1);
     } else if (command instanceof PaintCommand.ImagePlaceholder image) {
+      graphics.setGlobalAlpha(DisplayListBuilder.opacity(image.style()));
       Image decoded = images.get(image.source());
       if (decoded == null) {
         paintImagePlaceholder(image, graphics);
       } else {
         graphics.drawImage(decoded, image.x(), image.y(), image.width(), image.height());
       }
+      graphics.setGlobalAlpha(1);
     } else if (command instanceof PaintCommand.FormControl control) {
+      graphics.setGlobalAlpha(DisplayListBuilder.opacity(control.style()));
       paintFormControl(control, graphics);
+      graphics.setGlobalAlpha(1);
     }
   }
 
@@ -65,7 +85,7 @@ public final class JavaFxCanvasRenderer {
     boolean bold =
         weightValue.equals("bold")
             || weightValue.equals("bolder")
-            || (weightValue.matches("[1-9]00") && Integer.parseInt(weightValue) >= 600);
+            || (weightValue.matches("[1-9][0-9]{0,2}") && Integer.parseInt(weightValue) >= 600);
     FontWeight weight = bold ? FontWeight.BOLD : FontWeight.NORMAL;
     String styleValue = style.value("font-style");
     FontPosture posture =

@@ -14,7 +14,7 @@ text 16.0,183.0 first item link=-
 text 16.0,208.0 second item link=-
 text 16.0,233.0 third item link=-
 fill 0.0,252.0 320.0x72.0 #fafafa
-stroke 0.0,252.0 320.0x72.0 #000000 1.0
+stroke 0.0,252.0 320.0x72.0 #999999 1.0
 text 5.0,273.0 Quoted text that is long enough to link=-
 text 5.0,294.0 wrap onto more than one line of the link=-
 text 5.0,315.0 viewport. link=-
