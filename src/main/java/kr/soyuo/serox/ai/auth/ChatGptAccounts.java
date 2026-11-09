@@ -26,11 +26,16 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-/** Serox's own dynamically registered ChatGPT OAuth clients, never another app's credentials. */
+/** ChatGPT sign-in through the same OAuth client and browser flow as Codex CLI. */
 public final class ChatGptAccounts implements AutoCloseable {
-  private static final URI TOKEN = URI.create("https://auth.openai.com/api/accounts/oauth/token");
-  private static final String RESOURCE = "https://api.openai.com/v1";
-  private static final String PLAN_SCOPE = "chatgpt.tokens.use.direct";
+  private static final String ISSUER = "https://auth.openai.com";
+  private static final URI AUTHORIZE = URI.create(ISSUER + "/oauth/authorize");
+  private static final URI TOKEN = URI.create(ISSUER + "/oauth/token");
+  /** Codex CLI's public client; its redirect is registered only on ports 1455 and 1457. */
+  static final String CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann";
+  static final String ORIGINATOR = "codex_cli_rs";
+  static final String CODEX_BASE = "https://chatgpt.com/backend-api/codex";
+  private static final String CLIENT_VERSION = "0.167.0";
   private static final int REGISTRATION_CALLBACK_PORT = 1455;
   private static final int FALLBACK_CALLBACK_PORT = 1457;
   private final ProtectedLocalStore store;
@@ -101,16 +106,14 @@ public final class ChatGptAccounts implements AutoCloseable {
                   HttpServer server = null;
                   try {
                     JsonObject previous;
-                    String host;
                     synchronized (this) {
                       previous =
                           existingId.isEmpty() ? null : account(data(), existingId).deepCopy();
-                      host = hostId();
                     }
                     String state = random();
                     String nonce = random();
                     String verifier = random();
-                    server = callbackServer(existingId.isEmpty());
+                    server = callbackServer();
                     int port = server.getAddress().getPort();
                     String callback = "http://127.0.0.1:" + port + "/auth/callback";
                     CompletableFuture<Map<String, String>> returned = new CompletableFuture<>();
@@ -126,23 +129,10 @@ public final class ChatGptAccounts implements AutoCloseable {
                       server.start();
                     }
                     Map<String, String> parameters = new HashMap<>();
-                    parameters.put(
-                        "client_id",
-                        previous == null ? "dynamic_agent_client" : string(previous, "client_id"));
-                    if (previous == null) {
-                      parameters.put("agent_name_hint", "Serox");
-                    } else if (previous.has("id_token")) {
-                      parameters.put("id_token_hint", string(previous, "id_token"));
-                    }
-                    parameters.put("ext_agent_host_id", host);
                     parameters.put("response_type", "code");
+                    parameters.put("client_id", CLIENT_ID);
                     parameters.put("redirect_uri", callback);
-                    parameters.put(
-                        "scope",
-                        "openid profile email offline_access resource.invoke " + PLAN_SCOPE);
-                    parameters.put("resource", RESOURCE);
-                    parameters.put("state", state);
-                    parameters.put("nonce", nonce);
+                    parameters.put("scope", "openid profile email offline_access");
                     parameters.put("code_challenge_method", "S256");
                     parameters.put(
                         "code_challenge",
@@ -151,31 +141,15 @@ public final class ChatGptAccounts implements AutoCloseable {
                             .encodeToString(
                                 MessageDigest.getInstance("SHA-256")
                                     .digest(verifier.getBytes(StandardCharsets.US_ASCII))));
-                    openBrowser.accept(
-                        URI.create(
-                            "https://auth.openai.com/api/accounts/authorize?"
-                                + OAuthHttp.form(parameters)));
+                    parameters.put("id_token_add_organizations", "true");
+                    parameters.put("codex_cli_simplified_flow", "true");
+                    parameters.put("originator", ORIGINATOR);
+                    parameters.put("state", state);
+                    parameters.put("nonce", nonce);
+                    openBrowser.accept(URI.create(AUTHORIZE + "?" + OAuthHttp.form(parameters)));
                     Map<String, String> response = returned.get(3, TimeUnit.MINUTES);
-                    String clientId =
-                        issuedClient(
-                            response, previous == null ? "" : string(previous, "client_id"));
-                    // Retain a newly issued registration even if the one-use code later expires.
                     String registrationId =
                         previous == null ? UUID.randomUUID().toString() : existingId;
-                    if (previous == null) {
-                      synchronized (this) {
-                        if (closed || result.isCancelled()) {
-                          throw new IOException("Authentication cancelled");
-                        }
-                        JsonObject data = data();
-                        JsonObject registration = new JsonObject();
-                        registration.addProperty("client_id", clientId);
-                        registration.addProperty("label", "인증 미완료");
-                        registration.addProperty("subject", "");
-                        data.getAsJsonObject("accounts").add(registrationId, registration);
-                        store.write(data.toString());
-                      }
-                    }
                     JsonObject tokens =
                         http.post(
                             TOKEN,
@@ -183,21 +157,19 @@ public final class ChatGptAccounts implements AutoCloseable {
                                 "grant_type",
                                 "authorization_code",
                                 "client_id",
-                                clientId,
+                                CLIENT_ID,
                                 "code",
                                 response.get("code"),
                                 "code_verifier",
                                 verifier,
                                 "redirect_uri",
-                                callback,
-                                "resource",
-                                RESOURCE));
+                                callback));
                     JsonObject claims =
                         OpenAiIdentity.verify(
                             string(tokens, "id_token"),
-                            clientId,
+                            CLIENT_ID,
                             nonce,
-                            http.get(URI.create("https://auth.openai.com/.well-known/jwks.json")),
+                            http.get(URI.create(ISSUER + "/.well-known/jwks.json")),
                             Instant.now());
                     if (previous != null
                         && !string(previous, "subject").isEmpty()
@@ -205,8 +177,9 @@ public final class ChatGptAccounts implements AutoCloseable {
                       throw new IOException("The selected ChatGPT account does not match");
                     }
                     JsonObject account = new JsonObject();
-                    account.addProperty("client_id", clientId);
+                    account.addProperty("client_id", CLIENT_ID);
                     account.addProperty("subject", string(claims, "sub"));
+                    account.addProperty("chatgpt_account_id", chatGptAccountId(claims));
                     account.addProperty(
                         "label",
                         claims.has("email") ? string(claims, "email") : string(claims, "sub"));
@@ -280,16 +253,29 @@ public final class ChatGptAccounts implements AutoCloseable {
                   string(account, "client_id"),
                   "refresh_token",
                   string(account, "refresh_token"),
-                  "resource",
-                  RESOURCE));
+                  "scope",
+                  "openid profile email"));
       updateTokens(account, tokens, false);
       store.write(data.toString());
     }
     return string(account, "access_token");
   }
 
+  /** The ChatGPT workspace the Codex backend bills; sent as the chatgpt-account-id header. */
+  public synchronized String chatGptAccountId(String id) throws IOException {
+    return string(account(data(), id), "chatgpt_account_id");
+  }
+
   public List<Model> models(String id) throws IOException {
-    JsonObject response = http.get(URI.create(RESOURCE + "/models"), accessToken(id));
+    Map<String, String> headers = new HashMap<>();
+    headers.put("Authorization", "Bearer " + accessToken(id));
+    headers.put("originator", ORIGINATOR);
+    String workspace = chatGptAccountId(id);
+    if (!workspace.isEmpty()) {
+      headers.put("chatgpt-account-id", workspace);
+    }
+    JsonObject response =
+        http.get(URI.create(CODEX_BASE + "/models?client_version=" + CLIENT_VERSION), headers);
     List<Model> models = new ArrayList<>();
     for (var element : response.getAsJsonArray("models")) {
       JsonObject model = element.getAsJsonObject();
@@ -309,7 +295,7 @@ public final class ChatGptAccounts implements AutoCloseable {
     if (!revoked) {
       try {
         http.post(
-            URI.create("https://auth.openai.com/api/accounts/oauth/revoke"),
+            URI.create(ISSUER + "/oauth/revoke"),
             Map.of(
                 "token",
                 string(account, "refresh_token"),
@@ -344,32 +330,9 @@ public final class ChatGptAccounts implements AutoCloseable {
     }
   }
 
-  private String hostId() throws IOException {
-    Path file = directory.resolve("chatgpt-host.txt");
-    Files.createDirectories(directory);
-    if (!Files.exists(file)) {
-      try {
-        Files.writeString(
-            file,
-            "urn:uuid:" + UUID.randomUUID(),
-            StandardCharsets.US_ASCII,
-            java.nio.file.StandardOpenOption.CREATE_NEW);
-      } catch (java.nio.file.FileAlreadyExistsException ignored) {
-        // Another Serox process created this installation's stable host identifier.
-      }
-    }
-    String host = Files.readString(file, StandardCharsets.US_ASCII).strip();
-    if (!host.matches("urn:uuid:[0-9a-f-]{36}")) {
-      throw new IOException("Invalid ChatGPT host identifier");
-    }
-    return host;
-  }
-
-  private static HttpServer callbackServer(boolean newRegistration) throws IOException {
+  /** Codex CLI's client only accepts these two callback ports. */
+  private static HttpServer callbackServer() throws IOException {
     InetAddress loopback = InetAddress.getByName("127.0.0.1");
-    if (!newRegistration) {
-      return HttpServer.create(new InetSocketAddress(loopback, 0), 4);
-    }
     try {
       return HttpServer.create(new InetSocketAddress(loopback, REGISTRATION_CALLBACK_PORT), 4);
     } catch (BindException portInUse) {
@@ -377,13 +340,12 @@ public final class ChatGptAccounts implements AutoCloseable {
     }
   }
 
-  static String issuedClient(Map<String, String> response, String existing) throws IOException {
-    String issued = response.getOrDefault("client_id", existing);
-    if (!issued.matches("oaiapp_[A-Za-z0-9_-]{1,200}")
-        || !existing.isEmpty() && !existing.equals(issued)) {
-      throw new IOException("Invalid client registration");
+  /** The workspace id ChatGPT puts in the ID token's auth claim, or empty. */
+  static String chatGptAccountId(JsonObject claims) {
+    if (claims.get("https://api.openai.com/auth") instanceof JsonObject auth) {
+      return string(auth, "chatgpt_account_id");
     }
-    return issued;
+    return "";
   }
 
   private static void callback(
@@ -401,7 +363,7 @@ public final class ChatGptAccounts implements AutoCloseable {
       Map<String, String> query = query(exchange.getRequestURI().getRawQuery());
       if (!MessageDigest.isEqual(
           state.getBytes(StandardCharsets.UTF_8),
-          query.getOrDefault("state", "").getBytes(StandardCharsets.UTF_8))) {
+          callbackState(query.getOrDefault("state", "")).getBytes(StandardCharsets.UTF_8))) {
         return;
       }
       if (query.containsKey("error")) {
@@ -436,6 +398,12 @@ public final class ChatGptAccounts implements AutoCloseable {
     }
   }
 
+  /** ChatGPT may append onboarding metadata to the state, as Codex CLI allows; drop it. */
+  static String callbackState(String returned) {
+    int metadata = returned.indexOf(".onboarding_entrypoint=");
+    return metadata < 0 ? returned : returned.substring(0, metadata);
+  }
+
   static Map<String, String> query(String raw) {
     if (raw == null || raw.length() > 16 * 1024) {
       throw new IllegalArgumentException();
@@ -459,21 +427,38 @@ public final class ChatGptAccounts implements AutoCloseable {
         || initial && string(tokens, "refresh_token").isEmpty()) {
       throw new IOException("Incomplete authentication response");
     }
-    for (String name : List.of("access_token", "refresh_token", "id_token", "scope")) {
+    for (String name : List.of("access_token", "refresh_token", "id_token")) {
       if (tokens.has(name)) {
         account.add(name, tokens.get(name));
       }
     }
-    long lifetime = tokens.get("expires_in").getAsLong();
+    long lifetime =
+        tokens.has("expires_in")
+            ? tokens.get("expires_in").getAsLong()
+            : expiry(string(tokens, "access_token")) - Instant.now().getEpochSecond();
     if (lifetime <= 0 || lifetime > 30 * 24 * 3600) {
       throw new IOException("Invalid token expiration");
     }
     account.addProperty("expires_at", Instant.now().plusSeconds(lifetime).getEpochSecond());
   }
 
+  /** Seconds-since-epoch expiry from a JWT access token, or one hour from now. */
+  private static long expiry(String token) {
+    try {
+      String[] pieces = token.split("\\.");
+      JsonObject claims =
+          JsonParser.parseString(
+                  new String(Base64.getUrlDecoder().decode(pieces[1]), StandardCharsets.UTF_8))
+              .getAsJsonObject();
+      return claims.get("exp").getAsLong();
+    } catch (RuntimeException notJwt) {
+      return Instant.now().plusSeconds(3600).getEpochSecond();
+    }
+  }
+
+  /** Accounts from the old dynamic registration must sign in again. */
   private static boolean enabled(JsonObject account) {
-    return account.has("access_token")
-        && List.of(string(account, "scope").split(" ")).contains(PLAN_SCOPE);
+    return account.has("access_token") && CLIENT_ID.equals(string(account, "client_id"));
   }
 
   private static Account view(String id, JsonObject account) {
