@@ -110,6 +110,7 @@ public final class LayoutEngine {
       double contentX = outerX + borderLeft + paddingLeft;
       double contentY = outerY + borderTop + paddingTop;
       final int boxIndex = boxes.size();
+      final int textIndex = textRuns.size();
       final int boxPaintOrder = nextPaintOrder();
       boxes.add(null);
 
@@ -173,6 +174,20 @@ public final class LayoutEngine {
               contentHeight,
               style,
               boxPaintOrder));
+      if (style.value("position").equals("relative")) {
+        // A relative box is drawn moved, but keeps its place in the flow.
+        double dx = offset(style, "left", availableWidth);
+        if (dx == 0) {
+          dx = -offset(style, "right", availableWidth);
+        }
+        double dy = offset(style, "top", availableWidth);
+        if (dy == 0) {
+          dy = -offset(style, "bottom", availableWidth);
+        }
+        if (dx != 0 || dy != 0) {
+          shift(boxIndex, textIndex, dx, dy);
+        }
+      }
       return marginTop + borderBoxHeight + marginBottom;
     }
 
@@ -362,6 +377,15 @@ public final class LayoutEngine {
         grow = parseNumber(flex.split("\\s+")[0]);
       }
       return Math.max(0, grow);
+    }
+
+    private double offset(ComputedStyle style, String property, double containing) {
+      double percent = style.percentage(property);
+      if (Double.isFinite(percent)) {
+        return containing * percent / 100;
+      }
+      double pixels = style.pixels(property, 0);
+      return Double.isFinite(pixels) ? pixels : 0;
     }
 
     private double shrinkOf(ComputedStyle style) {

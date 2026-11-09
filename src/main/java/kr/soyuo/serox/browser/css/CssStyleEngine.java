@@ -73,6 +73,14 @@ public final class CssStyleEngine {
           "border-left-color",
           "letter-spacing",
           "word-spacing",
+          "position",
+          "top",
+          "right",
+          "bottom",
+          "left",
+          "box-shadow",
+          "overflow-wrap",
+          "word-break",
           "box-sizing");
   /** Values every property takes; resolved after the cascade. */
   private static final Set<String> GLOBAL_KEYWORDS =
@@ -601,6 +609,18 @@ public final class CssStyleEngine {
         }
       }
       case "border-radius" -> out.put("border-radius", lower.split("\\s*/\\s*")[0].split("\\s+")[0]);
+      case "word-wrap" -> out.put("overflow-wrap", lower);
+      case "inset" -> {
+        String[] parts = lower.split("\\s+");
+        String top = parts[0];
+        String right = parts.length > 1 ? parts[1] : top;
+        String bottom = parts.length > 2 ? parts[2] : top;
+        String left = parts.length > 3 ? parts[3] : right;
+        out.put("top", top);
+        out.put("right", right);
+        out.put("bottom", bottom);
+        out.put("left", left);
+      }
       case "outline" -> {
         if (lower.equals("none") || lower.equals("0") || lower.startsWith("0 ")
             || lower.startsWith("none ")) {
@@ -767,6 +787,14 @@ public final class CssStyleEngine {
       case "border-radius" -> isLength(normalized) || isPercentage(normalized);
       case "letter-spacing", "word-spacing" -> normalized.equals("normal") || isLength(normalized);
       case "box-sizing" -> Set.of("content-box", "border-box").contains(normalized);
+      // Only static and relative positioning are laid out; others stay reported.
+      case "position" -> Set.of("static", "relative").contains(normalized);
+      case "top", "right", "bottom", "left" ->
+          normalized.equals("auto") || isLength(normalized) || isSignedPercentage(normalized);
+      case "box-shadow" -> normalized.equals("none") || BoxShadow.parse(normalized) != null;
+      // Long words are broken to fit the line, which is what these values ask for.
+      case "overflow-wrap" -> Set.of("break-word", "anywhere").contains(normalized);
+      case "word-break" -> Set.of("break-all", "break-word").contains(normalized);
 
       case "justify-content" ->
           Set.of("flex-start", "center", "flex-end", "space-between", "space-around",
@@ -1145,6 +1173,7 @@ public final class CssStyleEngine {
     defaults.put("opacity", "1");
     defaults.put("flex-shrink", "1");
     defaults.put("box-sizing", "content-box");
+    defaults.put("position", "static");
     if (element.tagName().equals("body")) {
       defaults.put("margin", "8px");
     }

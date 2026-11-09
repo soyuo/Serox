@@ -11,7 +11,13 @@ public sealed interface PaintCommand
         PaintCommand.StrokeRect,
         PaintCommand.Text,
         PaintCommand.ImagePlaceholder,
-        PaintCommand.FormControl {
+        PaintCommand.FormControl,
+        PaintCommand.Shadow {
+  /** A soft shadow under a box, as box-shadow draws it. */
+  record Shadow(
+      double x, double y, double width, double height, CssColor color, double blur, double radius)
+      implements PaintCommand {}
+
   /** Fills a rectangular area with a color. */
   record FillRect(double x, double y, double width, double height, CssColor color, double radius)
       implements PaintCommand {

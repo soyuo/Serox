@@ -128,6 +128,34 @@ class BoxAndTextPropertiesTest {
   }
 
   @Test
+  void relativeBoxesMoveWithoutChangingTheFlow() {
+    Page page =
+        page(
+            "#a { position: relative; top: 10px; left: 5px; height: 20px } #b { height: 20px }",
+            "<div id='a'>a</div><div id='b'>b</div>");
+    assertEquals(5, box(page, "a").x(), 0.01);
+    assertEquals(10, box(page, "a").y(), 0.01);
+    assertEquals(20, box(page, "b").y(), 0.01);
+  }
+
+  @Test
+  void boxShadowPaintsUnderTheBox() {
+    Page page =
+        page("#a { box-shadow: 2px 3px 4px rgba(0,0,0,.5); height: 10px }", "<div id='a'></div>");
+    var shadow =
+        new DisplayListBuilder()
+            .build(page.layout()).commands().stream()
+                .filter(PaintCommand.Shadow.class::isInstance)
+                .map(PaintCommand.Shadow.class::cast)
+                .findFirst()
+                .orElseThrow();
+    assertEquals(2, shadow.x(), 0.01);
+    assertEquals(3, shadow.y(), 0.01);
+    assertEquals(4, shadow.blur(), 0.01);
+    assertEquals(0.5, shadow.color().opacity(), 0.001);
+  }
+
+  @Test
   void motionPointerAndPrefixedPropertiesAreNotReported() {
     Page page =
         page(

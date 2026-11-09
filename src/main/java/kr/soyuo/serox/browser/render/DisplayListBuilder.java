@@ -21,6 +21,23 @@ public final class DisplayListBuilder {
         continue;
       }
       double opacity = opacity(box.style());
+      kr.soyuo.serox.browser.css.BoxShadow shadow =
+          kr.soyuo.serox.browser.css.BoxShadow.parse(box.style().value("box-shadow"));
+      if (shadow != null && !shadow.inset()) {
+        double spread = shadow.spread();
+        orderedCommands.add(
+            new OrderedCommand(
+                box.paintOrder(),
+                -1,
+                new PaintCommand.Shadow(
+                    box.x() + shadow.offsetX() - spread,
+                    box.y() + shadow.offsetY() - spread,
+                    box.width() + 2 * spread,
+                    box.height() + 2 * spread,
+                    shadow.color().fade(opacity),
+                    shadow.blur(),
+                    radius(box))));
+      }
       CssColor background =
           box.style()
               .color("background-color")

@@ -71,6 +71,15 @@ public final class JavaFxCanvasRenderer {
         graphics.drawImage(decoded, image.x(), image.y(), image.width(), image.height());
       }
       graphics.setGlobalAlpha(1);
+    } else if (command instanceof PaintCommand.Shadow shadow) {
+      graphics.save();
+      if (shadow.blur() > 0) {
+        graphics.setEffect(new javafx.scene.effect.GaussianBlur(Math.min(63, shadow.blur())));
+      }
+      graphics.setFill(color(shadow.color()));
+      double arc = shadow.radius() * 2;
+      graphics.fillRoundRect(shadow.x(), shadow.y(), shadow.width(), shadow.height(), arc, arc);
+      graphics.restore();
     } else if (command instanceof PaintCommand.FormControl control) {
       graphics.setGlobalAlpha(DisplayListBuilder.opacity(control.style()));
       paintFormControl(control, graphics);
