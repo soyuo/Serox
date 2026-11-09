@@ -32,6 +32,10 @@ public final class HttpRequestDispatcher implements HttpTransport {
     this.maxResponseBytes = maxResponseBytes;
   }
 
+  static final String USER_AGENT =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
+          + " Chrome/142.0.0.0 Safari/537.36 Serox/0.1";
+
   /** Creates a client with standard certificate validation and automatic redirects. */
   public static HttpRequestDispatcher createDefault(
       Duration connectTimeout, Duration requestTimeout, int maxResponseBytes) {
@@ -51,6 +55,9 @@ public final class HttpRequestDispatcher implements HttpTransport {
         HttpRequest.newBuilder(pageRequest.uri())
             .timeout(requestTimeout)
             .header("Accept", "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8")
+            .header("Accept-Language", "ko-KR,ko;q=0.9,en;q=0.8")
+            // Many sites refuse Java's default agent, so a page opened from a result never loaded.
+            .header("User-Agent", USER_AGENT)
             .GET()
             .build();
     CompletableFuture<HttpResponse<byte[]>> exchange =

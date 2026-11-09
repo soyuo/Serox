@@ -1159,7 +1159,7 @@ public final class BrowserShellView extends BorderPane {
   }
 
   /** Opens a source in a new tab, which becomes the active tab. */
-  private void openInNewTab(kr.soyuo.serox.search.api.SearchResult result) {
+  void openInNewTab(kr.soyuo.serox.search.api.SearchResult result) {
     String address = result.uri().toString();
     browserController
         .createTab()
